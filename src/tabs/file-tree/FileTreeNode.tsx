@@ -175,7 +175,7 @@ export function FileTreeNode({ entry, depth, defaultExpanded, preloadedChildren 
 
         {/* Name */}
         <span
-          className={`text-[13px] leading-none truncate ${
+          className={`text-[13px] truncate pb-[1px] ${
             entry.name.startsWith(".")
               ? "text-[var(--color-text-secondary)]"
               : "text-[var(--color-text-primary)]"
