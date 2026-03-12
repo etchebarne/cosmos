@@ -12,6 +12,7 @@ interface TabIconProps {
 const iconMap: Record<string, IconSvgElement> = {
   file: Icons.File01Icon,
   "folder-tree": Icons.FolderTreeIcon,
+  "git-branch": Icons.GitBranchIcon,
 };
 
 export function TabIcon({ name, size = 14, className }: TabIconProps) {
