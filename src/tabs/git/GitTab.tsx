@@ -11,6 +11,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useWorkspaceStore } from "../../workspace-store";
 import { GitChangeNode } from "./GitChangeNode";
+import { ScrollArea } from "../../components/shared/ScrollArea";
 import type { TabContentProps } from "../types";
 
 export interface GitFileChange {
@@ -302,7 +303,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
       </div>
 
       {/* Changes tree */}
-      <div className="flex-1 overflow-auto">
+      <ScrollArea className="flex-1">
         {changes.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-xs text-[var(--color-text-muted)]">
@@ -347,7 +348,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
             )}
           </div>
         )}
-      </div>
+      </ScrollArea>
 
       {/* Bottom section */}
       <div className="border-t border-[var(--color-border-primary)]">

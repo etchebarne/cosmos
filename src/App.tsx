@@ -6,6 +6,7 @@ import { PaneContainer } from "./components/panes/PaneContainer";
 import { DragOverlay } from "./components/panes/DragOverlay";
 import { useLayoutStore } from "./store";
 import { useWorkspaceStore } from "./workspace-store";
+import "overlayscrollbars/overlayscrollbars.css";
 import "./globals.css";
 
 function App() {

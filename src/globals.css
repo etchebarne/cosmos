@@ -23,6 +23,17 @@
   --color-divider: #3A3A4A;
 }
 
+/* OverlayScrollbars custom theme */
+.os-theme-custom {
+  --os-handle-bg: rgba(255, 255, 255, 0.12);
+  --os-handle-bg-hover: rgba(255, 255, 255, 0.25);
+  --os-handle-bg-active: rgba(255, 255, 255, 0.35);
+  --os-size: 6px;
+  --os-handle-border-radius: 0px;
+  --os-padding-perpendicular: 0px;
+  --os-padding-axis: 0px;
+}
+
 @layer base {
   html, body, #root {
     height: 100%;

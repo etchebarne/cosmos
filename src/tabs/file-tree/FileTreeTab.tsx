@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useWorkspaceStore } from "../../workspace-store";
 import { FileTreeNode } from "./FileTreeNode";
+import { ScrollArea } from "../../components/shared/ScrollArea";
 import type { TabContentProps } from "../types";
 
 export interface DirEntry {
@@ -77,7 +78,7 @@ export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   };
 
   return (
-    <div className="h-full overflow-auto font-ui">
+    <ScrollArea className="h-full font-ui">
       <div className="pt-1 pb-4">
         <FileTreeNode
           entry={rootEntry}
@@ -86,6 +87,6 @@ export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
           preloadedChildren={entries}
         />
       </div>
-    </div>
+    </ScrollArea>
   );
 }

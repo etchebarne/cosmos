@@ -3,6 +3,7 @@ import type { PaneNode } from "../../types";
 import { useLayoutStore } from "../../store";
 import { TabBar } from "./TabBar";
 import { TabContent } from "./TabContent";
+import { ScrollArea } from "../shared/ScrollArea";
 
 interface PaneContainerProps {
   node: PaneNode;
@@ -93,12 +94,12 @@ function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
   return (
     <div className="flex flex-col w-full h-full min-w-0 min-h-0">
       <TabBar paneId={node.id} tabs={node.tabs} activeTabId={node.activeTabId} />
-      <div
+      <ScrollArea
         data-pane-content={node.id}
-        className="flex-1 min-h-0 bg-[var(--color-bg-page)] relative overflow-auto"
+        className="flex-1 min-h-0 bg-[var(--color-bg-page)] relative"
       >
         {activeTab && <TabContent tab={activeTab} paneId={node.id} />}
-      </div>
+      </ScrollArea>
     </div>
   );
 }
