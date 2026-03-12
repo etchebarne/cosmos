@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --color-accent-blue: #4B8EF5;
+  --color-accent-blue-hover: #5E9DF7;
+  --color-accent-blue-muted: #4B8EF520;
+  --color-bg-elevated: #222230;
+  --color-bg-input: #2A2A36;
+  --color-bg-page: #111116;
+  --color-bg-surface: #1A1A22;
+  --color-border-primary: #2E2E3A;
+  --color-border-secondary: #3A3A48;
+  --color-project-bar-bg: #0E0E12;
+  --color-status-amber: #FBBF24;
+  --color-status-green: #34D399;
+  --color-status-red: #F87171;
+  --color-tab-active-bg: #1A1A22;
+  --color-tab-inactive-bg: #111116;
+  --color-text-muted: #4A4A58;
+  --color-text-primary: #E8E8ED;
+  --color-text-secondary: #9D9DAA;
+  --color-text-tertiary: #6B6B78;
+  --color-divider: #3A3A4A;
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--color-bg-page);
+    color: var(--color-text-primary);
+  }
+
+  .font-ui {
+    font-family: "Inter", sans-serif;
+  }
+
+  .font-mono {
+    font-family: "JetBrains Mono", monospace;
+  }
+}
