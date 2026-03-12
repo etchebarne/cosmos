@@ -14,10 +14,14 @@ export function TabContent({ tab, paneId }: TabContentProps) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <File size={40} className="text-[var(--color-text-muted)]" />
-        <h3 className="text-base font-semibold text-[var(--color-text-primary)]">No Tab Open</h3>
-        <p className="text-xs text-[var(--color-text-secondary)] text-center leading-relaxed w-[280px]">
-          Open a new tab or start from a template.
-        </p>
+        <div className="flex flex-col items-center justify-center gap-2">
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
+            Get Started
+          </h3>
+          <p className="text-xs text-[var(--color-text-secondary)] text-center leading-relaxed w-[280px]">
+            Open a new tab or start from a template.
+          </p>
+        </div>
         <div className="flex gap-2.5">
           <button
             className="flex items-center gap-1.5 h-8 px-3.5 bg-[var(--color-accent-blue)] text-white text-xs font-medium hover:bg-[var(--color-accent-blue-hover)]"
