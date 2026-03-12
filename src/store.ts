@@ -5,8 +5,11 @@ import "./tabs"; // Initialize tab registry
 
 interface LayoutStore {
   layout: PaneNode;
+  layouts: Record<string, PaneNode>;
+  activeWorkspacePath: string | null;
   dragState: DragState | null;
 
+  setWorkspace: (path: string | null) => void;
   addTab: (paneId: string, type?: string, title?: string) => void;
   closeTab: (paneId: string, tabId: string) => void;
   setActiveTab: (paneId: string, tabId: string) => void;
@@ -19,7 +22,22 @@ interface LayoutStore {
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
   layout: createLeaf(),
+  layouts: {},
+  activeWorkspacePath: null,
   dragState: null,
+
+  setWorkspace: (path) =>
+    set((state) => {
+      // Save current layout
+      const layouts = { ...state.layouts };
+      if (state.activeWorkspacePath) {
+        layouts[state.activeWorkspacePath] = state.layout;
+      }
+
+      // Load or create layout for new workspace
+      const layout = path ? (layouts[path] ?? createLeaf()) : createLeaf();
+      return { layouts, layout, activeWorkspacePath: path, dragState: null };
+    }),
 
   setDragState: (data) => set({ dragState: data }),
 
