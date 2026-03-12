@@ -2,6 +2,7 @@
 
 export interface Tab {
   id: string;
+  type: string;
   title: string;
   icon: string;
 }

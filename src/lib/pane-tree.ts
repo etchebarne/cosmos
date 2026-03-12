@@ -1,26 +1,18 @@
 import type { PaneNode, PaneLeaf, Tab } from "../types";
+import { getTabDefinition } from "../tabs/registry";
 
 let idCounter = 0;
 export const genId = () => `${Date.now()}-${++idCounter}`;
 
 let tabCounter = 0;
 
-const DEFAULT_ICONS = [
-  "file-code",
-  "file-text",
-  "terminal",
-  "git-branch",
-  "settings",
-  "database",
-  "folder-tree",
-];
-
-export function createTab(title?: string): Tab {
-  const idx = Math.floor(Math.random() * DEFAULT_ICONS.length);
+export function createTab(type: string, title?: string): Tab {
+  const definition = getTabDefinition(type);
   return {
     id: genId(),
-    title: title ?? `Tab ${++tabCounter}`,
-    icon: DEFAULT_ICONS[idx],
+    type,
+    title: title ?? definition?.title ?? `Tab ${++tabCounter}`,
+    icon: definition?.icon ?? "file",
   };
 }
 

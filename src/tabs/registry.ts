@@ -1,0 +1,15 @@
+import type { TabDefinition } from "./types";
+
+const registry = new Map<string, TabDefinition>();
+
+export function registerTab(definition: TabDefinition) {
+  registry.set(definition.type, definition);
+}
+
+export function getTabDefinition(type: string): TabDefinition | undefined {
+  return registry.get(type);
+}
+
+export function getAllTabDefinitions(): TabDefinition[] {
+  return Array.from(registry.values());
+}

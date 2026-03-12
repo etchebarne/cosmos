@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import type { PaneNode, PaneSplit, Tab, DragState } from "./types";
 import { genId, createTab, createLeaf, findLeaf, updateNode } from "./lib/pane-tree";
+import "./tabs"; // Initialize tab registry
 
 interface LayoutStore {
   layout: PaneNode;
   dragState: DragState | null;
 
-  addTab: (paneId: string, title?: string) => void;
+  addTab: (paneId: string, type?: string, title?: string) => void;
   closeTab: (paneId: string, tabId: string) => void;
   setActiveTab: (paneId: string, tabId: string) => void;
   reorderTab: (paneId: string, fromIndex: number, toIndex: number) => void;
@@ -22,9 +23,9 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
   setDragState: (data) => set({ dragState: data }),
 
-  addTab: (paneId, title) =>
+  addTab: (paneId, type = "blank", title) =>
     set((state) => {
-      const tab = createTab(title);
+      const tab = createTab(type, title);
       const layout = updateNode(state.layout, paneId, (leaf) => ({
         ...leaf,
         tabs: [...leaf.tabs, tab],
