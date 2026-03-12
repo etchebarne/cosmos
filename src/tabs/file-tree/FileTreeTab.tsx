@@ -69,12 +69,22 @@ export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     );
   }
 
+  const rootEntry: DirEntry = {
+    name: activeWorkspace.name,
+    path: activeWorkspace.path,
+    isDir: true,
+    extension: null,
+  };
+
   return (
     <div className="h-full overflow-auto font-ui">
-      <div className="py-1 pb-4">
-        {entries.map((entry) => (
-          <FileTreeNode key={entry.path} entry={entry} depth={0} />
-        ))}
+      <div className="pt-1 pb-4">
+        <FileTreeNode
+          entry={rootEntry}
+          depth={0}
+          defaultExpanded
+          preloadedChildren={entries}
+        />
       </div>
     </div>
   );

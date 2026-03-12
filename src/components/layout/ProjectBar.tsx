@@ -1,4 +1,5 @@
-import { Search, Plus } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon, Add01Icon } from "@hugeicons/core-free-icons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useWorkspaceStore } from "../../workspace-store";
 
@@ -26,7 +27,7 @@ export function ProjectBar() {
       )}
       <div className="flex-1" />
       <div className="flex items-center gap-1.5 w-[220px] h-8 px-2.5 bg-[var(--color-bg-input)]">
-        <Search size={13} className="text-[var(--color-text-muted)] shrink-0" />
+        <HugeiconsIcon icon={Search01Icon} size={13} className="text-[var(--color-text-muted)] shrink-0" />
         <span className="text-xs text-[var(--color-text-muted)]">Search files...</span>
         <div className="flex-1" />
       </div>
@@ -51,7 +52,7 @@ export function ProjectBar() {
         className="w-8 h-8 flex items-center justify-center border border-[var(--color-border-secondary)] text-[var(--color-text-muted)] shrink-0 hover:border-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
         onClick={handleOpenFolder}
       >
-        <Plus size={14} />
+        <HugeiconsIcon icon={Add01Icon} size={14} />
       </button>
     </div>
   );

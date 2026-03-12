@@ -1,5 +1,6 @@
 import { useRef, useCallback } from "react";
-import { Plus, X } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useLayoutStore } from "../../store";
 import { TabIcon } from "../shared/TabIcon";
 import type { Tab } from "../../types";
@@ -86,7 +87,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
                   closeTab(paneId, tab.id);
                 }}
               >
-                <X size={12} />
+                <HugeiconsIcon icon={Cancel01Icon} size={12} />
               </button>
             </div>
           );
@@ -95,7 +96,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
         className="flex items-center justify-center w-7 h-7 mx-1 text-[var(--color-text-muted)] shrink-0 hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-border-primary)]"
         onClick={() => addTab(paneId)}
       >
-        <Plus size={14} />
+        <HugeiconsIcon icon={Add01Icon} size={14} />
       </button>
     </div>
   );
