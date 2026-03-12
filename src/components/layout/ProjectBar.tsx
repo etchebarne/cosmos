@@ -1,13 +1,32 @@
+import { useState, useCallback } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, Add01Icon } from "@hugeicons/core-free-icons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useWorkspaceStore } from "../../workspace-store";
+import { ContextMenu } from "../shared/ContextMenu";
 
 export function ProjectBar() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeIndex = useWorkspaceStore((s) => s.activeIndex);
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
   const switchWorkspace = useWorkspaceStore((s) => s.switchWorkspace);
+  const closeWorkspace = useWorkspaceStore((s) => s.closeWorkspace);
+
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    index: number;
+  } | null>(null);
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, index: number) => {
+      e.preventDefault();
+      setContextMenu({ x: e.clientX, y: e.clientY, index });
+    },
+    [],
+  );
+
+  const handleCloseMenu = useCallback(() => setContextMenu(null), []);
 
   const active = activeIndex !== null ? workspaces[activeIndex] : null;
 
@@ -43,6 +62,7 @@ export function ProjectBar() {
               color: isActive ? "#fff" : w.color,
             }}
             onClick={() => switchWorkspace(i)}
+            onContextMenu={(e) => handleContextMenu(e, i)}
           >
             {w.name[0].toUpperCase()}
           </button>
@@ -54,6 +74,20 @@ export function ProjectBar() {
       >
         <HugeiconsIcon icon={Add01Icon} size={14} />
       </button>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            {
+              label: "Close",
+              onClick: () => closeWorkspace(contextMenu.index),
+            },
+          ]}
+          onClose={handleCloseMenu}
+        />
+      )}
     </div>
   );
 }
