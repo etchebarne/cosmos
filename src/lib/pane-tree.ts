@@ -16,12 +16,13 @@ export function createTab(type: string, title?: string): Tab {
   };
 }
 
-export function createLeaf(tabs: Tab[] = []): PaneLeaf {
+export function createLeaf(tabs?: Tab[]): PaneLeaf {
+  const resolved = tabs ?? [createTab("blank")];
   return {
     id: genId(),
     type: "leaf",
-    tabs,
-    activeTabId: tabs[0]?.id ?? null,
+    tabs: resolved,
+    activeTabId: resolved[0]?.id ?? null,
   };
 }
 

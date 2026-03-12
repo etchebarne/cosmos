@@ -1,11 +1,46 @@
+import { getAllTabDefinitions } from "../registry";
+import { useLayoutStore } from "../../store";
+import { TabIcon } from "../../components/shared/TabIcon";
 import type { TabContentProps } from "../types";
 
-export function BlankTab({ tab }: TabContentProps) {
+export function BlankTab({ tab, paneId }: TabContentProps) {
+  const transformTab = useLayoutStore((s) => s.transformTab);
+  const definitions = getAllTabDefinitions().filter((d) => d.type !== "blank");
+
   return (
-    <div className="font-mono flex items-center justify-center h-full text-[var(--color-text-tertiary)] text-[13px]">
-      <span className="px-4 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-border-primary)]">
-        {tab.title}
-      </span>
+    <div className="flex flex-col items-center justify-center h-full gap-6">
+      <div className="flex flex-col items-center gap-2">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+          New Tab
+        </h3>
+        <p className="text-xs text-[var(--color-text-secondary)]">
+          Select a tab type to get started
+        </p>
+      </div>
+      {definitions.length === 0 ? (
+        <p className="text-xs text-[var(--color-text-muted)]">
+          No tab types available
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 w-[320px]">
+          {definitions.map((def) => (
+            <button
+              key={def.type}
+              className="flex items-center gap-3 px-3 py-2.5 bg-[var(--color-bg-surface)] border border-[var(--color-border-secondary)] text-left hover:border-[var(--color-accent-blue)] hover:bg-[var(--color-bg-hover)] transition-colors"
+              onClick={() => transformTab(paneId, tab.id, def.type)}
+            >
+              <TabIcon
+                name={def.icon}
+                size={16}
+                className="shrink-0 text-[var(--color-text-tertiary)]"
+              />
+              <span className="text-xs text-[var(--color-text-primary)]">
+                {def.title}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

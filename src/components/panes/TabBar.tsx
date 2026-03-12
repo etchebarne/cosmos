@@ -55,19 +55,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
       className="flex items-center h-9 min-h-9 bg-[var(--color-project-bar-bg)] border-b border-[var(--color-border-primary)] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:h-0"
       data-tabbar-pane={paneId}
     >
-      {tabs.length === 0 ? (
-        <div
-          className="flex items-center gap-2 h-full px-3 select-none whitespace-nowrap bg-[var(--color-tab-active-bg)] border-b-2 border-[var(--color-accent-blue)]"
-        >
-          <TabIcon
-            name="file"
-            size={14}
-            className="shrink-0 text-[var(--color-accent-blue)]"
-          />
-          <span className="text-xs text-[var(--color-text-primary)]">Blank</span>
-        </div>
-      ) : (
-        tabs.map((tab) => {
+      {tabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           return (
             <div
@@ -102,8 +90,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
               </button>
             </div>
           );
-        })
-      )}
+        })}
       <button
         className="flex items-center justify-center w-7 h-7 mx-1 text-[var(--color-text-muted)] shrink-0 hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-border-primary)]"
         onClick={() => addTab(paneId)}

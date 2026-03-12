@@ -88,7 +88,7 @@ function SplitView({ node }: { node: Extract<PaneNode, { type: "split" }> }) {
 }
 
 function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
-  const activeTab = node.tabs.find((t) => t.id === node.activeTabId) ?? null;
+  const activeTab = node.tabs.find((t) => t.id === node.activeTabId) ?? node.tabs[0];
 
   return (
     <div className="flex flex-col w-full h-full min-w-0 min-h-0">
@@ -97,7 +97,7 @@ function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
         data-pane-content={node.id}
         className="flex-1 min-h-0 bg-[var(--color-bg-page)] relative overflow-auto"
       >
-        <TabContent tab={activeTab} paneId={node.id} />
+        {activeTab && <TabContent tab={activeTab} paneId={node.id} />}
       </div>
     </div>
   );

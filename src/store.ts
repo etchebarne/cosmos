@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { PaneNode, PaneSplit, Tab, DragState } from "./types";
 import { genId, createTab, createLeaf, findLeaf, updateNode } from "./lib/pane-tree";
 import "./tabs"; // Initialize tab registry
+import { getTabDefinition } from "./tabs";
 
 interface LayoutStore {
   layout: PaneNode;
@@ -15,6 +16,7 @@ interface LayoutStore {
   setActiveTab: (paneId: string, tabId: string) => void;
   reorderTab: (paneId: string, fromIndex: number, toIndex: number) => void;
   moveTabToPane: (fromPaneId: string, tabId: string, toPaneId: string, index?: number) => void;
+  transformTab: (paneId: string, tabId: string, newType: string) => void;
   splitPane: (targetPaneId: string, direction: "horizontal" | "vertical", tab: Tab, sourcePaneId: string, position: "before" | "after") => void;
   setPaneSizes: (splitId: string, sizes: number[]) => void;
   setDragState: (data: DragState | null) => void;
@@ -50,6 +52,21 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         activeTabId: tab.id,
       }));
       return { layout: layout ?? createLeaf() };
+    }),
+
+  transformTab: (paneId, tabId, newType) =>
+    set((state) => {
+      const definition = getTabDefinition(newType);
+      if (!definition) return state;
+      const layout = updateNode(state.layout, paneId, (leaf) => ({
+        ...leaf,
+        tabs: leaf.tabs.map((t) =>
+          t.id === tabId
+            ? { ...t, type: newType, title: definition.title, icon: definition.icon }
+            : t,
+        ),
+      }));
+      return { layout: layout ?? state.layout };
     }),
 
   closeTab: (paneId, tabId) =>
