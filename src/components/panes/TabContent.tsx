@@ -1,6 +1,6 @@
 import { File, Plus, LayoutTemplate } from "lucide-react";
-import { useLayoutStore } from "../store";
-import type { Tab } from "../types";
+import { useLayoutStore } from "../../store";
+import type { Tab } from "../../types";
 
 interface TabContentProps {
   tab: Tab | null;

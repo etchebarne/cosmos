@@ -1,7 +1,7 @@
-import { ProjectBar } from "./components/ProjectBar";
-import { StatusBar } from "./components/StatusBar";
-import { PaneContainer } from "./components/PaneContainer";
-import { DragOverlay } from "./components/DragOverlay";
+import { ProjectBar } from "./components/layout/ProjectBar";
+import { StatusBar } from "./components/layout/StatusBar";
+import { PaneContainer } from "./components/panes/PaneContainer";
+import { DragOverlay } from "./components/panes/DragOverlay";
 import { useLayoutStore } from "./store";
 import "./globals.css";
 

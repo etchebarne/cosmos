@@ -1,75 +1,6 @@
 import { create } from "zustand";
-import type { PaneNode, PaneLeaf, PaneSplit, Tab } from "./types";
-
-let idCounter = 0;
-let tabCounter = 0;
-const genId = () => `${Date.now()}-${++idCounter}`;
-
-const DEFAULT_ICONS = [
-  "file-code",
-  "file-text",
-  "terminal",
-  "git-branch",
-  "settings",
-  "database",
-  "folder-tree",
-];
-
-function createTab(title?: string): Tab {
-  const idx = Math.floor(Math.random() * DEFAULT_ICONS.length);
-  return {
-    id: genId(),
-    title: title ?? `Tab ${++tabCounter}`,
-    icon: DEFAULT_ICONS[idx],
-  };
-}
-
-function createLeaf(tabs: Tab[] = []): PaneLeaf {
-  return {
-    id: genId(),
-    type: "leaf",
-    tabs,
-    activeTabId: tabs[0]?.id ?? null,
-  };
-}
-
-function updateNode(
-  node: PaneNode,
-  targetId: string,
-  updater: (leaf: PaneLeaf) => PaneNode | null,
-): PaneNode | null {
-  if (node.type === "leaf") {
-    if (node.id === targetId) return updater(node);
-    return node;
-  }
-  const newChildren: PaneNode[] = [];
-  for (const child of node.children) {
-    const result = updateNode(child, targetId, updater);
-    if (result) newChildren.push(result);
-  }
-  if (newChildren.length === 0) return null;
-  if (newChildren.length === 1) return newChildren[0];
-  return { ...node, children: newChildren, sizes: normalizeSizes(newChildren.length, node.sizes) };
-}
-
-function normalizeSizes(count: number, oldSizes: number[]): number[] {
-  if (count === oldSizes.length) return oldSizes;
-  return Array(count).fill(100 / count);
-}
-
-function findLeaf(node: PaneNode, paneId: string): PaneLeaf | null {
-  if (node.type === "leaf") return node.id === paneId ? node : null;
-  for (const child of node.children) {
-    const found = findLeaf(child, paneId);
-    if (found) return found;
-  }
-  return null;
-}
-
-interface DragState {
-  tab: Tab;
-  sourcePaneId: string;
-}
+import type { PaneNode, PaneSplit, Tab, DragState } from "./types";
+import { genId, createTab, createLeaf, findLeaf, updateNode } from "./lib/pane-tree";
 
 interface LayoutStore {
   layout: PaneNode;
@@ -167,7 +98,6 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
   splitPane: (targetPaneId, direction, tab, sourcePaneId, position) =>
     set((state) => {
-      // Don't split if it's the only tab in the same pane
       const sourceLeaf = findLeaf(state.layout, sourcePaneId);
       if (sourcePaneId === targetPaneId && sourceLeaf && sourceLeaf.tabs.length <= 1) {
         return state;

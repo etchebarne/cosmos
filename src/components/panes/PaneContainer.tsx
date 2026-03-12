@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from "react";
-import type { PaneNode } from "../types";
-import { useLayoutStore } from "../store";
+import type { PaneNode } from "../../types";
+import { useLayoutStore } from "../../store";
 import { TabBar } from "./TabBar";
 import { TabContent } from "./TabContent";
 

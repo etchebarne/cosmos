@@ -1,3 +1,5 @@
+// ── Tab & Pane tree ──
+
 export interface Tab {
   id: string;
   title: string;
@@ -21,4 +23,11 @@ export interface PaneSplit {
 
 export type PaneNode = PaneLeaf | PaneSplit;
 
+// ── Drag & Drop ──
+
 export type DropZone = "left" | "right" | "top" | "bottom" | "center";
+
+export interface DragState {
+  tab: Tab;
+  sourcePaneId: string;
+}

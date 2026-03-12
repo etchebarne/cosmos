@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLayoutStore } from "../store";
-import type { DropZone } from "../types";
+import { useLayoutStore } from "../../store";
+import { findLeaf } from "../../lib/pane-tree";
+import type { DropZone } from "../../types";
 
 interface DropTarget {
   type: "tab-bar" | "pane-zone";
@@ -113,7 +114,7 @@ export function DragOverlay() {
         if (target.type === "tab-bar") {
           if (target.paneId === dragged.sourcePaneId) {
             // Reorder within same pane
-            const leaf = findLeafInLayout(store.layout, dragged.sourcePaneId);
+            const leaf = findLeaf(store.layout, dragged.sourcePaneId);
             if (leaf) {
               const fromIndex = leaf.tabs.findIndex((t) => t.id === dragged.tab.id);
               const toIndex = target.index ?? leaf.tabs.length;
@@ -196,14 +197,4 @@ export function DragOverlay() {
     </div>,
     document.body,
   );
-}
-
-// Local helper - duplicates store logic but avoids circular import issues
-function findLeafInLayout(node: import("../types").PaneNode, paneId: string): import("../types").PaneLeaf | null {
-  if (node.type === "leaf") return node.id === paneId ? node : null;
-  for (const child of node.children) {
-    const found = findLeafInLayout(child, paneId);
-    if (found) return found;
-  }
-  return null;
 }

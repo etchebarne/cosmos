@@ -1,18 +1,8 @@
 import { useRef, useCallback } from "react";
 import { Plus, X } from "lucide-react";
-import * as Icons from "lucide-react";
-import { useLayoutStore } from "../store";
-import type { Tab } from "../types";
-
-function TabIcon({ name, size = 14, className }: { name: string; size?: number; className?: string }) {
-  const iconName = name
-    .split("-")
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join("") as keyof typeof Icons;
-  const Icon = Icons[iconName] as React.ElementType | undefined;
-  if (!Icon || typeof Icon !== "function") return null;
-  return <Icon size={size} className={className} />;
-}
+import { useLayoutStore } from "../../store";
+import { TabIcon } from "../shared/TabIcon";
+import type { Tab } from "../../types";
 
 interface TabBarProps {
   paneId: string;
