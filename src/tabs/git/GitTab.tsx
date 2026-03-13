@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   GitBranchIcon,
@@ -13,202 +12,62 @@ import { useWorkspaceStore } from "../../workspace-store";
 import { GitChangeNode } from "./GitChangeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { BranchPicker } from "./BranchPicker";
+import { useGitStatus } from "../../hooks/use-git-status";
+import { useGitActions, GIT_ACTIONS } from "../../hooks/use-git-actions";
+import { useClickOutside } from "../../hooks/use-click-outside";
+import { buildChangeTree, getNodeFiles } from "../../lib/git-tree";
+import type { TreeNode } from "../../lib/git-tree";
 import type { TabContentProps } from "../types";
-
-type GitAction = "fetch" | "pull" | "pull_rebase" | "push" | "force_push";
-
-const GIT_ACTIONS: { key: GitAction; label: string; command: string }[] = [
-  { key: "fetch", label: "Fetch", command: "git_fetch" },
-  { key: "pull", label: "Pull", command: "git_pull" },
-  { key: "pull_rebase", label: "Pull (Rebase)", command: "git_pull_rebase" },
-  { key: "push", label: "Push", command: "git_push" },
-  { key: "force_push", label: "Force Push", command: "git_force_push" },
-];
-
-export interface GitFileChange {
-  path: string;
-  status: string;
-  staged: boolean;
-  additions: number;
-  deletions: number;
-}
-
-interface GitStatusInfo {
-  changes: GitFileChange[];
-  branch: string | null;
-  remoteBranch: string | null;
-  lastCommitMessage: string | null;
-  hasRemote: boolean;
-  isRepo: boolean;
-}
-
-export interface TreeNode {
-  name: string;
-  path: string;
-  isDir: boolean;
-  children: TreeNode[];
-  change?: GitFileChange;
-}
-
-interface TrieNode {
-  children: Map<string, TrieNode>;
-  isFile: boolean;
-  change?: GitFileChange;
-}
-
-function buildChangeTree(changes: GitFileChange[]): TreeNode[] {
-  if (changes.length === 0) return [];
-
-  const root = new Map<string, TrieNode>();
-
-  for (const change of changes) {
-    const parts = change.path.split("/");
-    let current = root;
-
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      if (!current.has(part)) {
-        current.set(part, {
-          children: new Map(),
-          isFile: i === parts.length - 1,
-          change: i === parts.length - 1 ? change : undefined,
-        });
-      }
-      current = current.get(part)!.children;
-    }
-  }
-
-  function convert(map: Map<string, TrieNode>): TreeNode[] {
-    const nodes: TreeNode[] = [];
-
-    for (const [name, data] of map) {
-      if (data.isFile) {
-        nodes.push({
-          name,
-          path: data.change!.path,
-          isDir: false,
-          children: [],
-          change: data.change,
-        });
-      } else {
-        let collapsedName = name;
-        let currentData = data;
-
-        while (currentData.children.size === 1) {
-          const entry = currentData.children.entries().next();
-          if (entry.done) break;
-          const [childName, childData] = entry.value;
-          if (childData.isFile) break;
-          collapsedName += "/" + childName;
-          currentData = childData;
-        }
-
-        const children = convert(currentData.children);
-        nodes.push({
-          name: collapsedName,
-          path: collapsedName,
-          isDir: true,
-          children,
-        });
-      }
-    }
-
-    nodes.sort((a, b) => {
-      if (a.isDir && !b.isDir) return -1;
-      if (!a.isDir && b.isDir) return 1;
-      return a.name.localeCompare(b.name);
-    });
-
-    return nodes;
-  }
-
-  return convert(root);
-}
-
-function getNodeFiles(node: TreeNode): GitFileChange[] {
-  if (!node.isDir && node.change) return [node.change];
-  return node.children.flatMap(getNodeFiles);
-}
 
 export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeIndex = useWorkspaceStore((s) => s.activeIndex);
   const activeWorkspace =
     activeIndex !== null ? workspaces[activeIndex] : null;
+  const workspacePath = activeWorkspace?.path ?? null;
 
-  const [status, setStatus] = useState<GitStatusInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { status, loading, error, setError, refresh } =
+    useGitStatus(workspacePath);
+  const {
+    activeAction,
+    actionRunning,
+    actionDone,
+    currentAction,
+    handleRunAction,
+  } = useGitActions(workspacePath, refresh, setError);
+
   const [commitMessage, setCommitMessage] = useState("");
   const [committing, setCommitting] = useState(false);
   const [showBranchPicker, setShowBranchPicker] = useState(false);
-  const [activeAction, setActiveAction] = useState<GitAction>("fetch");
-  const [actionRunning, setActionRunning] = useState(false);
-  const [actionDone, setActionDone] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const branchBarRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
-  const currentAction = useMemo(
-    () => GIT_ACTIONS.find((a) => a.key === activeAction)!,
-    [activeAction],
+  useClickOutside(
+    actionMenuRef,
+    () => setShowActionMenu(false),
+    showActionMenu,
   );
 
-  const refresh = useCallback(async () => {
-    if (!activeWorkspace) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await invoke<GitStatusInfo>("get_git_status", {
-        path: activeWorkspace.path,
-      });
-      setStatus(result);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [activeWorkspace]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  // File system watcher: instant updates on any file or git change
-  useEffect(() => {
-    if (!activeWorkspace) return;
-
-    invoke("watch_workspace", { path: activeWorkspace.path });
-
-    const unlisten = listen("git-changed", () => {
-      refresh();
-    });
-
-    return () => {
-      unlisten.then((fn) => fn());
-      invoke("unwatch_workspace");
-    };
-  }, [activeWorkspace, refresh]);
-
   const handleStageAll = useCallback(async () => {
-    if (!activeWorkspace) return;
+    if (!workspacePath) return;
     try {
-      await invoke("git_stage_all", { path: activeWorkspace.path });
+      await invoke("git_stage_all", { path: workspacePath });
       refresh();
     } catch (e) {
       setError(String(e));
     }
-  }, [activeWorkspace, refresh]);
+  }, [workspacePath, refresh, setError]);
 
   const handleUnstageAll = useCallback(async () => {
-    if (!activeWorkspace || !status) return;
+    if (!workspacePath || !status) return;
     try {
       const stagedFiles = status.changes
         .filter((c) => c.staged)
         .map((c) => c.path);
       if (stagedFiles.length > 0) {
         await invoke("git_unstage", {
-          path: activeWorkspace.path,
+          path: workspacePath,
           files: stagedFiles,
         });
         refresh();
@@ -216,36 +75,36 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     } catch (e) {
       setError(String(e));
     }
-  }, [activeWorkspace, status, refresh]);
+  }, [workspacePath, status, refresh, setError]);
 
   const handleToggleStage = useCallback(
     async (node: TreeNode) => {
-      if (!activeWorkspace) return;
+      if (!workspacePath) return;
       const files = getNodeFiles(node).map((f) => f.path);
       const allStaged = getNodeFiles(node).every((f) => f.staged);
       try {
         if (allStaged) {
           await invoke("git_unstage", {
-            path: activeWorkspace.path,
+            path: workspacePath,
             files,
           });
         } else {
-          await invoke("git_stage", { path: activeWorkspace.path, files });
+          await invoke("git_stage", { path: workspacePath, files });
         }
         refresh();
       } catch (e) {
         setError(String(e));
       }
     },
-    [activeWorkspace, refresh],
+    [workspacePath, refresh, setError],
   );
 
   const handleCommit = useCallback(async () => {
-    if (!activeWorkspace || !commitMessage.trim()) return;
+    if (!workspacePath || !commitMessage.trim()) return;
     setCommitting(true);
     try {
       await invoke("git_commit", {
-        path: activeWorkspace.path,
+        path: workspacePath,
         message: commitMessage,
       });
       setCommitMessage("");
@@ -255,52 +114,17 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     } finally {
       setCommitting(false);
     }
-  }, [activeWorkspace, commitMessage, refresh]);
-
-  const handleRunAction = useCallback(
-    async (action?: GitAction) => {
-      if (!activeWorkspace || actionRunning) return;
-      const act = GIT_ACTIONS.find((a) => a.key === (action ?? activeAction))!;
-      if (action) setActiveAction(action);
-      setActionRunning(true);
-      try {
-        await invoke(act.command, { path: activeWorkspace.path });
-        refresh();
-        setActionDone(true);
-        setTimeout(() => setActionDone(false), 2000);
-      } catch (e) {
-        setError(String(e));
-      } finally {
-        setActionRunning(false);
-      }
-    },
-    [activeWorkspace, refresh, actionRunning, activeAction],
-  );
-
-  // Close action menu on outside click
-  useEffect(() => {
-    if (!showActionMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        actionMenuRef.current &&
-        !actionMenuRef.current.contains(e.target as Node)
-      ) {
-        setShowActionMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showActionMenu]);
+  }, [workspacePath, commitMessage, refresh, setError]);
 
   const handleInit = useCallback(async () => {
-    if (!activeWorkspace) return;
+    if (!workspacePath) return;
     try {
-      await invoke("git_init", { path: activeWorkspace.path });
+      await invoke("git_init", { path: workspacePath });
       refresh();
     } catch (e) {
       setError(String(e));
     }
-  }, [activeWorkspace, refresh]);
+  }, [workspacePath, refresh, setError]);
 
   if (!activeWorkspace) {
     return (

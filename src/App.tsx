@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { ProjectBar } from "./components/layout/ProjectBar";
 import { StatusBar } from "./components/layout/StatusBar";
 import { EmptyState } from "./components/layout/EmptyState";
@@ -11,6 +11,8 @@ import "./globals.css";
 
 function App() {
   const layout = useLayoutStore((s) => s.layout);
+  const setWorkspace = useLayoutStore((s) => s.setWorkspace);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeIndex = useWorkspaceStore((s) => s.activeIndex);
   const ready = useWorkspaceStore((s) => s.ready);
   const init = useWorkspaceStore((s) => s.init);
@@ -18,6 +20,14 @@ function App() {
   useEffect(() => {
     init();
   }, [init]);
+
+  // Sync active workspace path to layout store
+  useLayoutEffect(() => {
+    if (!ready) return;
+    const path =
+      activeIndex !== null ? workspaces[activeIndex]?.path ?? null : null;
+    setWorkspace(path);
+  }, [ready, activeIndex, workspaces, setWorkspace]);
 
   if (!ready) return null;
 

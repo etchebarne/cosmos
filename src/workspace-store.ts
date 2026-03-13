@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { load, type Store } from "@tauri-apps/plugin-store";
-import { useLayoutStore } from "./store";
 
 const WORKSPACE_COLORS = [
   "#4B8EF5",
@@ -34,10 +33,6 @@ function nameFromPath(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? "workspace";
 }
 
-function getActivePath(workspaces: Workspace[], index: number | null): string | null {
-  return index !== null ? workspaces[index]?.path ?? null : null;
-}
-
 let store: Store | null = null;
 
 async function getStore() {
@@ -63,7 +58,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const workspaces = (await s.get<Workspace[]>("workspaces")) ?? [];
     const activeIndex = (await s.get<number>("activeIndex")) ?? null;
     set({ workspaces, activeIndex, ready: true });
-    useLayoutStore.getState().setWorkspace(getActivePath(workspaces, activeIndex));
   },
 
   openWorkspace: async (path: string) => {
@@ -73,7 +67,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (existing !== -1) {
       persist(state.workspaces, existing);
       set({ activeIndex: existing });
-      useLayoutStore.getState().setWorkspace(path);
       return;
     }
 
@@ -83,7 +76,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const activeIndex = workspaces.length - 1;
     persist(workspaces, activeIndex);
     set({ workspaces, activeIndex });
-    useLayoutStore.getState().setWorkspace(path);
   },
 
   switchWorkspace: async (index: number) => {
@@ -91,7 +83,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (index < 0 || index >= state.workspaces.length) return;
     persist(state.workspaces, index);
     set({ activeIndex: index });
-    useLayoutStore.getState().setWorkspace(state.workspaces[index].path);
   },
 
   closeWorkspace: async (index: number) => {
@@ -111,6 +102,5 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
     persist(workspaces, activeIndex);
     set({ workspaces, activeIndex });
-    useLayoutStore.getState().setWorkspace(getActivePath(workspaces, activeIndex));
   },
 }));

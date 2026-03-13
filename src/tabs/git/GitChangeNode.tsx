@@ -6,7 +6,8 @@ import {
   Folder02Icon,
   File01Icon,
 } from "@hugeicons/core-free-icons";
-import type { TreeNode, GitFileChange } from "./GitTab";
+import { getNodeFiles } from "../../lib/git-tree";
+import type { TreeNode } from "../../lib/git-tree";
 
 interface GitChangeNodeProps {
   node: TreeNode;
@@ -16,11 +17,6 @@ interface GitChangeNodeProps {
 
 const INDENT_SIZE = 16;
 const LEFT_PAD = 8;
-
-function getNodeFiles(node: TreeNode): GitFileChange[] {
-  if (!node.isDir && node.change) return [node.change];
-  return node.children.flatMap(getNodeFiles);
-}
 
 function getFileIconColor(status: string): string {
   switch (status) {

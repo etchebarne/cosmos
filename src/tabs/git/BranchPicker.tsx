@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitBranchIcon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { ScrollArea } from "../../components/shared/ScrollArea";
+import { useClickOutside } from "../../hooks/use-click-outside";
 
 interface GitBranchInfo {
   name: string;
@@ -38,16 +39,7 @@ export function BranchPicker({
       .finally(() => setLoading(false));
   }, [workspacePath]);
 
-  // Close on outside click
-  useEffect(() => {
-    const handle = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, [onClose]);
+  useClickOutside(ref, onClose);
 
   // Close on Escape
   useEffect(() => {
