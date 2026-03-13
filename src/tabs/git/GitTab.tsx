@@ -401,9 +401,9 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
         {/* Commit input */}
         <div className="px-3 py-2">
           <textarea
-            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-secondary)] px-2.5 py-1.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-y min-h-[32px] max-h-[120px] focus:outline-none focus:border-[var(--color-accent-blue)]"
+            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-secondary)] px-2.5 py-1.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:border-[var(--color-accent-blue)]"
             placeholder="Enter commit message"
-            rows={1}
+            rows={3}
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
             onKeyDown={(e) => {
