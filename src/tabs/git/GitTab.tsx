@@ -390,7 +390,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
         )}
 
         {/* Commit input */}
-        <div className="px-3 py-2">
+        <div className="px-3 pt-2 pb-1">
           <textarea
             className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-secondary)] px-2.5 py-1.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:border-[var(--color-accent-blue)]"
             placeholder="Enter commit message"
@@ -406,7 +406,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
         </div>
 
         {/* Commit button */}
-        <div className="flex items-center justify-end px-3 py-1.5 border-t border-[var(--color-border-primary)]">
+        <div className="flex items-center justify-end px-3 pt-0 pb-1.5">
           <div className="flex items-center">
             <button
               className="flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -414,13 +414,6 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
               disabled={committing || !commitMessage.trim() || stagedCount === 0}
             >
               Commit Tracked
-            </button>
-            <button className="flex items-center px-1.5 py-1 bg-[var(--color-bg-elevated)] border border-l-0 border-[var(--color-border-secondary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer">
-              <HugeiconsIcon
-                icon={ArrowDown01Icon}
-                size={12}
-                className="text-[var(--color-text-tertiary)]"
-              />
             </button>
           </div>
         </div>
