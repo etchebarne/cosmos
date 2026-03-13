@@ -161,7 +161,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
           This workspace is not a git repository
         </p>
         <button
-          className="px-3 py-1.5 text-xs text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer"
+          className="px-3 py-1.5 text-xs text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer rounded-none"
           onClick={handleInit}
         >
           Initialize Git
@@ -210,7 +210,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
             {tracked.length > 0 && (
               <>
                 <div className="px-3 py-1">
-                  <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase tracking-wider">
+                  <span className="text-[11px] font-medium text-[var(--color-text-tertiary)] uppercase tracking-wider">
                     Tracked
                   </span>
                 </div>
@@ -227,7 +227,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
             {untracked.length > 0 && (
               <>
                 <div className="px-3 py-1 mt-2">
-                  <span className="text-[11px] text-[var(--color-text-tertiary)] uppercase tracking-wider">
+                  <span className="text-[11px] font-medium text-[var(--color-text-tertiary)] uppercase tracking-wider">
                     Untracked
                   </span>
                 </div>
@@ -246,61 +246,63 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
       </ScrollArea>
 
       {/* Bottom section */}
-      <div className="border-t border-[var(--color-border-primary)]">
+      <div className="border-t border-[var(--color-border-primary)] bg-[var(--color-bg-page)]">
         {/* Branch bar */}
         <div
           ref={branchBarRef}
-          className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)]"
+          className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--color-border-primary)]"
         >
           <button
-            className="flex items-center gap-2 min-w-0 hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer px-1 py-0.5 -mx-1"
+            className="flex items-center gap-1.5 min-w-0 hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer px-1.5 py-1 -mx-1.5 rounded-none group"
             onClick={() => setShowBranchPicker((v) => !v)}
           >
             <HugeiconsIcon
               icon={GitBranchIcon}
-              size={12}
+              size={14}
               className="text-[var(--color-status-green)] shrink-0"
             />
-            <span className="text-[11px] text-[var(--color-text-secondary)] truncate">
+            <span className="text-xs text-[var(--color-text-primary)] truncate font-medium group-hover:text-[var(--color-accent-blue)] transition-colors">
               {status?.remoteBranch
                 ? status.remoteBranch.replace(/\//, " / ")
                 : status?.branch ?? "\u2014"}
             </span>
             <HugeiconsIcon
               icon={ArrowDown01Icon}
-              size={10}
+              size={12}
               className="text-[var(--color-text-tertiary)] shrink-0"
             />
           </button>
-          <div className="flex-1" />
+          
           <div className="relative flex items-center" ref={actionMenuRef}>
-            <button
-              className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => handleRunAction()}
-              disabled={actionRunning || !status?.hasRemote}
-            >
-              <HugeiconsIcon
-                icon={actionDone ? Tick02Icon : actionRunning ? Loading03Icon : ArrowReloadHorizontalIcon}
-                size={12}
-                className={`${actionDone ? "text-[var(--color-status-green)]" : ""} ${actionRunning ? "animate-spin" : ""}`}
-              />
-              {currentAction.label}
-            </button>
-            <button
-              className="flex items-center px-1 py-0.5 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => setShowActionMenu((v) => !v)}
-              disabled={!status?.hasRemote}
-            >
-              <HugeiconsIcon icon={ArrowDown01Icon} size={10} />
-            </button>
+            <div className="flex bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] rounded-none overflow-hidden">
+              <button
+                className="flex items-center gap-1.5 px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-none border-r border-[var(--color-border-secondary)]"
+                onClick={() => handleRunAction()}
+                disabled={actionRunning || !status?.hasRemote}
+              >
+                <HugeiconsIcon
+                  icon={actionDone ? Tick02Icon : actionRunning ? Loading03Icon : ArrowReloadHorizontalIcon}
+                  size={12}
+                  className={`${actionDone ? "text-[var(--color-status-green)]" : ""} ${actionRunning ? "animate-spin" : ""}`}
+                />
+                <span className="font-medium">{currentAction.label}</span>
+              </button>
+              <button
+                className="flex items-center px-1 py-0.5 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-none"
+                onClick={() => setShowActionMenu((v) => !v)}
+                disabled={!status?.hasRemote}
+              >
+                <HugeiconsIcon icon={ArrowDown01Icon} size={12} />
+              </button>
+            </div>
             {showActionMenu && (
               <div className="absolute bottom-full right-0 mb-1 min-w-[140px] bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] shadow-lg z-50">
                 {GIT_ACTIONS.map((action) => (
                   <button
                     key={action.key}
-                    className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
+                    className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer rounded-none ${
                       action.key === activeAction
-                        ? "text-[var(--color-text-primary)] bg-[var(--color-bg-surface)]"
+                        ? "text-[var(--color-text-primary)] bg-[var(--color-bg-surface)] font-medium"
                         : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-text-primary)]"
                     }`}
                     onClick={() => {
@@ -325,10 +327,10 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
         )}
 
         {/* Commit input */}
-        <div className="px-3 pt-2 pb-1">
+        <div className="p-3">
           <textarea
-            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-secondary)] px-2.5 py-1.5 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:border-[var(--color-accent-blue)]"
-            placeholder="Enter commit message"
+            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-secondary)] px-3 py-2.5 text-[13px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:border-[var(--color-accent-blue)] focus:ring-1 focus:ring-[var(--color-accent-blue)] rounded-none transition-all"
+            placeholder="Commit message (Cmd+Enter to commit)"
             rows={3}
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
@@ -338,13 +340,9 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
               }
             }}
           />
-        </div>
-
-        {/* Commit button */}
-        <div className="flex items-center justify-end px-3 pt-0 pb-1.5">
-          <div className="flex items-center">
+          <div className="flex items-center justify-end mt-2">
             <button
-              className="flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] text-[11px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-none"
               onClick={handleCommit}
               disabled={committing || !commitMessage.trim() || stagedCount === 0}
             >
@@ -355,18 +353,19 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
 
         {/* Last commit */}
         {status?.lastCommitMessage && (
-          <div className="flex items-center gap-2 px-3 py-1.5 border-t border-[var(--color-border-primary)] bg-[var(--color-bg-page)]">
-            <span className="text-[11px] text-[var(--color-text-tertiary)] truncate flex-1">
+          <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--color-border-primary)] bg-[var(--color-bg-elevated)]">
+            <span className="text-[11px] text-[var(--color-text-tertiary)] truncate flex-1 font-mono">
               {status.lastCommitMessage}
             </span>
             <button
-              className="shrink-0 p-0.5 hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer"
+              className="shrink-0 p-1 hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer rounded-none group"
               onClick={refresh}
+              title="Refresh Git Status"
             >
               <HugeiconsIcon
                 icon={ArrowReloadHorizontalIcon}
-                size={12}
-                className="text-[var(--color-text-tertiary)]"
+                size={14}
+                className="text-[var(--color-text-tertiary)] group-hover:text-[var(--color-text-primary)] transition-colors"
               />
             </button>
           </div>

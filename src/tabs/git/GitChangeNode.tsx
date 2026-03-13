@@ -53,17 +53,17 @@ function Checkbox({
 }) {
   return (
     <button
-      className="w-[14px] h-[14px] border border-[var(--color-border-secondary)] flex items-center justify-center shrink-0 cursor-pointer hover:border-[var(--color-accent-blue)] transition-colors"
+      className="w-3.5 h-3.5 border border-[var(--color-border-secondary)] rounded-none flex items-center justify-center shrink-0 cursor-pointer hover:border-[var(--color-accent-blue)] transition-colors focus:outline-none focus:border-[var(--color-accent-blue)]"
       onClick={(e) => {
         e.stopPropagation();
         onClick();
       }}
     >
       {state === "checked" && (
-        <span className="w-2 h-2 bg-[var(--color-accent-blue)]" />
+        <span className="w-2 h-2 bg-[var(--color-accent-blue)] rounded-none" />
       )}
       {state === "indeterminate" && (
-        <span className="w-2 h-0.5 bg-[var(--color-accent-blue)]" />
+        <span className="w-2 h-0.5 bg-[var(--color-accent-blue)] rounded-none" />
       )}
     </button>
   );
@@ -86,7 +86,7 @@ export function GitChangeNode({
   return (
     <div>
       <div
-        className="relative flex items-center w-full h-[28px] gap-1.5 text-left hover:bg-[var(--color-bg-elevated)] transition-colors select-none cursor-pointer group"
+        className="relative flex items-center w-full h-[28px] gap-1.5 text-left hover:bg-[var(--color-bg-elevated)] focus-within:bg-[var(--color-bg-elevated)] transition-colors select-none cursor-pointer group"
         style={{ paddingLeft: LEFT_PAD + depth * INDENT_SIZE }}
         onClick={() => {
           if (node.isDir) setExpanded((prev) => !prev);

@@ -114,7 +114,7 @@ export function BranchPicker({
   return (
     <div
       ref={ref}
-      className="fixed z-50 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-lg flex flex-col"
+      className="fixed z-50 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-lg flex flex-col rounded-none overflow-hidden"
       style={{
         bottom: position.bottom,
         left: position.left,
@@ -123,8 +123,8 @@ export function BranchPicker({
       }}
     >
       {/* Header */}
-      <div className="px-3 py-2 border-b border-[var(--color-border-primary)]">
-        <span className="text-xs text-[var(--color-text-primary)]">
+      <div className="px-3 py-2 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-surface)]">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">
           Branches
         </span>
       </div>
@@ -144,14 +144,14 @@ export function BranchPicker({
             {filtered.map((branch) => (
               <div
                 key={branch.name}
-                className={`group flex items-center hover:bg-[var(--color-bg-input)] transition-colors ${
+                className={`group flex items-center hover:bg-[var(--color-bg-input)] transition-colors border-l-2 ${
                   branch.isCurrent
-                    ? "border-l-2 border-l-[var(--color-accent-blue)] bg-[var(--color-bg-surface)]"
-                    : ""
+                    ? "border-l-[var(--color-accent-blue)] bg-[var(--color-bg-surface)]"
+                    : "border-l-transparent"
                 }`}
               >
                 <button
-                  className="flex-1 min-w-0 text-left px-3 py-1.5 flex items-center gap-2 cursor-pointer"
+                  className="flex-1 min-w-0 text-left px-3 py-2 flex items-center gap-2.5 cursor-pointer outline-none focus:bg-[var(--color-bg-input)] rounded-none"
                   onClick={() => handleCheckout(branch)}
                   disabled={switching !== null}
                 >
@@ -168,7 +168,7 @@ export function BranchPicker({
                   />
                   <div className="flex flex-col min-w-0 flex-1">
                     <span
-                      className={`text-xs truncate ${
+                      className={`text-[12px] truncate ${
                         branch.isCurrent
                           ? "text-[var(--color-accent-blue)]"
                           : "text-[var(--color-text-primary)]"
@@ -177,7 +177,7 @@ export function BranchPicker({
                       {branch.name}
                     </span>
                     {branch.lastCommitDate && (
-                      <span className="text-[10px] text-[var(--color-text-tertiary)]">
+                      <span className="text-[10px] text-[var(--color-text-tertiary)] mt-0.5">
                         {branch.lastCommitDate}
                       </span>
                     )}
@@ -190,7 +190,7 @@ export function BranchPicker({
                 </button>
                 {!branch.isCurrent && !branch.isRemote && (
                   <button
-                    className="shrink-0 p-2 mr-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-status-red)] transition-colors cursor-pointer"
+                    className="shrink-0 p-2 mr-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-status-red)] transition-colors cursor-pointer rounded-none"
                     onClick={() => handleDelete(branch)}
                     title={`Delete ${branch.name}`}
                   >
