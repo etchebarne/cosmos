@@ -85,6 +85,8 @@ pub struct GitStatusInfo {
     branch: Option<String>,
     remote_branch: Option<String>,
     last_commit_message: Option<String>,
+    has_remote: bool,
+    is_repo: bool,
 }
 
 #[tauri::command]
@@ -94,9 +96,25 @@ pub fn get_git_status(path: &str) -> Result<GitStatusInfo, String> {
         return Err("Directory does not exist".to_string());
     }
 
+    // Check if this is a git repository
+    let is_repo = run_git(dir, &["rev-parse", "--is-inside-work-tree"])?
+        .is_some_and(|s| s.trim() == "true");
+
+    if !is_repo {
+        return Ok(GitStatusInfo {
+            changes: Vec::new(),
+            branch: None,
+            remote_branch: None,
+            last_commit_message: None,
+            has_remote: false,
+            is_repo: false,
+        });
+    }
+
     let branch = run_git(dir, &["rev-parse", "--abbrev-ref", "HEAD"])?;
     let remote_branch = run_git(dir, &["rev-parse", "--abbrev-ref", "@{upstream}"])?;
     let last_commit_message = run_git(dir, &["log", "-1", "--pretty=%s"])?;
+    let has_remote = run_git(dir, &["remote"])?.is_some_and(|s| !s.trim().is_empty());
 
     let status_output = run_git(dir, &["status", "--porcelain", "-uall"])?;
 
@@ -175,6 +193,8 @@ pub fn get_git_status(path: &str) -> Result<GitStatusInfo, String> {
         branch,
         remote_branch,
         last_commit_message,
+        has_remote,
+        is_repo: true,
     })
 }
 
@@ -280,9 +300,39 @@ pub fn git_delete_branch(path: &str, branch: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn git_init(path: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["init", "-b", "main"])
+}
+
+#[tauri::command]
 pub fn git_fetch(path: &str) -> Result<(), String> {
     let dir = Path::new(path);
     run_git_strict(dir, &["fetch"])
+}
+
+#[tauri::command]
+pub fn git_pull(path: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["pull"])
+}
+
+#[tauri::command]
+pub fn git_pull_rebase(path: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["pull", "--rebase"])
+}
+
+#[tauri::command]
+pub fn git_push(path: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["push"])
+}
+
+#[tauri::command]
+pub fn git_force_push(path: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["push", "--force-with-lease"])
 }
 
 #[tauri::command]

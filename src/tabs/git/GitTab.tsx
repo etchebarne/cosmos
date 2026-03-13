@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -15,6 +15,16 @@ import { ScrollArea } from "../../components/shared/ScrollArea";
 import { BranchPicker } from "./BranchPicker";
 import type { TabContentProps } from "../types";
 
+type GitAction = "fetch" | "pull" | "pull_rebase" | "push" | "force_push";
+
+const GIT_ACTIONS: { key: GitAction; label: string; command: string }[] = [
+  { key: "fetch", label: "Fetch", command: "git_fetch" },
+  { key: "pull", label: "Pull", command: "git_pull" },
+  { key: "pull_rebase", label: "Pull (Rebase)", command: "git_pull_rebase" },
+  { key: "push", label: "Push", command: "git_push" },
+  { key: "force_push", label: "Force Push", command: "git_force_push" },
+];
+
 export interface GitFileChange {
   path: string;
   status: string;
@@ -28,6 +38,8 @@ interface GitStatusInfo {
   branch: string | null;
   remoteBranch: string | null;
   lastCommitMessage: string | null;
+  hasRemote: boolean;
+  isRepo: boolean;
 }
 
 export interface TreeNode {
@@ -130,9 +142,17 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [commitMessage, setCommitMessage] = useState("");
   const [committing, setCommitting] = useState(false);
   const [showBranchPicker, setShowBranchPicker] = useState(false);
-  const [fetching, setFetching] = useState(false);
-  const [fetchDone, setFetchDone] = useState(false);
+  const [activeAction, setActiveAction] = useState<GitAction>("fetch");
+  const [actionRunning, setActionRunning] = useState(false);
+  const [actionDone, setActionDone] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
   const branchBarRef = useRef<HTMLDivElement>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  const currentAction = useMemo(
+    () => GIT_ACTIONS.find((a) => a.key === activeAction)!,
+    [activeAction],
+  );
 
   const refresh = useCallback(async () => {
     if (!activeWorkspace) return;
@@ -237,20 +257,50 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     }
   }, [activeWorkspace, commitMessage, refresh]);
 
-  const handleFetch = useCallback(async () => {
-    if (!activeWorkspace || fetching) return;
-    setFetching(true);
+  const handleRunAction = useCallback(
+    async (action?: GitAction) => {
+      if (!activeWorkspace || actionRunning) return;
+      const act = GIT_ACTIONS.find((a) => a.key === (action ?? activeAction))!;
+      if (action) setActiveAction(action);
+      setActionRunning(true);
+      try {
+        await invoke(act.command, { path: activeWorkspace.path });
+        refresh();
+        setActionDone(true);
+        setTimeout(() => setActionDone(false), 2000);
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setActionRunning(false);
+      }
+    },
+    [activeWorkspace, refresh, actionRunning, activeAction],
+  );
+
+  // Close action menu on outside click
+  useEffect(() => {
+    if (!showActionMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowActionMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showActionMenu]);
+
+  const handleInit = useCallback(async () => {
+    if (!activeWorkspace) return;
     try {
-      await invoke("git_fetch", { path: activeWorkspace.path });
+      await invoke("git_init", { path: activeWorkspace.path });
       refresh();
-      setFetchDone(true);
-      setTimeout(() => setFetchDone(false), 2000);
     } catch (e) {
       setError(String(e));
-    } finally {
-      setFetching(false);
     }
-  }, [activeWorkspace, refresh, fetching]);
+  }, [activeWorkspace, refresh]);
 
   if (!activeWorkspace) {
     return (
@@ -276,6 +326,22 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-xs text-[var(--color-status-red)]">{error}</p>
+      </div>
+    );
+  }
+
+  if (status && !status.isRepo) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 font-ui">
+        <p className="text-xs text-[var(--color-text-muted)]">
+          This workspace is not a git repository
+        </p>
+        <button
+          className="px-3 py-1.5 text-xs text-[var(--color-text-primary)] bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer"
+          onClick={handleInit}
+        >
+          Initialize Git
+        </button>
       </div>
     );
   }
@@ -383,18 +449,47 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
             />
           </button>
           <div className="flex-1" />
-          <button
-            className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleFetch}
-            disabled={fetching}
-          >
-            <HugeiconsIcon
-              icon={fetchDone ? Tick02Icon : fetching ? Loading03Icon : ArrowReloadHorizontalIcon}
-              size={12}
-              className={`${fetchDone ? "text-[var(--color-status-green)]" : ""} ${fetching ? "animate-spin" : ""}`}
-            />
-            Fetch
-          </button>
+          <div className="relative flex items-center" ref={actionMenuRef}>
+            <button
+              className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handleRunAction()}
+              disabled={actionRunning || !status?.hasRemote}
+            >
+              <HugeiconsIcon
+                icon={actionDone ? Tick02Icon : actionRunning ? Loading03Icon : ArrowReloadHorizontalIcon}
+                size={12}
+                className={`${actionDone ? "text-[var(--color-status-green)]" : ""} ${actionRunning ? "animate-spin" : ""}`}
+              />
+              {currentAction.label}
+            </button>
+            <button
+              className="flex items-center px-1 py-0.5 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setShowActionMenu((v) => !v)}
+              disabled={!status?.hasRemote}
+            >
+              <HugeiconsIcon icon={ArrowDown01Icon} size={10} />
+            </button>
+            {showActionMenu && (
+              <div className="absolute bottom-full right-0 mb-1 min-w-[140px] bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] shadow-lg z-50">
+                {GIT_ACTIONS.map((action) => (
+                  <button
+                    key={action.key}
+                    className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors cursor-pointer ${
+                      action.key === activeAction
+                        ? "text-[var(--color-text-primary)] bg-[var(--color-bg-surface)]"
+                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-surface)] hover:text-[var(--color-text-primary)]"
+                    }`}
+                    onClick={() => {
+                      setShowActionMenu(false);
+                      handleRunAction(action.key);
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         {showBranchPicker && activeWorkspace && (
           <BranchPicker

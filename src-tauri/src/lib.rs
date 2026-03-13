@@ -23,7 +23,12 @@ pub fn run() {
             git::git_list_branches,
             git::git_checkout,
             git::git_delete_branch,
+            git::git_init,
             git::git_fetch,
+            git::git_pull,
+            git::git_pull_rebase,
+            git::git_push,
+            git::git_force_push,
             git::watch_workspace,
             git::unwatch_workspace,
         ])
