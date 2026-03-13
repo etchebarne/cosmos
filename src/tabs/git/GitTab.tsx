@@ -6,6 +6,8 @@ import {
   GitBranchIcon,
   ArrowDown01Icon,
   ArrowReloadHorizontalIcon,
+  Tick02Icon,
+  Loading03Icon,
 } from "@hugeicons/core-free-icons";
 import { useWorkspaceStore } from "../../workspace-store";
 import { GitChangeNode } from "./GitChangeNode";
@@ -128,6 +130,8 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [commitMessage, setCommitMessage] = useState("");
   const [committing, setCommitting] = useState(false);
   const [showBranchPicker, setShowBranchPicker] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [fetchDone, setFetchDone] = useState(false);
   const branchBarRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
@@ -234,14 +238,19 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   }, [activeWorkspace, commitMessage, refresh]);
 
   const handleFetch = useCallback(async () => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace || fetching) return;
+    setFetching(true);
     try {
       await invoke("git_fetch", { path: activeWorkspace.path });
       refresh();
+      setFetchDone(true);
+      setTimeout(() => setFetchDone(false), 2000);
     } catch (e) {
       setError(String(e));
+    } finally {
+      setFetching(false);
     }
-  }, [activeWorkspace, refresh]);
+  }, [activeWorkspace, refresh, fetching]);
 
   if (!activeWorkspace) {
     return (
@@ -375,10 +384,15 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
           </button>
           <div className="flex-1" />
           <button
-            className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleFetch}
+            disabled={fetching}
           >
-            <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={12} />
+            <HugeiconsIcon
+              icon={fetchDone ? Tick02Icon : fetching ? Loading03Icon : ArrowReloadHorizontalIcon}
+              size={12}
+              className={`${fetchDone ? "text-[var(--color-status-green)]" : ""} ${fetching ? "animate-spin" : ""}`}
+            />
             Fetch
           </button>
         </div>
