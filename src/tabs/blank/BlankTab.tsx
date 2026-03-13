@@ -8,7 +8,7 @@ export function BlankTab({ tab, paneId }: TabContentProps) {
   const definitions = getAllTabDefinitions().filter((d) => d.type !== "blank");
 
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-6">
+    <div className="@container flex flex-col items-center justify-center h-full gap-6 p-4">
       <div className="flex flex-col items-center gap-2">
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
           New Tab
@@ -22,7 +22,7 @@ export function BlankTab({ tab, paneId }: TabContentProps) {
           No tab types available
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-2 w-[320px]">
+        <div className="grid grid-cols-1 @[360px]:grid-cols-2 gap-2 w-full @[360px]:w-[320px]">
           {definitions.map((def) => (
             <button
               key={def.type}
