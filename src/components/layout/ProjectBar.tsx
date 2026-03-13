@@ -4,6 +4,7 @@ import { Search01Icon, Add01Icon } from "@hugeicons/core-free-icons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useWorkspaceStore } from "../../workspace-store";
 import { ContextMenu } from "../shared/ContextMenu";
+import { Tooltip } from "../shared/Tooltip";
 
 export function ProjectBar() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
@@ -53,19 +54,19 @@ export function ProjectBar() {
       {workspaces.map((w, i) => {
         const isActive = i === activeIndex;
         return (
-          <button
-            key={w.path}
-            title={w.path}
-            className="font-mono w-8 h-8 flex items-center justify-center text-[13px] font-bold shrink-0 hover:opacity-85"
-            style={{
-              backgroundColor: isActive ? w.color : `${w.color}40`,
-              color: isActive ? "#fff" : w.color,
-            }}
-            onClick={() => switchWorkspace(i)}
-            onContextMenu={(e) => handleContextMenu(e, i)}
-          >
-            {w.name[0].toUpperCase()}
-          </button>
+          <Tooltip key={w.path} content={w.name}>
+            <button
+              className="font-mono w-8 h-8 flex items-center justify-center text-[13px] font-bold shrink-0 hover:opacity-85"
+              style={{
+                backgroundColor: isActive ? w.color : `${w.color}40`,
+                color: isActive ? "#fff" : w.color,
+              }}
+              onClick={() => switchWorkspace(i)}
+              onContextMenu={(e) => handleContextMenu(e, i)}
+            >
+              {w.name[0].toUpperCase()}
+            </button>
+          </Tooltip>
         );
       })}
       <button
