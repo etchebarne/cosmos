@@ -323,6 +323,105 @@ pub fn git_trash_untracked(path: &str, files: Vec<String>) -> Result<(), String>
 }
 
 #[tauri::command]
+pub fn git_stash_all(path: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["stash", "--include-untracked"])
+}
+
+#[tauri::command]
+pub fn git_stash_files(path: &str, files: Vec<String>) -> Result<(), String> {
+    let dir = Path::new(path);
+    // Stage the target files, stash only those, then restore index
+    let mut args: Vec<&str> = vec!["stash", "push", "--"];
+    let refs: Vec<&str> = files.iter().map(|s| s.as_str()).collect();
+    args.extend(refs);
+    run_git_strict(dir, &args)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitStashEntry {
+    index: usize,
+    message: String,
+}
+
+#[tauri::command]
+pub fn git_stash_list(path: &str) -> Result<Vec<GitStashEntry>, String> {
+    let dir = Path::new(path);
+    let output = run_git(dir, &["stash", "list", "--format=%gs"])?;
+    let mut entries = Vec::new();
+    if let Some(text) = output {
+        for (i, line) in text.lines().enumerate() {
+            entries.push(GitStashEntry {
+                index: i,
+                message: line.to_string(),
+            });
+        }
+    }
+    Ok(entries)
+}
+
+#[tauri::command]
+pub fn git_stash_pop(path: &str, index: usize) -> Result<(), String> {
+    let dir = Path::new(path);
+    let ref_str = format!("stash@{{{}}}", index);
+    run_git_strict(dir, &["stash", "pop", &ref_str])
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitStashFile {
+    path: String,
+    status: String,
+}
+
+#[tauri::command]
+pub fn git_stash_show(path: &str, index: usize) -> Result<Vec<GitStashFile>, String> {
+    let dir = Path::new(path);
+    let ref_str = format!("stash@{{{}}}", index);
+    let output = run_git(dir, &["stash", "show", "--name-status", &ref_str])?;
+    let mut files = Vec::new();
+    if let Some(text) = output {
+        for line in text.lines() {
+            let parts: Vec<&str> = line.splitn(2, '\t').collect();
+            if parts.len() < 2 {
+                continue;
+            }
+            let status = match parts[0].trim() {
+                "A" => "added",
+                "D" => "deleted",
+                "R" => "renamed",
+                _ => "modified",
+            };
+            files.push(GitStashFile {
+                path: parts[1].trim().to_string(),
+                status: status.to_string(),
+            });
+        }
+    }
+    Ok(files)
+}
+
+#[tauri::command]
+pub fn git_stash_drop(path: &str, index: usize) -> Result<(), String> {
+    let dir = Path::new(path);
+    let ref_str = format!("stash@{{{}}}", index);
+    run_git_strict(dir, &["stash", "drop", &ref_str])
+}
+
+#[tauri::command]
+pub fn git_discard_all_tracked(path: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["checkout", "--", "."])
+}
+
+#[tauri::command]
+pub fn git_trash_all_untracked(path: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["clean", "-fd"])
+}
+
+#[tauri::command]
 pub fn git_init(path: &str) -> Result<(), String> {
     let dir = Path::new(path);
     run_git_strict(dir, &["init", "-b", "main"])

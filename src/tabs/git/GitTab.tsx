@@ -7,6 +7,7 @@ import {
   ArrowReloadHorizontalIcon,
   Tick02Icon,
   Loading03Icon,
+  MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 import { useWorkspaceStore } from "../../workspace-store";
 import { GitChangeNode } from "./GitChangeNode";
@@ -14,6 +15,7 @@ import { ScrollArea } from "../../components/shared/ScrollArea";
 import { ContextMenu } from "../../components/shared/ContextMenu";
 import type { ContextMenuItem } from "../../components/shared/ContextMenu";
 import { BranchPicker } from "./BranchPicker";
+import { StashDialog } from "./StashDialog";
 import { useGitStatus } from "../../hooks/use-git-status";
 import { useGitActions, GIT_ACTIONS } from "../../hooks/use-git-actions";
 import { useClickOutside } from "../../hooks/use-click-outside";
@@ -42,6 +44,9 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [committing, setCommitting] = useState(false);
   const [showBranchPicker, setShowBranchPicker] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showStashDialog, setShowStashDialog] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -54,6 +59,12 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     actionMenuRef,
     () => setShowActionMenu(false),
     showActionMenu,
+  );
+
+  useClickOutside(
+    moreMenuRef,
+    () => setShowMoreMenu(false),
+    showMoreMenu,
   );
 
   const handleStageAll = useCallback(async () => {
@@ -133,6 +144,50 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     }
   }, [workspacePath, refresh, setError]);
 
+  const handleStashAll = useCallback(async () => {
+    if (!workspacePath) return;
+    try {
+      await invoke("git_stash_all", { path: workspacePath });
+      refresh();
+    } catch (e) {
+      setError(String(e));
+    }
+  }, [workspacePath, refresh, setError]);
+
+  const handleStashFiles = useCallback(
+    async (node: TreeNode) => {
+      if (!workspacePath) return;
+      const files = getNodeFiles(node).map((f) => f.path);
+      try {
+        await invoke("git_stash_files", { path: workspacePath, files });
+        refresh();
+      } catch (e) {
+        setError(String(e));
+      }
+    },
+    [workspacePath, refresh, setError],
+  );
+
+  const handleDiscardAllTracked = useCallback(async () => {
+    if (!workspacePath) return;
+    try {
+      await invoke("git_discard_all_tracked", { path: workspacePath });
+      refresh();
+    } catch (e) {
+      setError(String(e));
+    }
+  }, [workspacePath, refresh, setError]);
+
+  const handleTrashAllUntracked = useCallback(async () => {
+    if (!workspacePath) return;
+    try {
+      await invoke("git_trash_all_untracked", { path: workspacePath });
+      refresh();
+    } catch (e) {
+      setError(String(e));
+    }
+  }, [workspacePath, refresh, setError]);
+
   const handleDiscard = useCallback(
     async (node: TreeNode) => {
       if (!workspacePath) return;
@@ -168,10 +223,13 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
       const isUntracked = files.every((f) => f.status === "untracked");
       const items: ContextMenuItem[] = isUntracked
         ? [{ label: "Trash", onClick: () => handleTrash(node) }]
-        : [{ label: "Discard Changes", onClick: () => handleDiscard(node) }];
+        : [
+            { label: "Stash", onClick: () => handleStashFiles(node) },
+            { label: "Discard Changes", onClick: () => handleDiscard(node) },
+          ];
       setContextMenu({ x: e.clientX, y: e.clientY, items });
     },
-    [handleDiscard, handleTrash],
+    [handleDiscard, handleTrash, handleStashFiles],
   );
 
   if (!activeWorkspace) {
@@ -235,13 +293,62 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
             ? "No Changes"
             : `${changes.length} Change${changes.length !== 1 ? "s" : ""}`}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             className="text-xs text-[var(--color-accent-blue)] hover:text-[var(--color-accent-blue-hover)] transition-colors cursor-pointer"
             onClick={allStaged ? handleUnstageAll : handleStageAll}
           >
             {allStaged ? "Unstage All" : "Stage All"}
           </button>
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              className="p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+              onClick={() => setShowMoreMenu((v) => !v)}
+            >
+              <HugeiconsIcon icon={MoreHorizontalIcon} size={14} />
+            </button>
+            {showMoreMenu && (
+              <div className="absolute top-full right-0 mt-1 min-w-[180px] py-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-lg z-50">
+                <button
+                  className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-input)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleStashAll();
+                  }}
+                >
+                  Stash All
+                </button>
+                <button
+                  className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-input)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    setShowStashDialog(true);
+                  }}
+                >
+                  View Stash
+                </button>
+                <div className="my-1 border-t border-[var(--color-border-primary)]" />
+                <button
+                  className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-input)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleDiscardAllTracked();
+                  }}
+                >
+                  Discard Tracked Changes
+                </button>
+                <button
+                  className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-input)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    handleTrashAllUntracked();
+                  }}
+                >
+                  Trash Untracked Files
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -301,6 +408,15 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
           y={contextMenu.y}
           items={contextMenu.items}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {workspacePath && (
+        <StashDialog
+          open={showStashDialog}
+          onClose={() => setShowStashDialog(false)}
+          workspacePath={workspacePath}
+          onApply={refresh}
         />
       )}
 
