@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { useWorkspaceStore } from "../../workspace-store";
+import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { FileTreeNode } from "./FileTreeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import type { TabContentProps } from "../types";
@@ -13,10 +13,7 @@ export interface DirEntry {
 }
 
 export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
-  const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const activeIndex = useWorkspaceStore((s) => s.activeIndex);
-  const activeWorkspace =
-    activeIndex !== null ? workspaces[activeIndex] : null;
+  const activeWorkspace = useActiveWorkspace();
 
   const [entries, setEntries] = useState<DirEntry[]>([]);
   const [error, setError] = useState<string | null>(null);

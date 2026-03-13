@@ -9,7 +9,7 @@ import {
   Loading03Icon,
   MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
-import { useWorkspaceStore } from "../../workspace-store";
+import { useActiveWorkspace, useIsWorkspaceActive } from "../../contexts/WorkspaceContext";
 import { GitChangeNode } from "./GitChangeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { ContextMenu } from "../../components/shared/ContextMenu";
@@ -24,14 +24,12 @@ import type { TreeNode } from "../../lib/git-tree";
 import type { TabContentProps } from "../types";
 
 export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
-  const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const activeIndex = useWorkspaceStore((s) => s.activeIndex);
-  const activeWorkspace =
-    activeIndex !== null ? workspaces[activeIndex] : null;
+  const activeWorkspace = useActiveWorkspace();
+  const isActive = useIsWorkspaceActive();
   const workspacePath = activeWorkspace?.path ?? null;
 
   const { status, loading, error, setError, refresh } =
-    useGitStatus(workspacePath);
+    useGitStatus(workspacePath, isActive);
   const {
     activeAction,
     actionRunning,

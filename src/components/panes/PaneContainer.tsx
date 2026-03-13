@@ -89,7 +89,7 @@ function SplitView({ node }: { node: Extract<PaneNode, { type: "split" }> }) {
 }
 
 function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
-  const activeTab = node.tabs.find((t) => t.id === node.activeTabId) ?? node.tabs[0];
+  const activeTabId = node.activeTabId ?? node.tabs[0]?.id;
 
   return (
     <div className="flex flex-col w-full h-full min-w-0 min-h-0">
@@ -98,7 +98,14 @@ function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
         data-pane-content={node.id}
         className="flex-1 min-h-0 bg-[var(--color-bg-page)] relative"
       >
-        {activeTab && <TabContent tab={activeTab} paneId={node.id} />}
+        {node.tabs.map((tab) => (
+          <div
+            key={tab.id}
+            className={tab.id === activeTabId ? "h-full" : "hidden"}
+          >
+            <TabContent tab={tab} paneId={node.id} />
+          </div>
+        ))}
       </ScrollArea>
     </div>
   );
