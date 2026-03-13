@@ -284,7 +284,9 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border-primary)]">
         <span className="text-xs text-[var(--color-text-primary)]">
-          {changes.length} Change{changes.length !== 1 ? "s" : ""}
+          {changes.length === 0
+            ? "No Changes"
+            : `${changes.length} Change${changes.length !== 1 ? "s" : ""}`}
         </span>
         <div className="flex items-center gap-2">
           <button
