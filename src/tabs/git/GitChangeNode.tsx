@@ -13,6 +13,7 @@ interface GitChangeNodeProps {
   node: TreeNode;
   depth: number;
   onToggleStage: (node: TreeNode) => void;
+  onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
 }
 
 const INDENT_SIZE = 16;
@@ -73,6 +74,7 @@ export function GitChangeNode({
   node,
   depth,
   onToggleStage,
+  onContextMenu,
 }: GitChangeNodeProps) {
   const [expanded, setExpanded] = useState(true);
   const checkState = getCheckState(node);
@@ -91,6 +93,7 @@ export function GitChangeNode({
         onClick={() => {
           if (node.isDir) setExpanded((prev) => !prev);
         }}
+        onContextMenu={(e) => onContextMenu(e, node)}
       >
         {/* Indent guide lines */}
         {Array.from({ length: depth }, (_, i) => (
@@ -162,6 +165,7 @@ export function GitChangeNode({
               node={child}
               depth={depth + 1}
               onToggleStage={onToggleStage}
+              onContextMenu={onContextMenu}
             />
           ))}
         </div>

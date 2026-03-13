@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, type MouseEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -11,6 +11,8 @@ import {
 import { useWorkspaceStore } from "../../workspace-store";
 import { GitChangeNode } from "./GitChangeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
+import { ContextMenu } from "../../components/shared/ContextMenu";
+import type { ContextMenuItem } from "../../components/shared/ContextMenu";
 import { BranchPicker } from "./BranchPicker";
 import { useGitStatus } from "../../hooks/use-git-status";
 import { useGitActions, GIT_ACTIONS } from "../../hooks/use-git-actions";
@@ -40,6 +42,11 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [committing, setCommitting] = useState(false);
   const [showBranchPicker, setShowBranchPicker] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    items: ContextMenuItem[];
+  } | null>(null);
   const branchBarRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
@@ -125,6 +132,47 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
       setError(String(e));
     }
   }, [workspacePath, refresh, setError]);
+
+  const handleDiscard = useCallback(
+    async (node: TreeNode) => {
+      if (!workspacePath) return;
+      const files = getNodeFiles(node).map((f) => f.path);
+      try {
+        await invoke("git_discard", { path: workspacePath, files });
+        refresh();
+      } catch (e) {
+        setError(String(e));
+      }
+    },
+    [workspacePath, refresh, setError],
+  );
+
+  const handleTrash = useCallback(
+    async (node: TreeNode) => {
+      if (!workspacePath) return;
+      const files = getNodeFiles(node).map((f) => f.path);
+      try {
+        await invoke("git_trash_untracked", { path: workspacePath, files });
+        refresh();
+      } catch (e) {
+        setError(String(e));
+      }
+    },
+    [workspacePath, refresh, setError],
+  );
+
+  const handleNodeContextMenu = useCallback(
+    (e: MouseEvent, node: TreeNode) => {
+      e.preventDefault();
+      const files = getNodeFiles(node);
+      const isUntracked = files.every((f) => f.status === "untracked");
+      const items: ContextMenuItem[] = isUntracked
+        ? [{ label: "Trash", onClick: () => handleTrash(node) }]
+        : [{ label: "Discard Changes", onClick: () => handleDiscard(node) }];
+      setContextMenu({ x: e.clientX, y: e.clientY, items });
+    },
+    [handleDiscard, handleTrash],
+  );
 
   if (!activeWorkspace) {
     return (
@@ -220,6 +268,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
                     node={node}
                     depth={0}
                     onToggleStage={handleToggleStage}
+                    onContextMenu={handleNodeContextMenu}
                   />
                 ))}
               </>
@@ -237,6 +286,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
                     node={node}
                     depth={0}
                     onToggleStage={handleToggleStage}
+                    onContextMenu={handleNodeContextMenu}
                   />
                 ))}
               </>
@@ -244,6 +294,15 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
           </div>
         )}
       </ScrollArea>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenu.items}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       {/* Bottom section */}
       <div className="border-t border-[var(--color-border-primary)] bg-[var(--color-bg-page)]">

@@ -23,6 +23,8 @@ pub fn run() {
             git::git_list_branches,
             git::git_checkout,
             git::git_delete_branch,
+            git::git_discard,
+            git::git_trash_untracked,
             git::git_init,
             git::git_fetch,
             git::git_pull,

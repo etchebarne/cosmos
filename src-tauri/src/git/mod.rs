@@ -300,6 +300,29 @@ pub fn git_delete_branch(path: &str, branch: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn git_discard(path: &str, files: Vec<String>) -> Result<(), String> {
+    let dir = Path::new(path);
+    let mut args: Vec<&str> = vec!["checkout", "--"];
+    let refs: Vec<&str> = files.iter().map(|s| s.as_str()).collect();
+    args.extend(refs);
+    run_git_strict(dir, &args)
+}
+
+#[tauri::command]
+pub fn git_trash_untracked(path: &str, files: Vec<String>) -> Result<(), String> {
+    let dir = Path::new(path);
+    for file in &files {
+        let full_path = dir.join(file);
+        if full_path.is_dir() {
+            std::fs::remove_dir_all(&full_path).map_err(|e| e.to_string())?;
+        } else {
+            std::fs::remove_file(&full_path).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn git_init(path: &str) -> Result<(), String> {
     let dir = Path::new(path);
     run_git_strict(dir, &["init", "-b", "main"])
