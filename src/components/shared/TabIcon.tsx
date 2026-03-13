@@ -11,6 +11,7 @@ interface TabIconProps {
 // Map tab icon keys to hugeicons exports
 const iconMap: Record<string, IconSvgElement> = {
   file: Icons.File01Icon,
+  code: Icons.SourceCodeIcon,
   "folder-tree": Icons.FolderTreeIcon,
   "git-branch": Icons.GitBranchIcon,
 };

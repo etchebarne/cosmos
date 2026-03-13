@@ -5,6 +5,7 @@ export interface Tab {
   type: string;
   title: string;
   icon: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PaneLeaf {

@@ -8,7 +8,12 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 
 pub struct FsWatcherState {
-    pub watcher: Mutex<Option<(notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>, PathBuf)>>,
+    pub watcher: Mutex<
+        Option<(
+            notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>,
+            PathBuf,
+        )>,
+    >,
 }
 
 fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>, String> {
@@ -23,7 +28,9 @@ fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>, String> {
         return Ok(None);
     }
 
-    let text = String::from_utf8_lossy(&output.stdout).trim_end().to_string();
+    let text = String::from_utf8_lossy(&output.stdout)
+        .trim_end()
+        .to_string();
     if text.is_empty() {
         Ok(None)
     } else {
@@ -97,8 +104,8 @@ pub fn get_git_status(path: &str) -> Result<GitStatusInfo, String> {
     }
 
     // Check if this is a git repository
-    let is_repo = run_git(dir, &["rev-parse", "--is-inside-work-tree"])?
-        .is_some_and(|s| s.trim() == "true");
+    let is_repo =
+        run_git(dir, &["rev-parse", "--is-inside-work-tree"])?.is_some_and(|s| s.trim() == "true");
 
     if !is_repo {
         return Ok(GitStatusInfo {
@@ -487,10 +494,7 @@ pub fn watch_workspace(app: AppHandle, path: String) -> Result<(), String> {
 
     debouncer
         .watcher()
-        .watch(
-            Path::new(&path),
-            notify::RecursiveMode::Recursive,
-        )
+        .watch(Path::new(&path), notify::RecursiveMode::Recursive)
         .map_err(|e| e.to_string())?;
 
     *guard = Some((debouncer, watch_path));

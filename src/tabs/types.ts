@@ -11,4 +11,5 @@ export interface TabDefinition {
   title: string;
   icon: string;
   component: ComponentType<TabContentProps>;
+  hidden?: boolean;
 }

@@ -1,11 +1,11 @@
-import { getAllTabDefinitions } from "../registry";
+import { getVisibleTabDefinitions } from "../registry";
 import { useLayoutStore } from "../../store";
 import { TabIcon } from "../../components/shared/TabIcon";
 import type { TabContentProps } from "../types";
 
 export function BlankTab({ tab, paneId }: TabContentProps) {
   const transformTab = useLayoutStore((s) => s.transformTab);
-  const definitions = getAllTabDefinitions().filter((d) => d.type !== "blank");
+  const definitions = getVisibleTabDefinitions().filter((d) => d.type !== "blank");
 
   return (
     <div className="@container flex flex-col items-center justify-center h-full gap-6 p-4">

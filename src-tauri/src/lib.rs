@@ -1,4 +1,5 @@
 mod git;
+mod lsp;
 mod tabs;
 
 use std::sync::Mutex;
@@ -12,8 +13,16 @@ pub fn run() {
         .manage(git::FsWatcherState {
             watcher: Mutex::new(None),
         })
+        .manage(lsp::LspState::default())
         .invoke_handler(tauri::generate_handler![
             tabs::file_tree::read_dir,
+            tabs::editor::read_file,
+            tabs::editor::write_file,
+            lsp::lsp_start,
+            lsp::lsp_send,
+            lsp::lsp_stop,
+            lsp::lsp_stop_workspace,
+            lsp::lsp_check_availability,
             git::get_git_branch,
             git::get_git_status,
             git::git_stage,

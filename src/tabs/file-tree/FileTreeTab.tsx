@@ -12,7 +12,7 @@ export interface DirEntry {
   extension: string | null;
 }
 
-export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
+export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
   const activeWorkspace = useActiveWorkspace();
 
   const [entries, setEntries] = useState<DirEntry[]>([]);
@@ -73,7 +73,13 @@ export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   return (
     <ScrollArea className="h-full font-ui">
       <div className="pt-1 pb-4">
-        <FileTreeNode entry={rootEntry} depth={0} defaultExpanded preloadedChildren={entries} />
+        <FileTreeNode
+          entry={rootEntry}
+          depth={0}
+          paneId={paneId}
+          defaultExpanded
+          preloadedChildren={entries}
+        />
       </div>
     </ScrollArea>
   );

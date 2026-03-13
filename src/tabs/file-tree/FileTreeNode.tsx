@@ -16,11 +16,13 @@ import {
   FileTerminalIcon,
   Configuration01Icon,
 } from "@hugeicons/core-free-icons";
+import { useLayoutStore } from "../../store";
 import type { DirEntry } from "./FileTreeTab";
 
 interface FileTreeNodeProps {
   entry: DirEntry;
   depth: number;
+  paneId: string;
   defaultExpanded?: boolean;
   preloadedChildren?: DirEntry[];
 }
@@ -104,6 +106,7 @@ function getFileIcon(name: string, extension: string | null): IconSvgElement {
 export function FileTreeNode({
   entry,
   depth,
+  paneId,
   defaultExpanded,
   preloadedChildren,
 }: FileTreeNodeProps) {
@@ -111,28 +114,31 @@ export function FileTreeNode({
   const [children, setChildren] = useState<DirEntry[]>(preloadedChildren ?? []);
   const [loaded, setLoaded] = useState(!!preloadedChildren);
   const [loading, setLoading] = useState(false);
+  const openFile = useLayoutStore((s) => s.openFile);
 
-  const toggle = useCallback(async () => {
-    if (!entry.isDir) return;
-
-    if (!loaded) {
-      setLoading(true);
-      try {
-        const result = await invoke<DirEntry[]>("read_dir", {
-          path: entry.path,
-        });
-        setChildren(result);
-        setLoaded(true);
-        setExpanded(true);
-      } catch {
-        // silently fail for unreadable dirs
-      } finally {
-        setLoading(false);
+  const handleClick = useCallback(async () => {
+    if (entry.isDir) {
+      if (!loaded) {
+        setLoading(true);
+        try {
+          const result = await invoke<DirEntry[]>("read_dir", {
+            path: entry.path,
+          });
+          setChildren(result);
+          setLoaded(true);
+          setExpanded(true);
+        } catch {
+          // silently fail for unreadable dirs
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setExpanded((prev) => !prev);
       }
     } else {
-      setExpanded((prev) => !prev);
+      openFile(entry.path, entry.name, paneId);
     }
-  }, [entry, loaded]);
+  }, [entry, loaded, openFile, paneId]);
 
   const icon = entry.isDir
     ? expanded
@@ -145,7 +151,7 @@ export function FileTreeNode({
       <button
         className="relative flex items-center w-full h-[28px] gap-1.5 text-left hover:bg-[var(--color-bg-elevated)] focus:bg-[var(--color-bg-elevated)] focus:outline-none transition-colors select-none cursor-pointer group"
         style={{ paddingLeft: LEFT_PAD + depth * INDENT_SIZE }}
-        onClick={toggle}
+        onClick={handleClick}
       >
         {/* Indent guide lines */}
         {Array.from({ length: depth }, (_, i) => (
@@ -196,7 +202,7 @@ export function FileTreeNode({
       {expanded && (
         <div className="relative">
           {children.map((child) => (
-            <FileTreeNode key={child.path} entry={child} depth={depth + 1} />
+            <FileTreeNode key={child.path} entry={child} depth={depth + 1} paneId={paneId} />
           ))}
         </div>
       )}

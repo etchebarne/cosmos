@@ -13,3 +13,7 @@ export function getTabDefinition(type: string): TabDefinition | undefined {
 export function getAllTabDefinitions(): TabDefinition[] {
   return Array.from(registry.values());
 }
+
+export function getVisibleTabDefinitions(): TabDefinition[] {
+  return Array.from(registry.values()).filter((d) => !d.hidden);
+}

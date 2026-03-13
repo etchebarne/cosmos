@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { load, type Store } from "@tauri-apps/plugin-store";
+import { useLspStore } from "./lsp/lsp-store";
 
 const WORKSPACE_COLORS = [
   "#4B8EF5",
@@ -87,8 +88,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   closeWorkspace: async (index: number) => {
     const state = get();
+    const closedPath = state.workspaces[index]?.path;
     const workspaces = state.workspaces.filter((_, i) => i !== index);
     let activeIndex: number | null = state.activeIndex;
+
+    // Stop LSP servers for the closed workspace
+    if (closedPath) {
+      useLspStore.getState().stopWorkspace(closedPath);
+    }
 
     if (workspaces.length === 0) {
       activeIndex = null;

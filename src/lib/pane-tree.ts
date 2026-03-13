@@ -6,14 +6,20 @@ export const genId = () => `${Date.now()}-${++idCounter}`;
 
 let tabCounter = 0;
 
-export function createTab(type: string, title?: string): Tab {
+export function createTab(type: string, title?: string, metadata?: Record<string, unknown>): Tab {
   const definition = getTabDefinition(type);
   return {
     id: genId(),
     type,
     title: title ?? definition?.title ?? `Tab ${++tabCounter}`,
     icon: definition?.icon ?? "file",
+    ...(metadata && { metadata }),
   };
+}
+
+export function findAllLeaves(node: PaneNode): PaneLeaf[] {
+  if (node.type === "leaf") return [node];
+  return node.children.flatMap(findAllLeaves);
 }
 
 export function createLeaf(tabs?: Tab[]): PaneLeaf {
