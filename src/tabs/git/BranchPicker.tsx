@@ -1,0 +1,227 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GitBranchIcon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { ScrollArea } from "../../components/shared/ScrollArea";
+
+interface GitBranchInfo {
+  name: string;
+  isRemote: boolean;
+  isCurrent: boolean;
+  lastCommitDate: string | null;
+}
+
+interface BranchPickerProps {
+  workspacePath: string;
+  onClose: () => void;
+  onSwitch: () => void;
+  anchorRef: React.RefObject<HTMLElement | null>;
+}
+
+export function BranchPicker({
+  workspacePath,
+  onClose,
+  onSwitch,
+  anchorRef,
+}: BranchPickerProps) {
+  const [branches, setBranches] = useState<GitBranchInfo[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    invoke<GitBranchInfo[]>("git_list_branches", { path: workspacePath })
+      .then(setBranches)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [workspacePath]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [onClose]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handle);
+    return () => document.removeEventListener("keydown", handle);
+  }, [onClose]);
+
+  // Focus search input on open
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleCheckout = useCallback(
+    async (branch: GitBranchInfo) => {
+      if (branch.isCurrent) return;
+      // For remote branches, strip the remote prefix so git creates a local tracking branch
+      const branchName = branch.isRemote
+        ? branch.name.replace(/^[^/]+\//, "")
+        : branch.name;
+      setSwitching(branch.name);
+      try {
+        await invoke("git_checkout", {
+          path: workspacePath,
+          branch: branchName,
+        });
+        onSwitch();
+        onClose();
+      } catch (e) {
+        console.error(e);
+        setSwitching(null);
+      }
+    },
+    [workspacePath, onSwitch, onClose],
+  );
+
+  const handleDelete = useCallback(
+    async (branch: GitBranchInfo) => {
+      try {
+        await invoke("git_delete_branch", {
+          path: workspacePath,
+          branch: branch.name,
+        });
+        setBranches((prev) => prev.filter((b) => b.name !== branch.name));
+        onSwitch();
+      } catch (e) {
+        console.error(e);
+      }
+    },
+    [workspacePath, onSwitch],
+  );
+
+  const filtered = branches.filter((b) =>
+    b.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  // Position the dropdown above the anchor
+  const [position, setPosition] = useState({ bottom: 0, left: 0, width: 0 });
+  useEffect(() => {
+    if (anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      setPosition({
+        bottom: window.innerHeight - rect.top,
+        left: rect.left,
+        width: Math.max(rect.width, 260),
+      });
+    }
+  }, [anchorRef]);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed z-50 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-lg flex flex-col"
+      style={{
+        bottom: position.bottom,
+        left: position.left,
+        width: position.width,
+        maxHeight: 400,
+      }}
+    >
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-[var(--color-border-primary)]">
+        <span className="text-xs text-[var(--color-text-primary)]">
+          Branches
+        </span>
+      </div>
+
+      {/* Branch list */}
+      <ScrollArea className="flex-1 min-h-0">
+        {loading ? (
+          <div className="px-3 py-4 text-xs text-[var(--color-text-muted)]">
+            Loading...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="px-3 py-4 text-xs text-[var(--color-text-muted)]">
+            No branches found
+          </div>
+        ) : (
+          <div className="py-1">
+            {filtered.map((branch) => (
+              <div
+                key={branch.name}
+                className={`group flex items-center hover:bg-[var(--color-bg-input)] transition-colors ${
+                  branch.isCurrent
+                    ? "border-l-2 border-l-[var(--color-accent-blue)] bg-[var(--color-bg-surface)]"
+                    : ""
+                }`}
+              >
+                <button
+                  className="flex-1 min-w-0 text-left px-3 py-1.5 flex items-center gap-2 cursor-pointer"
+                  onClick={() => handleCheckout(branch)}
+                  disabled={switching !== null}
+                >
+                  <HugeiconsIcon
+                    icon={GitBranchIcon}
+                    size={14}
+                    className={`shrink-0 ${
+                      branch.isCurrent
+                        ? "text-[var(--color-accent-blue)]"
+                        : branch.isRemote
+                          ? "text-[var(--color-text-muted)]"
+                          : "text-[var(--color-text-tertiary)]"
+                    }`}
+                  />
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span
+                      className={`text-xs truncate ${
+                        branch.isCurrent
+                          ? "text-[var(--color-accent-blue)]"
+                          : "text-[var(--color-text-primary)]"
+                      }`}
+                    >
+                      {branch.name}
+                    </span>
+                    {branch.lastCommitDate && (
+                      <span className="text-[10px] text-[var(--color-text-tertiary)]">
+                        {branch.lastCommitDate}
+                      </span>
+                    )}
+                  </div>
+                  {switching === branch.name && (
+                    <span className="text-[10px] text-[var(--color-text-muted)] shrink-0">
+                      ...
+                    </span>
+                  )}
+                </button>
+                {!branch.isCurrent && !branch.isRemote && (
+                  <button
+                    className="shrink-0 p-2 mr-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-status-red)] transition-colors cursor-pointer"
+                    onClick={() => handleDelete(branch)}
+                    title={`Delete ${branch.name}`}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+
+      {/* Search */}
+      <div className="flex items-center gap-2 px-3 py-1.5 border-t border-[var(--color-border-primary)]">
+        <input
+          ref={inputRef}
+          type="text"
+          className="flex-1 bg-transparent text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
+          placeholder="Select branch or remote..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+    </div>
+  );
+}

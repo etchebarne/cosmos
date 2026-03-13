@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -12,6 +12,7 @@ import {
 import { useWorkspaceStore } from "../../workspace-store";
 import { GitChangeNode } from "./GitChangeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
+import { BranchPicker } from "./BranchPicker";
 import type { TabContentProps } from "../types";
 
 export interface GitFileChange {
@@ -128,6 +129,8 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [error, setError] = useState<string | null>(null);
   const [commitMessage, setCommitMessage] = useState("");
   const [committing, setCommitting] = useState(false);
+  const [showBranchPicker, setShowBranchPicker] = useState(false);
+  const branchBarRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
     if (!activeWorkspace) return;
@@ -353,17 +356,30 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
       {/* Bottom section */}
       <div className="border-t border-[var(--color-border-primary)]">
         {/* Branch bar */}
-        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)]">
-          <HugeiconsIcon
-            icon={GitBranchIcon}
-            size={12}
-            className="text-[var(--color-status-green)] shrink-0"
-          />
-          <span className="text-[11px] text-[var(--color-text-secondary)] truncate">
-            {status?.remoteBranch
-              ? status.remoteBranch.replace(/\//, " / ")
-              : status?.branch ?? "\u2014"}
-          </span>
+        <div
+          ref={branchBarRef}
+          className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border-primary)]"
+        >
+          <button
+            className="flex items-center gap-2 min-w-0 hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer px-1 py-0.5 -mx-1"
+            onClick={() => setShowBranchPicker((v) => !v)}
+          >
+            <HugeiconsIcon
+              icon={GitBranchIcon}
+              size={12}
+              className="text-[var(--color-status-green)] shrink-0"
+            />
+            <span className="text-[11px] text-[var(--color-text-secondary)] truncate">
+              {status?.remoteBranch
+                ? status.remoteBranch.replace(/\//, " / ")
+                : status?.branch ?? "\u2014"}
+            </span>
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              size={10}
+              className="text-[var(--color-text-tertiary)] shrink-0"
+            />
+          </button>
           <div className="flex-1" />
           <button
             className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer"
@@ -372,12 +388,15 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
             <HugeiconsIcon icon={ArrowReloadHorizontalIcon} size={12} />
             Fetch
           </button>
-          <HugeiconsIcon
-            icon={ArrowDown01Icon}
-            size={12}
-            className="text-[var(--color-text-tertiary)]"
-          />
         </div>
+        {showBranchPicker && activeWorkspace && (
+          <BranchPicker
+            workspacePath={activeWorkspace.path}
+            onClose={() => setShowBranchPicker(false)}
+            onSwitch={refresh}
+            anchorRef={branchBarRef}
+          />
+        )}
 
         {/* Commit input */}
         <div className="px-3 py-2">

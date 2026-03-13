@@ -211,6 +211,74 @@ pub fn git_commit(path: &str, message: &str) -> Result<(), String> {
     run_git_strict(dir, &["commit", "-m", message])
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitBranchInfo {
+    name: String,
+    is_remote: bool,
+    is_current: bool,
+    last_commit_date: Option<String>,
+}
+
+#[tauri::command]
+pub fn git_list_branches(path: &str) -> Result<Vec<GitBranchInfo>, String> {
+    let dir = Path::new(path);
+    if !dir.exists() {
+        return Err("Directory does not exist".to_string());
+    }
+
+    let output = run_git(
+        dir,
+        &[
+            "branch",
+            "-a",
+            "--sort=-committerdate",
+            "--format=%(HEAD)|%(refname:short)|%(committerdate:relative)",
+        ],
+    )?;
+
+    let mut branches = Vec::new();
+    if let Some(output) = output {
+        for line in output.lines() {
+            let parts: Vec<&str> = line.splitn(3, '|').collect();
+            if parts.len() < 3 {
+                continue;
+            }
+            let is_current = parts[0].trim() == "*";
+            let name = parts[1].trim().to_string();
+            let date = parts[2].trim().to_string();
+
+            // Skip HEAD pointer entries
+            if name.contains("->") || name == "HEAD" {
+                continue;
+            }
+
+            let is_remote = name.starts_with("origin/");
+
+            branches.push(GitBranchInfo {
+                name,
+                is_remote,
+                is_current,
+                last_commit_date: if date.is_empty() { None } else { Some(date) },
+            });
+        }
+    }
+
+    Ok(branches)
+}
+
+#[tauri::command]
+pub fn git_checkout(path: &str, branch: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["checkout", branch])
+}
+
+#[tauri::command]
+pub fn git_delete_branch(path: &str, branch: &str) -> Result<(), String> {
+    let dir = Path::new(path);
+    run_git_strict(dir, &["branch", "-D", branch])
+}
+
 #[tauri::command]
 pub fn git_fetch(path: &str) -> Result<(), String> {
     let dir = Path::new(path);
