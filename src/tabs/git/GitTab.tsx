@@ -4,10 +4,8 @@ import { listen } from "@tauri-apps/api/event";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   GitBranchIcon,
-  MoreHorizontalIcon,
   ArrowDown01Icon,
   ArrowReloadHorizontalIcon,
-  PencilEdit02Icon,
 } from "@hugeicons/core-free-icons";
 import { useWorkspaceStore } from "../../workspace-store";
 import { GitChangeNode } from "./GitChangeNode";
@@ -289,13 +287,6 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
           {changes.length} Change{changes.length !== 1 ? "s" : ""}
         </span>
         <div className="flex items-center gap-2">
-          <button className="p-1 hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer">
-            <HugeiconsIcon
-              icon={MoreHorizontalIcon}
-              size={14}
-              className="text-[var(--color-text-secondary)]"
-            />
-          </button>
           <button
             className="text-xs text-[var(--color-accent-blue)] hover:text-[var(--color-accent-blue-hover)] transition-colors cursor-pointer"
             onClick={allStaged ? handleUnstageAll : handleStageAll}
@@ -415,14 +406,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
         </div>
 
         {/* Commit button */}
-        <div className="flex items-center justify-between px-3 py-1.5 border-t border-[var(--color-border-primary)]">
-          <button className="p-1 hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer">
-            <HugeiconsIcon
-              icon={PencilEdit02Icon}
-              size={14}
-              className="text-[var(--color-text-tertiary)]"
-            />
-          </button>
+        <div className="flex items-center justify-end px-3 py-1.5 border-t border-[var(--color-border-primary)]">
           <div className="flex items-center">
             <button
               className="flex items-center gap-1.5 px-3 py-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
