@@ -8,12 +8,7 @@ interface TooltipProps {
   side?: "top" | "bottom";
 }
 
-export function Tooltip({
-  content,
-  children,
-  delay = 400,
-  side = "bottom",
-}: TooltipProps) {
+export function Tooltip({ content, children, delay = 400, side = "bottom" }: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -39,12 +34,7 @@ export function Tooltip({
 
   return (
     <>
-      <div
-        ref={triggerRef}
-        onMouseEnter={show}
-        onMouseLeave={hide}
-        className="inline-flex"
-      >
+      <div ref={triggerRef} onMouseEnter={show} onMouseLeave={hide} className="inline-flex">
         {children}
       </div>
       {visible &&
@@ -55,9 +45,7 @@ export function Tooltip({
               left: position.x,
               top: position.y,
               transform:
-                side === "bottom"
-                  ? "translateX(-50%)"
-                  : "translateX(-50%) translateY(-100%)",
+                side === "bottom" ? "translateX(-50%)" : "translateX(-50%) translateY(-100%)",
             }}
           >
             {content}

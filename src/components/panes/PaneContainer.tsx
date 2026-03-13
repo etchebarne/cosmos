@@ -60,7 +60,14 @@ function SplitView({ node }: { node: Extract<PaneNode, { type: "split" }> }) {
     <div
       ref={containerRef}
       className={`flex w-full h-full min-w-0 min-h-0 ${node.direction === "horizontal" ? "flex-row" : "flex-col"}`}
-      style={{ cursor: resizing !== null ? (node.direction === "horizontal" ? "col-resize" : "row-resize") : undefined }}
+      style={{
+        cursor:
+          resizing !== null
+            ? node.direction === "horizontal"
+              ? "col-resize"
+              : "row-resize"
+            : undefined,
+      }}
     >
       {node.children.map((child, i) => (
         <div key={child.id} style={{ display: "contents" }}>
@@ -99,10 +106,7 @@ function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
         className="flex-1 min-h-0 bg-[var(--color-bg-page)] relative"
       >
         {node.tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className={tab.id === activeTabId ? "h-full" : "hidden"}
-          >
+          <div key={tab.id} className={tab.id === activeTabId ? "h-full" : "hidden"}>
             <TabContent tab={tab} paneId={node.id} />
           </div>
         ))}

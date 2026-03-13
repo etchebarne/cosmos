@@ -10,17 +10,13 @@ export function BlankTab({ tab, paneId }: TabContentProps) {
   return (
     <div className="@container flex flex-col items-center justify-center h-full gap-6 p-4">
       <div className="flex flex-col items-center gap-2">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-          New Tab
-        </h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">New Tab</h3>
         <p className="text-xs text-[var(--color-text-secondary)]">
           Select a tab type to get started
         </p>
       </div>
       {definitions.length === 0 ? (
-        <p className="text-xs text-[var(--color-text-muted)]">
-          No tab types available
-        </p>
+        <p className="text-xs text-[var(--color-text-muted)]">No tab types available</p>
       ) : (
         <div className="grid grid-cols-1 @[360px]:grid-cols-2 gap-2 w-full @[360px]:w-[320px]">
           {definitions.map((def) => (
@@ -34,9 +30,7 @@ export function BlankTab({ tab, paneId }: TabContentProps) {
                 size={16}
                 className="shrink-0 text-[var(--color-text-tertiary)]"
               />
-              <span className="text-xs text-[var(--color-text-primary)]">
-                {def.title}
-              </span>
+              <span className="text-xs text-[var(--color-text-primary)]">{def.title}</span>
             </button>
           ))}
         </div>

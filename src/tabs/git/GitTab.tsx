@@ -28,15 +28,12 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const isActive = useIsWorkspaceActive();
   const workspacePath = activeWorkspace?.path ?? null;
 
-  const { status, loading, error, setError, refresh } =
-    useGitStatus(workspacePath, isActive);
-  const {
-    activeAction,
-    actionRunning,
-    actionDone,
-    currentAction,
-    handleRunAction,
-  } = useGitActions(workspacePath, refresh, setError);
+  const { status, loading, error, setError, refresh } = useGitStatus(workspacePath, isActive);
+  const { activeAction, actionRunning, actionDone, currentAction, handleRunAction } = useGitActions(
+    workspacePath,
+    refresh,
+    setError,
+  );
 
   const [commitMessage, setCommitMessage] = useState("");
   const [committing, setCommitting] = useState(false);
@@ -53,17 +50,9 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const branchBarRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(
-    actionMenuRef,
-    () => setShowActionMenu(false),
-    showActionMenu,
-  );
+  useClickOutside(actionMenuRef, () => setShowActionMenu(false), showActionMenu);
 
-  useClickOutside(
-    moreMenuRef,
-    () => setShowMoreMenu(false),
-    showMoreMenu,
-  );
+  useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu);
 
   const handleStageAll = useCallback(async () => {
     if (!workspacePath) return;
@@ -78,9 +67,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const handleUnstageAll = useCallback(async () => {
     if (!workspacePath || !status) return;
     try {
-      const stagedFiles = status.changes
-        .filter((c) => c.staged)
-        .map((c) => c.path);
+      const stagedFiles = status.changes.filter((c) => c.staged).map((c) => c.path);
       if (stagedFiles.length > 0) {
         await invoke("git_unstage", {
           path: workspacePath,
@@ -233,9 +220,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   if (!activeWorkspace) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-muted)]">
-          No workspace open
-        </p>
+        <p className="text-xs text-[var(--color-text-muted)]">No workspace open</p>
       </div>
     );
   }
@@ -243,9 +228,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   if (loading && !status) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-secondary)]">
-          Loading...
-        </p>
+        <p className="text-xs text-[var(--color-text-secondary)]">Loading...</p>
       </div>
     );
   }
@@ -354,9 +337,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
       <ScrollArea className="flex-1">
         {changes.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-xs text-[var(--color-text-muted)]">
-              No changes
-            </p>
+            <p className="text-xs text-[var(--color-text-muted)]">No changes</p>
           </div>
         ) : (
           <div className="pt-1 pb-4">
@@ -437,7 +418,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
             <span className="text-xs text-[var(--color-text-primary)] truncate font-medium group-hover:text-[var(--color-accent-blue)] transition-colors">
               {status?.remoteBranch
                 ? status.remoteBranch.replace(/\//, " / ")
-                : status?.branch ?? "\u2014"}
+                : (status?.branch ?? "\u2014")}
             </span>
             <HugeiconsIcon
               icon={ArrowDown01Icon}
@@ -445,7 +426,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
               className="text-[var(--color-text-tertiary)] shrink-0"
             />
           </button>
-          
+
           <div className="relative flex items-center" ref={actionMenuRef}>
             <div className="flex bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] rounded-none overflow-hidden">
               <button
@@ -454,7 +435,13 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
                 disabled={actionRunning || !status?.hasRemote}
               >
                 <HugeiconsIcon
-                  icon={actionDone ? Tick02Icon : actionRunning ? Loading03Icon : ArrowReloadHorizontalIcon}
+                  icon={
+                    actionDone
+                      ? Tick02Icon
+                      : actionRunning
+                        ? Loading03Icon
+                        : ArrowReloadHorizontalIcon
+                  }
                   size={12}
                   className={`${actionDone ? "text-[var(--color-status-green)]" : ""} ${actionRunning ? "animate-spin" : ""}`}
                 />

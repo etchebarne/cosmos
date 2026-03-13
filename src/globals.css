@@ -1,26 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --color-accent-blue: #4B8EF5;
-  --color-accent-blue-hover: #5E9DF7;
-  --color-accent-blue-muted: #4B8EF520;
+  --color-accent-blue: #4b8ef5;
+  --color-accent-blue-hover: #5e9df7;
+  --color-accent-blue-muted: #4b8ef520;
   --color-bg-elevated: #222230;
-  --color-bg-input: #2A2A36;
+  --color-bg-input: #2a2a36;
   --color-bg-page: #111116;
-  --color-bg-surface: #1A1A22;
-  --color-border-primary: #2E2E3A;
-  --color-border-secondary: #3A3A48;
-  --color-project-bar-bg: #0E0E12;
-  --color-status-amber: #FBBF24;
-  --color-status-green: #34D399;
-  --color-status-red: #F87171;
-  --color-tab-active-bg: #1A1A22;
+  --color-bg-surface: #1a1a22;
+  --color-border-primary: #2e2e3a;
+  --color-border-secondary: #3a3a48;
+  --color-project-bar-bg: #0e0e12;
+  --color-status-amber: #fbbf24;
+  --color-status-green: #34d399;
+  --color-status-red: #f87171;
+  --color-tab-active-bg: #1a1a22;
   --color-tab-inactive-bg: #111116;
-  --color-text-muted: #4A4A58;
-  --color-text-primary: #E8E8ED;
-  --color-text-secondary: #9D9DAA;
-  --color-text-tertiary: #6B6B78;
-  --color-divider: #3A3A4A;
+  --color-text-muted: #4a4a58;
+  --color-text-primary: #e8e8ed;
+  --color-text-secondary: #9d9daa;
+  --color-text-tertiary: #6b6b78;
+  --color-divider: #3a3a4a;
 }
 
 /* OverlayScrollbars custom theme */
@@ -35,7 +35,9 @@
 }
 
 @layer base {
-  html, body, #root {
+  html,
+  body,
+  #root {
     height: 100%;
     width: 100%;
     overflow: hidden;

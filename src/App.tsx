@@ -21,16 +21,11 @@ function WorkspacePane({
   layout: PaneNode;
   isActive: boolean;
 }) {
-  const contextValue = useMemo(
-    () => ({ workspace, isActive }),
-    [workspace, isActive],
-  );
+  const contextValue = useMemo(() => ({ workspace, isActive }), [workspace, isActive]);
 
   return (
     <WorkspaceProvider value={contextValue}>
-      <div
-        className={isActive ? "flex w-full h-full min-w-0 min-h-0" : "hidden"}
-      >
+      <div className={isActive ? "flex w-full h-full min-w-0 min-h-0" : "hidden"}>
         <PaneContainer node={layout} />
       </div>
     </WorkspaceProvider>
@@ -54,8 +49,7 @@ function App() {
   // Sync active workspace path to layout store
   useLayoutEffect(() => {
     if (!ready) return;
-    const path =
-      activeIndex !== null ? workspaces[activeIndex]?.path ?? null : null;
+    const path = activeIndex !== null ? (workspaces[activeIndex]?.path ?? null) : null;
     setWorkspace(path);
   }, [ready, activeIndex, workspaces, setWorkspace]);
 

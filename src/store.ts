@@ -17,7 +17,13 @@ interface LayoutStore {
   reorderTab: (paneId: string, fromIndex: number, toIndex: number) => void;
   moveTabToPane: (fromPaneId: string, tabId: string, toPaneId: string, index?: number) => void;
   transformTab: (paneId: string, tabId: string, newType: string) => void;
-  splitPane: (targetPaneId: string, direction: "horizontal" | "vertical", tab: Tab, sourcePaneId: string, position: "before" | "after") => void;
+  splitPane: (
+    targetPaneId: string,
+    direction: "horizontal" | "vertical",
+    tab: Tab,
+    sourcePaneId: string,
+    position: "before" | "after",
+  ) => void;
   setPaneSizes: (splitId: string, sizes: number[]) => void;
   setDragState: (data: DragState | null) => void;
 }
@@ -76,7 +82,12 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         if (tabs.length === 0) return null;
         const activeTabId =
           leaf.activeTabId === tabId
-            ? tabs[Math.min(leaf.tabs.findIndex((t) => t.id === tabId), tabs.length - 1)]?.id ?? null
+            ? (tabs[
+                Math.min(
+                  leaf.tabs.findIndex((t) => t.id === tabId),
+                  tabs.length - 1,
+                )
+              ]?.id ?? null)
             : leaf.activeTabId;
         return { ...leaf, tabs, activeTabId };
       });
@@ -116,7 +127,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         return {
           ...leaf,
           tabs,
-          activeTabId: leaf.activeTabId === tabId ? tabs[0]?.id ?? null : leaf.activeTabId,
+          activeTabId: leaf.activeTabId === tabId ? (tabs[0]?.id ?? null) : leaf.activeTabId,
         };
       });
       if (!layout) layout = createLeaf();
@@ -146,7 +157,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         return {
           ...leaf,
           tabs,
-          activeTabId: leaf.activeTabId === tab.id ? tabs[0]?.id ?? null : leaf.activeTabId,
+          activeTabId: leaf.activeTabId === tab.id ? (tabs[0]?.id ?? null) : leaf.activeTabId,
         };
       });
       if (!layout) layout = createLeaf();

@@ -19,12 +19,7 @@ interface BranchPickerProps {
   anchorRef: React.RefObject<HTMLElement | null>;
 }
 
-export function BranchPicker({
-  workspacePath,
-  onClose,
-  onSwitch,
-  anchorRef,
-}: BranchPickerProps) {
+export function BranchPicker({ workspacePath, onClose, onSwitch, anchorRef }: BranchPickerProps) {
   const [branches, setBranches] = useState<GitBranchInfo[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -59,9 +54,7 @@ export function BranchPicker({
     async (branch: GitBranchInfo) => {
       if (branch.isCurrent) return;
       // For remote branches, strip the remote prefix so git creates a local tracking branch
-      const branchName = branch.isRemote
-        ? branch.name.replace(/^[^/]+\//, "")
-        : branch.name;
+      const branchName = branch.isRemote ? branch.name.replace(/^[^/]+\//, "") : branch.name;
       setSwitching(branch.name);
       try {
         await invoke("git_checkout", {
@@ -94,9 +87,7 @@ export function BranchPicker({
     [workspacePath, onSwitch],
   );
 
-  const filtered = branches.filter((b) =>
-    b.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = branches.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
 
   // Position the dropdown above the anchor
   const [position, setPosition] = useState({ bottom: 0, left: 0, width: 0 });
@@ -132,13 +123,9 @@ export function BranchPicker({
       {/* Branch list */}
       <ScrollArea className="flex-1 min-h-0">
         {loading ? (
-          <div className="px-3 py-4 text-xs text-[var(--color-text-muted)]">
-            Loading...
-          </div>
+          <div className="px-3 py-4 text-xs text-[var(--color-text-muted)]">Loading...</div>
         ) : filtered.length === 0 ? (
-          <div className="px-3 py-4 text-xs text-[var(--color-text-muted)]">
-            No branches found
-          </div>
+          <div className="px-3 py-4 text-xs text-[var(--color-text-muted)]">No branches found</div>
         ) : (
           <div className="py-1">
             {filtered.map((branch) => (
@@ -183,9 +170,7 @@ export function BranchPicker({
                     )}
                   </div>
                   {switching === branch.name && (
-                    <span className="text-[10px] text-[var(--color-text-muted)] shrink-0">
-                      ...
-                    </span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] shrink-0">...</span>
                   )}
                 </button>
                 {!branch.isCurrent && !branch.isRemote && (

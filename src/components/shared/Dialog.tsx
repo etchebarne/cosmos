@@ -31,9 +31,7 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
     >
       <div className="w-full max-w-md bg-[var(--color-bg-page)] border border-[var(--color-border-primary)] shadow-xl flex flex-col max-h-[70vh]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]">
-          <span className="text-sm font-medium text-[var(--color-text-primary)]">
-            {title}
-          </span>
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">{title}</span>
           <button
             className="text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
             onClick={onClose}

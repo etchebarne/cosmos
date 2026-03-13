@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Delete02Icon,
-  ArrowRight01Icon,
-  File01Icon,
-} from "@hugeicons/core-free-icons";
+import { Delete02Icon, ArrowRight01Icon, File01Icon } from "@hugeicons/core-free-icons";
 import { Dialog } from "../../components/shared/Dialog";
 
 interface GitStashEntry {
@@ -126,24 +122,17 @@ function StashEntryRow({
         <div className="bg-[var(--color-bg-surface)]">
           {filesLoading && (
             <div className="px-8 py-2">
-              <span className="text-[11px] text-[var(--color-text-muted)]">
-                Loading...
-              </span>
+              <span className="text-[11px] text-[var(--color-text-muted)]">Loading...</span>
             </div>
           )}
           {!filesLoading && files.length === 0 && (
             <div className="px-8 py-2">
-              <span className="text-[11px] text-[var(--color-text-muted)]">
-                No files
-              </span>
+              <span className="text-[11px] text-[var(--color-text-muted)]">No files</span>
             </div>
           )}
           {!filesLoading &&
             files.map((file) => (
-              <div
-                key={file.path}
-                className="flex items-center gap-2 px-8 py-1.5"
-              >
+              <div key={file.path} className="flex items-center gap-2 px-8 py-1.5">
                 <HugeiconsIcon
                   icon={File01Icon}
                   size={12}
@@ -165,12 +154,7 @@ function StashEntryRow({
   );
 }
 
-export function StashDialog({
-  open,
-  onClose,
-  workspacePath,
-  onApply,
-}: StashDialogProps) {
+export function StashDialog({ open, onClose, workspacePath, onApply }: StashDialogProps) {
   const [entries, setEntries] = useState<GitStashEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,23 +208,17 @@ export function StashDialog({
       <div className="font-ui">
         {loading && (
           <div className="px-4 py-6 text-center">
-            <span className="text-xs text-[var(--color-text-secondary)]">
-              Loading...
-            </span>
+            <span className="text-xs text-[var(--color-text-secondary)]">Loading...</span>
           </div>
         )}
         {error && (
           <div className="px-4 py-3">
-            <span className="text-xs text-[var(--color-status-red)]">
-              {error}
-            </span>
+            <span className="text-xs text-[var(--color-status-red)]">{error}</span>
           </div>
         )}
         {!loading && !error && entries.length === 0 && (
           <div className="px-4 py-6 text-center">
-            <span className="text-xs text-[var(--color-text-muted)]">
-              No stashes
-            </span>
+            <span className="text-xs text-[var(--color-text-muted)]">No stashes</span>
           </div>
         )}
         {!loading &&

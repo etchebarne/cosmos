@@ -33,9 +33,7 @@ function getFileIconColor(status: string): string {
   }
 }
 
-function getCheckState(
-  node: TreeNode,
-): "checked" | "unchecked" | "indeterminate" {
+function getCheckState(node: TreeNode): "checked" | "unchecked" | "indeterminate" {
   const files = getNodeFiles(node);
   if (files.length === 0) return "unchecked";
   const allStaged = files.every((f) => f.staged);
@@ -70,20 +68,11 @@ function Checkbox({
   );
 }
 
-export function GitChangeNode({
-  node,
-  depth,
-  onToggleStage,
-  onContextMenu,
-}: GitChangeNodeProps) {
+export function GitChangeNode({ node, depth, onToggleStage, onContextMenu }: GitChangeNodeProps) {
   const [expanded, setExpanded] = useState(true);
   const checkState = getCheckState(node);
 
-  const icon = node.isDir
-    ? expanded
-      ? Folder02Icon
-      : Folder01Icon
-    : File01Icon;
+  const icon = node.isDir ? (expanded ? Folder02Icon : Folder01Icon) : File01Icon;
 
   return (
     <div>
@@ -130,29 +119,22 @@ export function GitChangeNode({
         </span>
 
         {/* Diff stats (only for files) */}
-        {!node.isDir &&
-          node.change &&
-          (node.change.additions > 0 || node.change.deletions > 0) && (
-            <span className="flex items-center gap-1.5 text-[11px] mr-1">
-              {node.change.additions > 0 && (
-                <span className="text-[var(--color-status-green)]">
-                  + {node.change.additions}
-                </span>
-              )}
-              {node.change.deletions > 0 && (
-                <span className="text-[var(--color-status-red)]">
-                  &minus; {node.change.deletions}
-                </span>
-              )}
-            </span>
-          )}
+        {!node.isDir && node.change && (node.change.additions > 0 || node.change.deletions > 0) && (
+          <span className="flex items-center gap-1.5 text-[11px] mr-1">
+            {node.change.additions > 0 && (
+              <span className="text-[var(--color-status-green)]">+ {node.change.additions}</span>
+            )}
+            {node.change.deletions > 0 && (
+              <span className="text-[var(--color-status-red)]">
+                &minus; {node.change.deletions}
+              </span>
+            )}
+          </span>
+        )}
 
         {/* Checkbox */}
         <span className="mr-2">
-          <Checkbox
-            state={checkState}
-            onClick={() => onToggleStage(node)}
-          />
+          <Checkbox state={checkState} onClick={() => onToggleStage(node)} />
         </span>
       </div>
 

@@ -19,13 +19,10 @@ export function ProjectBar() {
     index: number;
   } | null>(null);
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, index: number) => {
-      e.preventDefault();
-      setContextMenu({ x: e.clientX, y: e.clientY, index });
-    },
-    [],
-  );
+  const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, index });
+  }, []);
 
   const handleCloseMenu = useCallback(() => setContextMenu(null), []);
 
@@ -47,7 +44,11 @@ export function ProjectBar() {
       )}
       <div className="flex-1" />
       <div className="flex items-center gap-1.5 w-[220px] h-8 px-2.5 bg-[var(--color-bg-input)]">
-        <HugeiconsIcon icon={Search01Icon} size={13} className="text-[var(--color-text-muted)] shrink-0" />
+        <HugeiconsIcon
+          icon={Search01Icon}
+          size={13}
+          className="text-[var(--color-text-muted)] shrink-0"
+        />
         <span className="text-xs text-[var(--color-text-muted)]">Search files...</span>
         <div className="flex-1" />
       </div>

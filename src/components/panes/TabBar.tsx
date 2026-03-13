@@ -57,41 +57,41 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
       data-tabbar-pane={paneId}
     >
       {tabs.map((tab) => {
-          const isActive = tab.id === activeTabId;
-          return (
-            <div
-              key={tab.id}
-              data-tab
-              className={`group flex items-center gap-2 h-full px-3 cursor-grab select-none whitespace-nowrap ${
-                isActive
-                  ? "bg-[var(--color-tab-active-bg)] border-b-2 border-[var(--color-accent-blue)]"
-                  : "bg-[var(--color-tab-inactive-bg)] border-b border-[var(--color-border-primary)] hover:bg-[var(--color-bg-surface)]"
-              }`}
-              onMouseDown={(e) => handleTabMouseDown(e, tab)}
+        const isActive = tab.id === activeTabId;
+        return (
+          <div
+            key={tab.id}
+            data-tab
+            className={`group flex items-center gap-2 h-full px-3 cursor-grab select-none whitespace-nowrap ${
+              isActive
+                ? "bg-[var(--color-tab-active-bg)] border-b-2 border-[var(--color-accent-blue)]"
+                : "bg-[var(--color-tab-inactive-bg)] border-b border-[var(--color-border-primary)] hover:bg-[var(--color-bg-surface)]"
+            }`}
+            onMouseDown={(e) => handleTabMouseDown(e, tab)}
+          >
+            <TabIcon
+              name={tab.icon}
+              size={14}
+              className={`shrink-0 ${isActive ? "text-[var(--color-accent-blue)]" : "text-[var(--color-text-tertiary)]"}`}
+            />
+            <span
+              className={`text-xs ${isActive ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}
             >
-              <TabIcon
-                name={tab.icon}
-                size={14}
-                className={`shrink-0 ${isActive ? "text-[var(--color-accent-blue)]" : "text-[var(--color-text-tertiary)]"}`}
-              />
-              <span
-                className={`text-xs ${isActive ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}
-              >
-                {tab.title}
-              </span>
-              <button
-                className="flex items-center justify-center p-0.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-100 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border-secondary)]"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeTab(paneId, tab.id);
-                }}
-              >
-                <HugeiconsIcon icon={Cancel01Icon} size={12} />
-              </button>
-            </div>
-          );
-        })}
+              {tab.title}
+            </span>
+            <button
+              className="flex items-center justify-center p-0.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-100 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border-secondary)]"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                closeTab(paneId, tab.id);
+              }}
+            >
+              <HugeiconsIcon icon={Cancel01Icon} size={12} />
+            </button>
+          </div>
+        );
+      })}
       <button
         className="flex items-center justify-center w-7 h-7 mx-1 text-[var(--color-text-muted)] shrink-0 hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-border-primary)]"
         onClick={() => addTab(paneId)}

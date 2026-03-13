@@ -101,7 +101,12 @@ function getFileIcon(name: string, extension: string | null): IconSvgElement {
   }
 }
 
-export function FileTreeNode({ entry, depth, defaultExpanded, preloadedChildren }: FileTreeNodeProps) {
+export function FileTreeNode({
+  entry,
+  depth,
+  defaultExpanded,
+  preloadedChildren,
+}: FileTreeNodeProps) {
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
   const [children, setChildren] = useState<DirEntry[]>(preloadedChildren ?? []);
   const [loaded, setLoaded] = useState(!!preloadedChildren);
@@ -157,7 +162,9 @@ export function FileTreeNode({ entry, depth, defaultExpanded, preloadedChildren 
             {loading ? (
               <span className="w-3 h-3 border border-[var(--color-text-muted)] border-t-transparent animate-spin rounded-full" />
             ) : (
-              <span className={`flex items-center justify-center transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}>
+              <span
+                className={`flex items-center justify-center transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+              >
                 <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
               </span>
             )}

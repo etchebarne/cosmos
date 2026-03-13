@@ -7,8 +7,7 @@ import { useWorkspaceStore } from "../../workspace-store";
 export function StatusBar() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeIndex = useWorkspaceStore((s) => s.activeIndex);
-  const activePath =
-    activeIndex !== null ? workspaces[activeIndex]?.path ?? null : null;
+  const activePath = activeIndex !== null ? (workspaces[activeIndex]?.path ?? null) : null;
 
   const [branch, setBranch] = useState<string | null>(null);
 

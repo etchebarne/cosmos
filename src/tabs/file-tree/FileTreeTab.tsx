@@ -42,9 +42,7 @@ export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   if (!activeWorkspace) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-muted)]">
-          No workspace open
-        </p>
+        <p className="text-xs text-[var(--color-text-muted)]">No workspace open</p>
       </div>
     );
   }
@@ -52,9 +50,7 @@ export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   if (loading && entries.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-secondary)]">
-          Loading...
-        </p>
+        <p className="text-xs text-[var(--color-text-secondary)]">Loading...</p>
       </div>
     );
   }
@@ -77,12 +73,7 @@ export function FileTreeTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   return (
     <ScrollArea className="h-full font-ui">
       <div className="pt-1 pb-4">
-        <FileTreeNode
-          entry={rootEntry}
-          depth={0}
-          defaultExpanded
-          preloadedChildren={entries}
-        />
+        <FileTreeNode entry={rootEntry} depth={0} defaultExpanded preloadedChildren={entries} />
       </div>
     </ScrollArea>
   );

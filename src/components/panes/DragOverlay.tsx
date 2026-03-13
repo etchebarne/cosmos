@@ -70,15 +70,40 @@ function getZoneOverlayStyle(zone: DropZone, rect: DOMRect): React.CSSProperties
   const pad = 4;
   switch (zone) {
     case "left":
-      return { left: rect.left + pad, top: rect.top + pad, width: rect.width / 2 - pad * 2, height: rect.height - pad * 2 };
+      return {
+        left: rect.left + pad,
+        top: rect.top + pad,
+        width: rect.width / 2 - pad * 2,
+        height: rect.height - pad * 2,
+      };
     case "right":
-      return { left: rect.left + rect.width / 2 + pad, top: rect.top + pad, width: rect.width / 2 - pad * 2, height: rect.height - pad * 2 };
+      return {
+        left: rect.left + rect.width / 2 + pad,
+        top: rect.top + pad,
+        width: rect.width / 2 - pad * 2,
+        height: rect.height - pad * 2,
+      };
     case "top":
-      return { left: rect.left + pad, top: rect.top + pad, width: rect.width - pad * 2, height: rect.height / 2 - pad * 2 };
+      return {
+        left: rect.left + pad,
+        top: rect.top + pad,
+        width: rect.width - pad * 2,
+        height: rect.height / 2 - pad * 2,
+      };
     case "bottom":
-      return { left: rect.left + pad, top: rect.top + rect.height / 2 + pad, width: rect.width - pad * 2, height: rect.height / 2 - pad * 2 };
+      return {
+        left: rect.left + pad,
+        top: rect.top + rect.height / 2 + pad,
+        width: rect.width - pad * 2,
+        height: rect.height / 2 - pad * 2,
+      };
     default:
-      return { left: rect.left + pad, top: rect.top + pad, width: rect.width - pad * 2, height: rect.height - pad * 2 };
+      return {
+        left: rect.left + pad,
+        top: rect.top + pad,
+        width: rect.width - pad * 2,
+        height: rect.height - pad * 2,
+      };
   }
 }
 
