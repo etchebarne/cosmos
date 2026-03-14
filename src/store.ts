@@ -4,6 +4,11 @@ import { genId, createTab, createLeaf, findLeaf, findAllLeaves, updateNode } fro
 import "./tabs"; // Initialize tab registry
 import { getTabDefinition } from "./tabs";
 
+const DEFAULT_FONT_SIZE = 13;
+const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 30;
+const FONT_SIZE_STEP = 1;
+
 interface LayoutStore {
   layout: PaneNode;
   layouts: Record<string, PaneNode>;
@@ -11,8 +16,12 @@ interface LayoutStore {
   dragState: DragState | null;
   lastEditorPaneId: string | null;
   activePaneId: string | null;
+  editorFontSize: number;
 
   setWorkspace: (path: string | null) => void;
+  zoomEditorIn: () => void;
+  zoomEditorOut: () => void;
+  resetEditorZoom: () => void;
   addTab: (paneId: string, type?: string, title?: string) => void;
   closeTab: (paneId: string, tabId: string) => void;
   setActiveTab: (paneId: string, tabId: string) => void;
@@ -38,6 +47,17 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   dragState: null,
   lastEditorPaneId: null,
   activePaneId: null,
+  editorFontSize: DEFAULT_FONT_SIZE,
+
+  zoomEditorIn: () =>
+    set((state) => ({
+      editorFontSize: Math.min(state.editorFontSize + FONT_SIZE_STEP, MAX_FONT_SIZE),
+    })),
+  zoomEditorOut: () =>
+    set((state) => ({
+      editorFontSize: Math.max(state.editorFontSize - FONT_SIZE_STEP, MIN_FONT_SIZE),
+    })),
+  resetEditorZoom: () => set({ editorFontSize: DEFAULT_FONT_SIZE }),
 
   setWorkspace: (path) =>
     set((state) => {

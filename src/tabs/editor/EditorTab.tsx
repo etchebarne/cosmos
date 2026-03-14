@@ -124,6 +124,11 @@ export function EditorTab({ tab }: TabContentProps) {
   const versionRef = useRef(0);
   const changeDisposableRef = useRef<{ dispose: () => void } | null>(null);
 
+  const editorFontSize = useLayoutStore((s) => s.editorFontSize);
+  const zoomEditorIn = useLayoutStore((s) => s.zoomEditorIn);
+  const zoomEditorOut = useLayoutStore((s) => s.zoomEditorOut);
+  const resetEditorZoom = useLayoutStore((s) => s.resetEditorZoom);
+
   const workspace = useActiveWorkspace();
   const startServer = useLspStore((s) => s.startServer);
   const getClient = useLspStore((s) => s.getClient);
@@ -166,6 +171,11 @@ export function EditorTab({ tab }: TabContentProps) {
       setError(String(e));
     }
   }, [filePath, workspace, fileUri, getClient]);
+
+  // Sync font size from store to the editor instance
+  useEffect(() => {
+    editorRef.current?.updateOptions({ fontSize: editorFontSize });
+  }, [editorFontSize]);
 
   // Cleanup on unmount: didClose + change listener + editor instance
   useEffect(() => {
@@ -217,6 +227,14 @@ export function EditorTab({ tab }: TabContentProps) {
 
     // eslint-disable-next-line no-bitwise
     instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => saveFile());
+
+    // Zoom keybindings
+    // eslint-disable-next-line no-bitwise
+    instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal, () => zoomEditorIn());
+    // eslint-disable-next-line no-bitwise
+    instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus, () => zoomEditorOut());
+    // eslint-disable-next-line no-bitwise
+    instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit0, () => resetEditorZoom());
 
     // Listen for content changes to send didChange notifications
     changeDisposableRef.current = instance.onDidChangeModelContent((e) => {
@@ -321,7 +339,7 @@ export function EditorTab({ tab }: TabContentProps) {
           onMount={handleEditorDidMount}
           options={{
             fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 13,
+            fontSize: editorFontSize,
             lineHeight: 1.6,
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
