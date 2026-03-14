@@ -429,15 +429,17 @@ pub fn git_trash_all_untracked(path: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn git_diff(path: &str, file: &str, staged: bool) -> Result<String, String> {
+pub fn git_diff(path: &str, file: &str) -> Result<String, String> {
     let dir = Path::new(path);
-    let args = if staged {
-        vec!["diff", "--cached", "--", file]
-    } else {
-        vec!["diff", "--", file]
-    };
-    let output = run_git(dir, &args)?;
-    Ok(output.unwrap_or_default())
+    // Try unstaged diff first, fall back to staged diff
+    let unstaged = run_git(dir, &["diff", "--", file])?;
+    if let Some(ref s) = unstaged {
+        if !s.is_empty() {
+            return Ok(s.clone());
+        }
+    }
+    let staged = run_git(dir, &["diff", "--cached", "--", file])?;
+    Ok(staged.unwrap_or_default())
 }
 
 #[tauri::command]

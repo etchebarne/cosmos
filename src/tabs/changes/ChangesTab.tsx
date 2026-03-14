@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { PatchDiff } from "@pierre/diffs/react";
 import { registerCustomTheme } from "@pierre/diffs";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
@@ -61,49 +62,48 @@ const THEME_CSS = `
 export function ChangesTab({ tab }: TabContentProps) {
   const workspace = useActiveWorkspace();
   const filePath = tab.metadata?.filePath as string;
-  const staged = tab.metadata?.staged as boolean;
   const isUntracked = tab.metadata?.isUntracked as boolean;
 
   const [patch, setPatch] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadDiff = useCallback(async () => {
     if (!workspace?.path || !filePath) return;
-
-    let cancelled = false;
-
-    async function loadDiff() {
-      try {
-        let result: string;
-        if (isUntracked) {
-          result = await invoke<string>("git_diff_untracked", {
-            path: workspace!.path,
-            file: filePath,
-          });
-        } else {
-          result = await invoke<string>("git_diff", {
-            path: workspace!.path,
-            file: filePath,
-            staged: staged ?? false,
-          });
-        }
-        if (!cancelled) {
-          setPatch(result || "");
-          setError(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(String(e));
-          setPatch(null);
-        }
+    try {
+      let result: string;
+      if (isUntracked) {
+        result = await invoke<string>("git_diff_untracked", {
+          path: workspace.path,
+          file: filePath,
+        });
+      } else {
+        result = await invoke<string>("git_diff", {
+          path: workspace.path,
+          file: filePath,
+        });
       }
+      setPatch(result || "");
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+      setPatch(null);
     }
+  }, [workspace?.path, filePath, isUntracked]);
 
+  // Initial load
+  useEffect(() => {
     loadDiff();
+  }, [loadDiff]);
+
+  // Re-fetch when files change on disk
+  useEffect(() => {
+    const unlisten = listen("git-changed", () => {
+      loadDiff();
+    });
     return () => {
-      cancelled = true;
+      unlisten.then((fn) => fn());
     };
-  }, [workspace?.path, filePath, staged, isUntracked]);
+  }, [loadDiff]);
 
   if (error) {
     return (
