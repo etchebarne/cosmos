@@ -1,6 +1,7 @@
 mod git;
 mod lsp;
 mod tabs;
+mod terminal;
 
 use std::sync::Mutex;
 
@@ -14,6 +15,7 @@ pub fn run() {
             watcher: Mutex::new(None),
         })
         .manage(lsp::LspState::default())
+        .manage(terminal::TerminalState::default())
         .invoke_handler(tauri::generate_handler![
             tabs::file_tree::read_dir,
             tabs::editor::read_file,
@@ -57,6 +59,11 @@ pub fn run() {
             git::git_force_push,
             git::watch_workspace,
             git::unwatch_workspace,
+            terminal::terminal_list_shells,
+            terminal::terminal_spawn,
+            terminal::terminal_write,
+            terminal::terminal_resize,
+            terminal::terminal_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

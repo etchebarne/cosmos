@@ -26,8 +26,6 @@ function ensureTheme() {
         "editor.foreground": "#e8e8ed",
         "editorLineNumber.foreground": "#4a4a58",
         "editorLineNumber.activeForeground": "#6b6b78",
-        "diffEditor.insertedTextBackground": "#34d39918",
-        "diffEditor.deletedTextBackground": "#f8717118",
       },
     };
   });
