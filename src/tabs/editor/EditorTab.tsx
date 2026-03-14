@@ -1,13 +1,85 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Editor, { type Monaco } from "@monaco-editor/react";
-import type { editor } from "monaco-editor";
+import type { editor, Uri, IRange, IPosition } from "monaco-editor";
 import { TextDocumentSyncKind } from "vscode-languageserver-protocol";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { useLspStore } from "../../lsp/lsp-store";
-import { pathToFileUri } from "../../lsp/uri";
+import { pathToFileUri, fileUriToPath } from "../../lsp/uri";
+import { useLayoutStore } from "../../store";
 import { setupMonacoLanguages, resolveModelLanguage } from "../../lsp/monaco-languages";
 import type { TabContentProps } from "../types";
+
+// ── Cross-file navigation (Ctrl+Click go-to-definition) ──
+
+const editorInstances = new Map<string, editor.IStandaloneCodeEditor>();
+const pendingReveals = new Map<string, { lineNumber: number; column: number }>();
+let editorOpenerRegistered = false;
+
+/** Convert a file URI to an OS path with the drive letter uppercased to match OS convention. */
+function uriToNormalizedPath(uri: string): string {
+  let p = fileUriToPath(uri);
+  // Uppercase drive letter to match Windows OS convention (OS returns C:\, but URIs use c:/)
+  if (/^[a-z]:/.test(p)) {
+    p = p[0].toUpperCase() + p.slice(1);
+  }
+  return p;
+}
+
+function registerEditorOpener(monaco: Monaco) {
+  if (editorOpenerRegistered) return;
+  editorOpenerRegistered = true;
+
+  monaco.editor.registerEditorOpener({
+    openCodeEditor(
+      source: editor.ICodeEditor,
+      resource: Uri,
+      selectionOrPosition?: IRange | IPosition,
+    ) {
+      // If the definition is in the same file, let Monaco's default handler
+      // navigate within the current editor.
+      const sourceModel = source.getModel();
+      if (sourceModel && sourceModel.uri.toString() === resource.toString()) {
+        return false;
+      }
+
+      const filePath = uriToNormalizedPath(resource.toString());
+      const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+
+      // Determine target position
+      let position: { lineNumber: number; column: number } | undefined;
+      if (selectionOrPosition) {
+        if ("lineNumber" in selectionOrPosition) {
+          position = {
+            lineNumber: selectionOrPosition.lineNumber,
+            column: selectionOrPosition.column,
+          };
+        } else {
+          position = {
+            lineNumber: selectionOrPosition.startLineNumber,
+            column: selectionOrPosition.startColumn,
+          };
+        }
+      }
+
+      const store = useLayoutStore.getState();
+      store.openFile(filePath, fileName, store.activePaneId ?? "");
+
+      if (position) {
+        const existing = editorInstances.get(filePath);
+        if (existing) {
+          existing.setPosition(position);
+          existing.revealPositionInCenter(position);
+          existing.focus();
+        } else {
+          pendingReveals.set(filePath, position);
+        }
+      }
+
+      return true;
+    },
+  });
+}
 
 let themeDefined = false;
 function defineCosmosTheme(monaco: Monaco) {
@@ -95,10 +167,11 @@ export function EditorTab({ tab }: TabContentProps) {
     }
   }, [filePath, workspace, fileUri, getClient]);
 
-  // Cleanup on unmount: didClose + change listener
+  // Cleanup on unmount: didClose + change listener + editor instance
   useEffect(() => {
     return () => {
       changeDisposableRef.current?.dispose();
+      if (filePath) editorInstances.delete(filePath);
       if (workspace && fileUri) {
         const client = getClient(workspace.path, lspLanguageRef.current);
         client?.didClose(fileUri);
@@ -129,6 +202,17 @@ export function EditorTab({ tab }: TabContentProps) {
         versionRef.current = 1;
         client.didOpen(fileUri, lspLang, versionRef.current, instance.getValue());
       });
+    }
+
+    // Register editor instance for cross-file navigation
+    if (filePath) {
+      editorInstances.set(filePath, instance);
+      const pendingReveal = pendingReveals.get(filePath);
+      if (pendingReveal) {
+        pendingReveals.delete(filePath);
+        instance.setPosition(pendingReveal);
+        instance.revealPositionInCenter(pendingReveal);
+      }
     }
 
     // eslint-disable-next-line no-bitwise
@@ -180,6 +264,7 @@ export function EditorTab({ tab }: TabContentProps) {
     monacoRef.current = monaco;
     defineCosmosTheme(monaco);
     setupMonacoLanguages(monaco);
+    registerEditorOpener(monaco);
 
     // Disable Monaco's built-in TS/JS diagnostics unconditionally.
     // They run in-browser without tsconfig/node_modules so they always
