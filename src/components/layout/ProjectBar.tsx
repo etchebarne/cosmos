@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, Add01Icon } from "@hugeicons/core-free-icons";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useWorkspaceStore } from "../../workspace-store";
+import { useWorkspaceStore } from "../../store/workspace.store";
 import { ContextMenu } from "../shared/ContextMenu";
 import { Tooltip } from "../shared/Tooltip";
 

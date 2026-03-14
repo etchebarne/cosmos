@@ -4,10 +4,11 @@ import Editor, { type Monaco } from "@monaco-editor/react";
 import type { editor, Uri, IRange, IPosition } from "monaco-editor";
 import { TextDocumentSyncKind } from "vscode-languageserver-protocol";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
-import { useLspStore } from "../../lsp/lsp-store";
-import { pathToFileUri, fileUriToPath } from "../../lsp/uri";
-import { useLayoutStore } from "../../store";
-import { setupMonacoLanguages, resolveModelLanguage } from "../../lsp/monaco-languages";
+import { useLspStore } from "../../store/lsp.store";
+import { pathToFileUri, fileUriToPath } from "../../lib/lsp/uri";
+import { useLayoutStore } from "../../store/layout.store";
+import { useEditorStore } from "../../store/editor.store";
+import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
 import type { TabContentProps } from "../types";
 
 // ── Cross-file navigation (Ctrl+Click go-to-definition) ──
@@ -124,10 +125,10 @@ export function EditorTab({ tab }: TabContentProps) {
   const versionRef = useRef(0);
   const changeDisposableRef = useRef<{ dispose: () => void } | null>(null);
 
-  const editorFontSize = useLayoutStore((s) => s.editorFontSize);
-  const zoomEditorIn = useLayoutStore((s) => s.zoomEditorIn);
-  const zoomEditorOut = useLayoutStore((s) => s.zoomEditorOut);
-  const resetEditorZoom = useLayoutStore((s) => s.resetEditorZoom);
+  const editorFontSize = useEditorStore((s) => s.editorFontSize);
+  const zoomEditorIn = useEditorStore((s) => s.zoomEditorIn);
+  const zoomEditorOut = useEditorStore((s) => s.zoomEditorOut);
+  const resetEditorZoom = useEditorStore((s) => s.resetEditorZoom);
 
   const workspace = useActiveWorkspace();
   const startServer = useLspStore((s) => s.startServer);

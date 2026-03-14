@@ -2,10 +2,10 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { Monaco } from "@monaco-editor/react";
 import type { IDisposable } from "monaco-editor";
-import { TauriLspTransport } from "./transport";
-import { LspClient } from "./client";
-import { registerLspProviders } from "./monaco-bridge";
-import { useToastStore } from "../toast-store";
+import { TauriLspTransport } from "../lib/lsp/transport";
+import { LspClient } from "../lib/lsp/client";
+import { registerLspProviders } from "../lib/lsp/monaco-bridge";
+import { useToastStore } from "./toast.store";
 
 export type ServerStatus =
   | "starting"

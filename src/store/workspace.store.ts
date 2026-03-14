@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { load, type Store } from "@tauri-apps/plugin-store";
-import { useLspStore } from "./lsp/lsp-store";
+import { useLspStore } from "./lsp.store";
 
 const WORKSPACE_COLORS = [
   "#4B8EF5",

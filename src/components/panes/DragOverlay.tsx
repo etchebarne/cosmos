@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLayoutStore } from "../../store";
+import { useLayoutStore } from "../../store/layout.store";
+import { useDragStore } from "../../store/drag.store";
 import { findLeaf } from "../../lib/pane-tree";
 import type { DropZone } from "../../types";
 
@@ -108,7 +109,7 @@ function getZoneOverlayStyle(zone: DropZone, rect: DOMRect): React.CSSProperties
 }
 
 export function DragOverlay() {
-  const dragState = useLayoutStore((s) => s.dragState);
+  const dragState = useDragStore((s) => s.dragState);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const dropTargetRef = useRef<DropTarget | null>(null);
@@ -131,7 +132,7 @@ export function DragOverlay() {
 
     const onMouseUp = () => {
       const target = dropTargetRef.current;
-      const dragged = useLayoutStore.getState().dragState;
+      const dragged = useDragStore.getState().dragState;
 
       if (target && dragged) {
         const store = useLayoutStore.getState();
@@ -167,7 +168,7 @@ export function DragOverlay() {
         }
       }
 
-      useLayoutStore.getState().setDragState(null);
+      useDragStore.getState().setDragState(null);
       setDropTarget(null);
     };
 

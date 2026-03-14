@@ -1,5 +1,5 @@
 import { getVisibleTabDefinitions } from "../registry";
-import { useLayoutStore } from "../../store";
+import { useLayoutStore } from "../../store/layout.store";
 import { TabIcon } from "../../components/shared/TabIcon";
 import type { TabContentProps } from "../types";
 

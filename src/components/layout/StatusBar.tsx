@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitBranchIcon } from "@hugeicons/core-free-icons";
-import { useWorkspaceStore } from "../../workspace-store";
-import { useLspStore, resolveServerLanguage, type ServerStatus } from "../../lsp/lsp-store";
-import { useLayoutStore } from "../../store";
+import { useWorkspaceStore } from "../../store/workspace.store";
+import { useLspStore, resolveServerLanguage, type ServerStatus } from "../../store/lsp.store";
+import { useLayoutStore } from "../../store/layout.store";
 import { findLeaf } from "../../lib/pane-tree";
 import { Dialog } from "../shared/Dialog";
 

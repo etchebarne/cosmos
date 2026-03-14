@@ -1,27 +1,25 @@
 import { create } from "zustand";
-import type { PaneNode, PaneSplit, Tab, DragState } from "./types";
-import { genId, createTab, createLeaf, findLeaf, findAllLeaves, updateNode } from "./lib/pane-tree";
-import "./tabs"; // Initialize tab registry
-import { getTabDefinition } from "./tabs";
-
-const DEFAULT_FONT_SIZE = 13;
-const MIN_FONT_SIZE = 8;
-const MAX_FONT_SIZE = 30;
-const FONT_SIZE_STEP = 1;
+import type { PaneNode, PaneSplit, Tab } from "../types";
+import {
+  genId,
+  createTab,
+  createLeaf,
+  findLeaf,
+  findAllLeaves,
+  updateNode,
+} from "../lib/pane-tree";
+import "../tabs"; // Initialize tab registry
+import { getTabDefinition } from "../tabs";
+import { useDragStore } from "./drag.store";
 
 interface LayoutStore {
   layout: PaneNode;
   layouts: Record<string, PaneNode>;
   activeWorkspacePath: string | null;
-  dragState: DragState | null;
   lastEditorPaneId: string | null;
   activePaneId: string | null;
-  editorFontSize: number;
 
   setWorkspace: (path: string | null) => void;
-  zoomEditorIn: () => void;
-  zoomEditorOut: () => void;
-  resetEditorZoom: () => void;
   addTab: (paneId: string, type?: string, title?: string) => void;
   closeTab: (paneId: string, tabId: string) => void;
   setActiveTab: (paneId: string, tabId: string) => void;
@@ -36,7 +34,6 @@ interface LayoutStore {
     position: "before" | "after",
   ) => void;
   setPaneSizes: (splitId: string, sizes: number[]) => void;
-  setDragState: (data: DragState | null) => void;
   openFile: (filePath: string, fileName: string, sourcePaneId: string) => void;
 }
 
@@ -44,20 +41,8 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   layout: createLeaf(),
   layouts: {},
   activeWorkspacePath: null,
-  dragState: null,
   lastEditorPaneId: null,
   activePaneId: null,
-  editorFontSize: DEFAULT_FONT_SIZE,
-
-  zoomEditorIn: () =>
-    set((state) => ({
-      editorFontSize: Math.min(state.editorFontSize + FONT_SIZE_STEP, MAX_FONT_SIZE),
-    })),
-  zoomEditorOut: () =>
-    set((state) => ({
-      editorFontSize: Math.max(state.editorFontSize - FONT_SIZE_STEP, MIN_FONT_SIZE),
-    })),
-  resetEditorZoom: () => set({ editorFontSize: DEFAULT_FONT_SIZE }),
 
   setWorkspace: (path) =>
     set((state) => {
@@ -69,10 +54,9 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
       // Load or create layout for new workspace
       const layout = path ? (layouts[path] ?? createLeaf()) : createLeaf();
-      return { layouts, layout, activeWorkspacePath: path, dragState: null };
+      useDragStore.getState().setDragState(null);
+      return { layouts, layout, activeWorkspacePath: path };
     }),
-
-  setDragState: (data) => set({ dragState: data }),
 
   addTab: (paneId, type = "blank", title) =>
     set((state) => {

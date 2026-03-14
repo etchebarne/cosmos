@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Workspace } from "../workspace-store";
+import type { Workspace } from "../store/workspace.store";
 
 interface WorkspaceContextValue {
   workspace: Workspace;

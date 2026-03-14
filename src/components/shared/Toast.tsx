@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useToastStore, type Toast } from "../../toast-store";
+import { useToastStore, type Toast } from "../../store/toast.store";
 
 const TYPE_STYLES: Record<Toast["type"], string> = {
   info: "border-l-[var(--color-accent-blue)]",

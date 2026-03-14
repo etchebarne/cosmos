@@ -16,7 +16,7 @@ import {
   FileTerminalIcon,
   Configuration01Icon,
 } from "@hugeicons/core-free-icons";
-import { useLayoutStore } from "../../store";
+import { useLayoutStore } from "../../store/layout.store";
 import type { DirEntry } from "./FileTreeTab";
 
 interface FileTreeNodeProps {

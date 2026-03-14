@@ -7,12 +7,12 @@ import { PanePortalProvider } from "./components/panes/PanePortalContext";
 import { DragOverlay } from "./components/panes/DragOverlay";
 import { ToastContainer } from "./components/shared/Toast";
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
-import { useLayoutStore } from "./store";
-import { useWorkspaceStore } from "./workspace-store";
-import type { Workspace } from "./workspace-store";
+import { useLayoutStore } from "./store/layout.store";
+import { useWorkspaceStore } from "./store/workspace.store";
+import type { Workspace } from "./store/workspace.store";
 import type { PaneNode } from "./types";
 import "overlayscrollbars/overlayscrollbars.css";
-import "./globals.css";
+import "./styles/globals.css";
 
 function WorkspacePane({
   workspace,

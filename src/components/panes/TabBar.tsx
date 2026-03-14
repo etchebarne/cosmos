@@ -1,7 +1,8 @@
 import { useRef, useCallback, useEffect } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
-import { useLayoutStore } from "../../store";
+import { useLayoutStore } from "../../store/layout.store";
+import { useDragStore } from "../../store/drag.store";
 import { TabIcon } from "../shared/TabIcon";
 import type { Tab } from "../../types";
 
@@ -17,7 +18,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const closeTab = useLayoutStore((s) => s.closeTab);
   const addTab = useLayoutStore((s) => s.addTab);
-  const setDragState = useLayoutStore((s) => s.setDragState);
+  const setDragState = useDragStore((s) => s.setDragState);
   const isDraggingRef = useRef(false);
 
   const handleTabMouseDown = useCallback(

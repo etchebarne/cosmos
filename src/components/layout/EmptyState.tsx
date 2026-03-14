@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Folder02Icon, Folder01Icon, GitBranchIcon } from "@hugeicons/core-free-icons";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useWorkspaceStore } from "../../workspace-store";
+import { useWorkspaceStore } from "../../store/workspace.store";
 
 export function EmptyState() {
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
