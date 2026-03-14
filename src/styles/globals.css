@@ -31,6 +31,14 @@
   background: rgba(255, 255, 255, 0.25) !important;
 }
 
+/* @pierre/diffs — font overrides inherit through shadow DOM */
+.changes-tab-container {
+  color-scheme: dark;
+  --diffs-font-family: "JetBrains Mono", "SF Mono", Monaco, Consolas, monospace;
+  --diffs-font-size: 13px;
+  --diffs-line-height: 20px;
+}
+
 /* OverlayScrollbars custom theme */
 .os-theme-custom {
   --os-handle-bg: rgba(255, 255, 255, 0.12);

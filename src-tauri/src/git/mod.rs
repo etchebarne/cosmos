@@ -429,6 +429,39 @@ pub fn git_trash_all_untracked(path: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn git_diff(path: &str, file: &str, staged: bool) -> Result<String, String> {
+    let dir = Path::new(path);
+    let args = if staged {
+        vec!["diff", "--cached", "--", file]
+    } else {
+        vec!["diff", "--", file]
+    };
+    let output = run_git(dir, &args)?;
+    Ok(output.unwrap_or_default())
+}
+
+#[tauri::command]
+pub fn git_diff_untracked(path: &str, file: &str) -> Result<String, String> {
+    let dir = Path::new(path);
+    let full_path = dir.join(file);
+    let contents = std::fs::read_to_string(&full_path).map_err(|e| e.to_string())?;
+
+    // Build a unified diff header for an untracked (new) file
+    let lines: Vec<&str> = contents.lines().collect();
+    let line_count = lines.len();
+    let mut diff = format!(
+        "diff --git a/{f} b/{f}\nnew file mode 100644\n--- /dev/null\n+++ b/{f}\n@@ -0,0 +1,{line_count} @@\n",
+        f = file
+    );
+    for line in &lines {
+        diff.push('+');
+        diff.push_str(line);
+        diff.push('\n');
+    }
+    Ok(diff)
+}
+
+#[tauri::command]
 pub fn git_init(path: &str) -> Result<(), String> {
     let dir = Path::new(path);
     run_git_strict(dir, &["init", "-b", "main"])

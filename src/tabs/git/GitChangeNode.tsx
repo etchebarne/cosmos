@@ -14,6 +14,7 @@ interface GitChangeNodeProps {
   depth: number;
   onToggleStage: (node: TreeNode) => void;
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
+  onFileClick: (node: TreeNode) => void;
 }
 
 const INDENT_SIZE = 16;
@@ -68,7 +69,13 @@ function Checkbox({
   );
 }
 
-export function GitChangeNode({ node, depth, onToggleStage, onContextMenu }: GitChangeNodeProps) {
+export function GitChangeNode({
+  node,
+  depth,
+  onToggleStage,
+  onContextMenu,
+  onFileClick,
+}: GitChangeNodeProps) {
   const [expanded, setExpanded] = useState(true);
   const checkState = getCheckState(node);
 
@@ -81,6 +88,7 @@ export function GitChangeNode({ node, depth, onToggleStage, onContextMenu }: Git
         style={{ paddingLeft: LEFT_PAD + depth * INDENT_SIZE }}
         onClick={() => {
           if (node.isDir) setExpanded((prev) => !prev);
+          else onFileClick(node);
         }}
         onContextMenu={(e) => onContextMenu(e, node)}
       >
@@ -148,6 +156,7 @@ export function GitChangeNode({ node, depth, onToggleStage, onContextMenu }: Git
               depth={depth + 1}
               onToggleStage={onToggleStage}
               onContextMenu={onContextMenu}
+              onFileClick={onFileClick}
             />
           ))}
         </div>

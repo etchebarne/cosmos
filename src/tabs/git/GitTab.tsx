@@ -21,9 +21,10 @@ import { useGitActions, GIT_ACTIONS } from "../../hooks/use-git-actions";
 import { useClickOutside } from "../../hooks/use-click-outside";
 import { buildChangeTree, getNodeFiles } from "../../lib/git-tree";
 import type { TreeNode } from "../../lib/git-tree";
+import { useLayoutStore } from "../../store/layout.store";
 import type { TabContentProps } from "../types";
 
-export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
+export function GitTab({ tab: _tab, paneId }: TabContentProps) {
   const activeWorkspace = useActiveWorkspace();
   const isActive = useIsWorkspaceActive();
   const workspacePath = activeWorkspace?.path ?? null;
@@ -201,6 +202,18 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     [workspacePath, refresh, setError],
   );
 
+  const handleFileClick = useCallback(
+    (node: TreeNode) => {
+      if (node.isDir || !node.change) return;
+      const fileName = node.name;
+      const isUntracked = node.change.status === "untracked";
+      useLayoutStore
+        .getState()
+        .openChanges(node.change.path, fileName, node.change.staged, isUntracked, paneId);
+    },
+    [paneId],
+  );
+
   const handleNodeContextMenu = useCallback(
     (e: MouseEvent, node: TreeNode) => {
       e.preventDefault();
@@ -355,6 +368,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
                     depth={0}
                     onToggleStage={handleToggleStage}
                     onContextMenu={handleNodeContextMenu}
+                    onFileClick={handleFileClick}
                   />
                 ))}
               </>
@@ -373,6 +387,7 @@ export function GitTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
                     depth={0}
                     onToggleStage={handleToggleStage}
                     onContextMenu={handleNodeContextMenu}
+                    onFileClick={handleFileClick}
                   />
                 ))}
               </>

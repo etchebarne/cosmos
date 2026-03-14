@@ -47,6 +47,8 @@ pub fn run() {
             git::git_stash_drop,
             git::git_discard_all_tracked,
             git::git_trash_all_untracked,
+            git::git_diff,
+            git::git_diff_untracked,
             git::git_init,
             git::git_fetch,
             git::git_pull,

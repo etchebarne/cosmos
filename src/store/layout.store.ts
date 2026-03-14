@@ -35,6 +35,13 @@ interface LayoutStore {
   ) => void;
   setPaneSizes: (splitId: string, sizes: number[]) => void;
   openFile: (filePath: string, fileName: string, sourcePaneId: string) => void;
+  openChanges: (
+    filePath: string,
+    fileName: string,
+    staged: boolean,
+    isUntracked: boolean,
+    sourcePaneId: string,
+  ) => void;
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -221,8 +228,10 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
       const tab = createTab("editor", fileName, { filePath });
 
-      // Find panes that already have editor tabs
-      const editorPanes = leaves.filter((leaf) => leaf.tabs.some((t) => t.type === "editor"));
+      // Find panes that already have editor or changes tabs
+      const editorPanes = leaves.filter((leaf) =>
+        leaf.tabs.some((t) => t.type === "editor" || t.type === "changes"),
+      );
 
       let targetPaneId: string | null = null;
 
@@ -245,7 +254,69 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         return { layout, lastEditorPaneId: targetPaneId, activePaneId: targetPaneId };
       }
 
-      // No editor pane exists — split from source pane
+      // No editor/changes pane exists — split from source pane
+      const newLeaf = createLeaf([tab]);
+      const layout =
+        updateNode(state.layout, sourcePaneId, (leaf) => {
+          const split: PaneSplit = {
+            id: genId(),
+            type: "split",
+            direction: "horizontal",
+            children: [leaf, newLeaf],
+            sizes: [50, 50],
+          };
+          return split;
+        }) ?? state.layout;
+
+      return { layout, lastEditorPaneId: newLeaf.id, activePaneId: newLeaf.id };
+    }),
+
+  openChanges: (filePath, fileName, staged, isUntracked, sourcePaneId) =>
+    set((state) => {
+      const leaves = findAllLeaves(state.layout);
+
+      // Check if a changes tab for this file is already open
+      for (const leaf of leaves) {
+        const existing = leaf.tabs.find(
+          (t) => t.type === "changes" && (t.metadata?.filePath as string) === filePath,
+        );
+        if (existing) {
+          const layout =
+            updateNode(state.layout, leaf.id, (l) => ({
+              ...l,
+              activeTabId: existing.id,
+            })) ?? state.layout;
+          return { layout, lastEditorPaneId: leaf.id, activePaneId: leaf.id };
+        }
+      }
+
+      const tab = createTab("changes", fileName, { filePath, staged, isUntracked });
+
+      // Find panes that have editor or changes tabs
+      const editorPanes = leaves.filter((leaf) =>
+        leaf.tabs.some((t) => t.type === "editor" || t.type === "changes"),
+      );
+
+      let targetPaneId: string | null = null;
+
+      if (editorPanes.length === 1) {
+        targetPaneId = editorPanes[0].id;
+      } else if (editorPanes.length > 1) {
+        const lastUsed = editorPanes.find((p) => p.id === state.lastEditorPaneId);
+        targetPaneId = lastUsed ? lastUsed.id : editorPanes[0].id;
+      }
+
+      if (targetPaneId) {
+        const layout =
+          updateNode(state.layout, targetPaneId, (leaf) => ({
+            ...leaf,
+            tabs: [...leaf.tabs, tab],
+            activeTabId: tab.id,
+          })) ?? state.layout;
+        return { layout, lastEditorPaneId: targetPaneId, activePaneId: targetPaneId };
+      }
+
+      // No editor/changes pane exists — split from source pane
       const newLeaf = createLeaf([tab]);
       const layout =
         updateNode(state.layout, sourcePaneId, (leaf) => {
