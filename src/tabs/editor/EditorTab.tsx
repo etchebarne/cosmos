@@ -257,6 +257,7 @@ export function EditorTab({ tab }: TabContentProps) {
               horizontalScrollbarSize: 6,
               useShadows: false,
             },
+            hover: { above: false },
             wordWrap: "on",
             roundedSelection: false,
             contextmenu: false,
