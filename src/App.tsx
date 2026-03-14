@@ -3,7 +3,9 @@ import { ProjectBar } from "./components/layout/ProjectBar";
 import { StatusBar } from "./components/layout/StatusBar";
 import { EmptyState } from "./components/layout/EmptyState";
 import { PaneContainer } from "./components/panes/PaneContainer";
+import { PanePortalProvider } from "./components/panes/PanePortalContext";
 import { DragOverlay } from "./components/panes/DragOverlay";
+import { ToastContainer } from "./components/shared/Toast";
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import { useLayoutStore } from "./store";
 import { useWorkspaceStore } from "./workspace-store";
@@ -25,9 +27,11 @@ function WorkspacePane({
 
   return (
     <WorkspaceProvider value={contextValue}>
-      <div className={isActive ? "flex w-full h-full min-w-0 min-h-0" : "hidden"}>
-        <PaneContainer node={layout} />
-      </div>
+      <PanePortalProvider layout={layout}>
+        <div className={isActive ? "flex w-full h-full min-w-0 min-h-0" : "hidden"}>
+          <PaneContainer node={layout} />
+        </div>
+      </PanePortalProvider>
     </WorkspaceProvider>
   );
 }
@@ -86,6 +90,7 @@ function App() {
       </div>
       <StatusBar />
       {hasWorkspace && <DragOverlay />}
+      <ToastContainer />
     </div>
   );
 }

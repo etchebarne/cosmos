@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useLayoutStore } from "../../store";
@@ -51,10 +51,29 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
     [paneId, setDragState, setActiveTab],
   );
 
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  const prevTabCountRef = useRef(tabs.length);
+
+  useEffect(() => {
+    if (tabs.length > prevTabCountRef.current && tabBarRef.current) {
+      tabBarRef.current.scrollLeft = tabBarRef.current.scrollWidth;
+    }
+    prevTabCountRef.current = tabs.length;
+  }, [tabs.length]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (tabBarRef.current && e.deltaY !== 0) {
+      e.preventDefault();
+      tabBarRef.current.scrollLeft += e.deltaY;
+    }
+  }, []);
+
   return (
     <div
+      ref={tabBarRef}
       className="flex items-center h-9 min-h-9 bg-[var(--color-project-bar-bg)] border-b border-[var(--color-border-primary)] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:h-0"
       data-tabbar-pane={paneId}
+      onWheel={handleWheel}
     >
       {tabs.map((tab) => {
         const isActive = tab.id === activeTabId;

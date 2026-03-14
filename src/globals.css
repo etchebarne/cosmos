@@ -23,6 +23,14 @@
   --color-divider: #3a3a4a;
 }
 
+/* Monaco scrollbar override — ensures Tailwind preflight doesn't interfere */
+.monaco-scrollable-element > .scrollbar > .slider {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+.monaco-scrollable-element > .scrollbar > .slider:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
 /* OverlayScrollbars custom theme */
 .os-theme-custom {
   --os-handle-bg: rgba(255, 255, 255, 0.12);

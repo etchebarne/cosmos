@@ -6,13 +6,17 @@ import { TextDocumentSyncKind } from "vscode-languageserver-protocol";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { useLspStore } from "../../lsp/lsp-store";
 import { pathToFileUri } from "../../lsp/uri";
+import { setupMonacoLanguages, resolveModelLanguage } from "../../lsp/monaco-languages";
 import type { TabContentProps } from "../types";
 
+let themeDefined = false;
 function defineCosmosTheme(monaco: Monaco) {
+  if (themeDefined) return;
+  themeDefined = true;
   monaco.editor.defineTheme("cosmos", {
     base: "vs-dark",
     inherit: true,
-    rules: [],
+    rules: [{ token: "tag", foreground: "569cd6" }],
     colors: {
       "editor.background": "#111116",
       "editor.foreground": "#e8e8ed",
@@ -106,8 +110,16 @@ export function EditorTab({ tab }: TabContentProps) {
     editorRef.current = instance;
     monacoRef.current = monaco;
 
-    // Use Monaco's auto-detected language for LSP too
-    lspLanguageRef.current = instance.getModel()?.getLanguageId() ?? "plaintext";
+    // Remeasure fonts once loaded — fixes cursor offset when web fonts swap in
+    document.fonts.ready.then(() => {
+      if (editorRef.current) monaco.editor.remeasureFonts();
+    });
+
+    // Resolve the model to the most specific registered language (e.g.
+    // "typescriptreact" instead of "typescript" for .tsx files).
+    const model = instance.getModel();
+    if (model) resolveModelLanguage(monaco, model);
+    lspLanguageRef.current = model?.getLanguageId() ?? "plaintext";
 
     // Start LSP server and send didOpen
     if (workspace && fileUri && content !== null) {
@@ -167,6 +179,7 @@ export function EditorTab({ tab }: TabContentProps) {
   function handleBeforeMount(monaco: Monaco) {
     monacoRef.current = monaco;
     defineCosmosTheme(monaco);
+    setupMonacoLanguages(monaco);
 
     // Disable Monaco's built-in TS/JS diagnostics unconditionally.
     // They run in-browser without tsconfig/node_modules so they always
@@ -244,6 +257,7 @@ export function EditorTab({ tab }: TabContentProps) {
               horizontalScrollbarSize: 6,
               useShadows: false,
             },
+            wordWrap: "on",
             roundedSelection: false,
             contextmenu: false,
             automaticLayout: true,

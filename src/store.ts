@@ -10,6 +10,7 @@ interface LayoutStore {
   activeWorkspacePath: string | null;
   dragState: DragState | null;
   lastEditorPaneId: string | null;
+  activePaneId: string | null;
 
   setWorkspace: (path: string | null) => void;
   addTab: (paneId: string, type?: string, title?: string) => void;
@@ -36,6 +37,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   activeWorkspacePath: null,
   dragState: null,
   lastEditorPaneId: null,
+  activePaneId: null,
 
   setWorkspace: (path) =>
     set((state) => {
@@ -99,6 +101,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
   setActiveTab: (paneId, tabId) =>
     set((state) => ({
+      activePaneId: paneId,
       layout:
         updateNode(state.layout, paneId, (leaf) => ({
           ...leaf,
@@ -208,7 +211,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
               ...l,
               activeTabId: existing.id,
             })) ?? state.layout;
-          return { layout, lastEditorPaneId: leaf.id };
+          return { layout, lastEditorPaneId: leaf.id, activePaneId: leaf.id };
         }
       }
 
@@ -235,7 +238,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
             tabs: [...leaf.tabs, tab],
             activeTabId: tab.id,
           })) ?? state.layout;
-        return { layout, lastEditorPaneId: targetPaneId };
+        return { layout, lastEditorPaneId: targetPaneId, activePaneId: targetPaneId };
       }
 
       // No editor pane exists — split from source pane
@@ -252,6 +255,6 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
           return split;
         }) ?? state.layout;
 
-      return { layout, lastEditorPaneId: newLeaf.id };
+      return { layout, lastEditorPaneId: newLeaf.id, activePaneId: newLeaf.id };
     }),
 }));

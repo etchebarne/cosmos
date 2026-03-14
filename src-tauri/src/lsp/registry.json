@@ -1,0 +1,5562 @@
+[
+  {
+    "name": "ada-language-server",
+    "description": "Ada/SPARK language server.",
+    "languages": ["Ada"],
+    "source_id": "pkg:github/AdaCore/ada_language_server@2026.1.202601121",
+    "bin": "ada_language_server",
+    "assets": {
+      "darwin_x64": {
+        "file": "als-{{version}}-darwin-x64.tar.gz",
+        "bin": "integration/vscode/ada/x64/darwin/ada_language_server"
+      },
+      "darwin_arm64": {
+        "file": "als-{{version}}-darwin-arm64.tar.gz",
+        "bin": "integration/vscode/ada/arm64/darwin/ada_language_server"
+      },
+      "linux_arm64_gnu": {
+        "file": "als-{{version}}-linux-arm64.tar.gz",
+        "bin": "integration/vscode/ada/arm64/linux/ada_language_server"
+      },
+      "linux_x64_gnu": {
+        "file": "als-{{version}}-linux-x64.tar.gz",
+        "bin": "integration/vscode/ada/x64/linux/ada_language_server"
+      },
+      "win_x64": {
+        "file": "als-{{version}}-win32-x64.tar.gz",
+        "bin": "integration/vscode/ada/x64/win32/ada_language_server.exe"
+      }
+    },
+    "version": "2026.1.202601121",
+    "source_type": "github"
+  },
+  {
+    "name": "aiken",
+    "description": "A modern smart contract platform for Cardano",
+    "languages": ["Aiken"],
+    "source_id": "pkg:github/aiken-lang/aiken@v1.1.21",
+    "bin": "aiken",
+    "assets": {
+      "darwin_x64": {
+        "file": "aiken-x86_64-apple-darwin.tar.gz",
+        "bin": "aiken-x86_64-apple-darwin/aiken"
+      },
+      "darwin_arm64": {
+        "file": "aiken-aarch64-apple-darwin.tar.gz",
+        "bin": "aiken-aarch64-apple-darwin/aiken"
+      },
+      "linux_x64": {
+        "file": "aiken-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "aiken-x86_64-unknown-linux-musl/aiken"
+      },
+      "win_x64": {
+        "file": "aiken-x86_64-pc-windows-msvc.tar.gz",
+        "bin": "aiken-x86_64-pc-windows-msvc/aiken.exe"
+      }
+    },
+    "version": "v1.1.21",
+    "source_type": "github"
+  },
+  {
+    "name": "air",
+    "description": "R formatter and language server",
+    "languages": ["R"],
+    "source_id": "pkg:github/posit-dev/air@0.8.1",
+    "bin": "air",
+    "assets": {
+      "darwin_arm64": {
+        "file": "air-aarch64-apple-darwin.tar.gz",
+        "bin": "air-aarch64-apple-darwin/air"
+      },
+      "darwin_x64": {
+        "file": "air-x86_64-apple-darwin.tar.gz",
+        "bin": "air-x86_64-apple-darwin/air"
+      },
+      "linux_arm64_gnu": {
+        "file": "air-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "air-aarch64-unknown-linux-gnu/air"
+      },
+      "linux_x64_gnu": {
+        "file": "air-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "air-x86_64-unknown-linux-gnu/air"
+      },
+      "win_x86": {
+        "file": "air-aarch64-pc-windows-msvc.zip",
+        "bin": "air.exe"
+      },
+      "win_x64": {
+        "file": "air-x86_64-pc-windows-msvc.zip",
+        "bin": "air.exe"
+      }
+    },
+    "version": "0.8.1",
+    "source_type": "github"
+  },
+  {
+    "name": "amber-lsp",
+    "description": "Amber's Language Server Protocol",
+    "languages": ["Amber"],
+    "source_id": "pkg:github/amber-lang/amber-lsp@v0.1.18",
+    "bin": "amber-lsp",
+    "assets": {
+      "darwin_arm64": {
+        "file": "amber-lsp-aarch64-apple-darwin.tar.gz",
+        "bin": "amber-lsp-aarch64-apple-darwin/amber-lsp"
+      },
+      "darwin_x64": {
+        "file": "amber-lsp-x86_64-apple-darwin.tar.gz",
+        "bin": "amber-lsp-x86_64-apple-darwin/amber-lsp"
+      },
+      "linux_x64_gnu": {
+        "file": "amber-lsp-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "amber-lsp-x86_64-unknown-linux-gnu/amber-lsp"
+      },
+      "linux_x64_musl": {
+        "file": "amber-lsp-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "amber-lsp-x86_64-unknown-linux-musl/amber-lsp"
+      },
+      "win_x64": {
+        "file": "amber-lsp-x86_64-pc-windows-msvc.zip",
+        "bin": "amber-lsp.exe"
+      }
+    },
+    "version": "v0.1.18",
+    "source_type": "github"
+  },
+  {
+    "name": "angular-language-server",
+    "description": "The Angular Language Service provides code editors with a way to get completions, errors, hints, and navigation inside\nAngular templates. It works with external templates in separate HTML files, and also with in-line templates.",
+    "languages": ["Angular"],
+    "source_id": "pkg:npm/%40angular/language-server@21.2.4",
+    "extra_packages": ["typescript@5.8.3"],
+    "bin": "ngserver",
+    "version": "21.2.4",
+    "source_type": "npm"
+  },
+  {
+    "name": "ansible-language-server",
+    "description": "Ansible Language Server.",
+    "languages": ["Ansible"],
+    "source_id": "pkg:npm/%40ansible/ansible-language-server@1.2.3",
+    "bin": "ansible-language-server",
+    "version": "1.2.3",
+    "source_type": "npm"
+  },
+  {
+    "name": "antlers-language-server",
+    "description": "Provides rich language features for Statamic's Antlers templating language, including code completions, syntax\nhighlighting, and more.",
+    "languages": ["Antlers"],
+    "source_id": "pkg:npm/antlers-language-server@1.3.14",
+    "bin": "antlersls",
+    "version": "1.3.14",
+    "source_type": "npm"
+  },
+  {
+    "name": "apex-language-server",
+    "description": "The Apex Language Server is an IDE-agnostic way for tools to access code-editing capabilities such as code completion, go to definition, find all usage, and refactoring.",
+    "languages": ["Apex"],
+    "source_id": "pkg:github/forcedotcom/salesforcedx-vscode@v66.1.1",
+    "assets": {
+      "any": {
+        "file": "salesforcedx-vscode-apex-{{ version | strip_prefix \"v\" }}.vsix"
+      }
+    },
+    "version": "v66.1.1",
+    "source_type": "github"
+  },
+  {
+    "name": "arduino-language-server",
+    "description": "An Arduino Language Server based on Clangd to Arduino code autocompletion.",
+    "languages": ["Arduino"],
+    "source_id": "pkg:github/arduino/arduino-language-server@0.7.7",
+    "bin": "arduino-language-server",
+    "assets": {
+      "darwin_x64": {
+        "file": "arduino-language-server_{{version}}_macOS_64bit.tar.gz",
+        "bin": "arduino-language-server"
+      },
+      "darwin_arm64": {
+        "file": "arduino-language-server_{{version}}_macOS_64bit.tar.gz",
+        "bin": "arduino-language-server"
+      },
+      "linux_x64": {
+        "file": "arduino-language-server_{{version}}_Linux_64bit.tar.gz",
+        "bin": "arduino-language-server"
+      },
+      "linux_x86": {
+        "file": "arduino-language-server_{{version}}_Linux_32bit.tar.gz",
+        "bin": "arduino-language-server"
+      },
+      "linux_arm64": {
+        "file": "arduino-language-server_{{version}}_Linux_ARM64.tar.gz",
+        "bin": "arduino-language-server"
+      },
+      "win_x64": {
+        "file": "arduino-language-server_{{version}}_Windows_64bit.zip",
+        "bin": "arduino-language-server.exe"
+      },
+      "win_x86": {
+        "file": "arduino-language-server_{{version}}_Windows_32bit.zip",
+        "bin": "arduino-language-server.exe"
+      }
+    },
+    "version": "0.7.7",
+    "source_type": "github"
+  },
+  {
+    "name": "asm-lsp",
+    "description": "Language server for NASM/GAS/GO Assembly.",
+    "languages": ["Assembly"],
+    "source_id": "pkg:cargo/asm-lsp@0.10.1",
+    "bin": "asm-lsp",
+    "version": "0.10.1",
+    "source_type": "cargo"
+  },
+  {
+    "name": "ast-grep",
+    "description": "A CLI tool for code structural search, lint and rewriting. Written in Rust.",
+    "languages": [
+      "C",
+      "C++",
+      "Rust",
+      "Go",
+      "Java",
+      "Python",
+      "C#",
+      "JavaScript",
+      "JSX",
+      "TypeScript",
+      "HTML",
+      "CSS",
+      "Kotlin",
+      "Dart",
+      "Lua"
+    ],
+    "source_id": "pkg:github/ast-grep/ast-grep@0.41.1",
+    "bin": "ast-grep",
+    "assets": {
+      "darwin_arm64": {
+        "file": "app-aarch64-apple-darwin.zip"
+      },
+      "darwin_x64": {
+        "file": "app-x86_64-apple-darwin.zip"
+      },
+      "linux_arm64_gnu": {
+        "file": "app-aarch64-unknown-linux-gnu.zip"
+      },
+      "linux_x64_gnu": {
+        "file": "app-x86_64-unknown-linux-gnu.zip"
+      },
+      "win_arm64": {
+        "file": "app-aarch64-pc-windows-msvc.zip"
+      },
+      "win_x64": {
+        "file": "app-x86_64-pc-windows-msvc.zip"
+      },
+      "win_x86": {
+        "file": "app-i686-pc-windows-msvc.zip"
+      }
+    },
+    "version": "0.41.1",
+    "source_type": "github"
+  },
+  {
+    "name": "astro-language-server",
+    "description": "The Astro language server, its structure is inspired by the Svelte Language Server.",
+    "languages": ["Astro"],
+    "source_id": "pkg:npm/%40astrojs/language-server@2.16.4",
+    "extra_packages": ["typescript", "@astrojs/ts-plugin"],
+    "bin": "astro-ls",
+    "version": "2.16.4",
+    "source_type": "npm"
+  },
+  {
+    "name": "autotools-language-server",
+    "description": "Autotools language server, support configure.ac, Makefile.am, Makefile.",
+    "languages": [],
+    "source_id": "pkg:pypi/autotools-language-server@0.0.23",
+    "bin": "autotools-language-server",
+    "version": "0.0.23",
+    "source_type": "pypi"
+  },
+  {
+    "name": "awk-language-server",
+    "description": "Language Server for AWK.",
+    "languages": ["AWK"],
+    "source_id": "pkg:npm/awk-language-server@0.10.6",
+    "bin": "awk-language-server",
+    "version": "0.10.6",
+    "source_type": "npm"
+  },
+  {
+    "name": "azure-pipelines-language-server",
+    "description": "A language server for Azure Pipelines YAML.",
+    "languages": ["Azure Pipelines"],
+    "source_id": "pkg:npm/azure-pipelines-language-server@0.8.0",
+    "bin": "azure-pipelines-language-server",
+    "version": "0.8.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "bacon-ls",
+    "description": "Rust diagnostic provider based on Bacon",
+    "languages": ["Rust"],
+    "source_id": "pkg:cargo/bacon-ls@0.26.0",
+    "bin": "bacon-ls",
+    "version": "0.26.0",
+    "source_type": "cargo"
+  },
+  {
+    "name": "basedpyright",
+    "description": "Fork of the Pyright static type checker for Python, with extra Pylance features.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/basedpyright@1.38.2",
+    "bin": "basedpyright",
+    "version": "1.38.2",
+    "source_type": "pypi"
+  },
+  {
+    "name": "bash-language-server",
+    "description": "A language server for Bash.",
+    "languages": ["Bash", "Csh", "Ksh", "Sh", "Zsh"],
+    "source_id": "pkg:npm/bash-language-server@5.6.0",
+    "bin": "bash-language-server",
+    "version": "5.6.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "basics-language-server",
+    "description": "Buffer, path, and snippet completions",
+    "languages": [],
+    "source_id": "pkg:npm/basics-language-server@1.1.2",
+    "bin": "basics-language-server",
+    "version": "1.1.2",
+    "source_type": "npm"
+  },
+  {
+    "name": "bazelrc-lsp",
+    "description": "Language Server for `.bazelrc` configuration files",
+    "languages": ["bazelrc"],
+    "source_id": "pkg:github/salesforce-misc/bazelrc-lsp@v0.2.6",
+    "bin": "bazelrc-lsp",
+    "assets": {
+      "darwin_x64": {
+        "file": "bazelrc-lsp-macos"
+      },
+      "darwin_arm64": {
+        "file": "bazelrc-lsp-macos"
+      },
+      "linux_x64_gnu": {
+        "file": "bazelrc-lsp-ubuntu"
+      },
+      "win_x64": {
+        "file": "bazelrc-lsp-windows.exe"
+      }
+    },
+    "version": "v0.2.6",
+    "source_type": "github"
+  },
+  {
+    "name": "beancount-language-server",
+    "description": "A Language Server Protocol (LSP) for beancount files.",
+    "languages": ["Beancount"],
+    "source_id": "pkg:cargo/beancount-language-server@1.9.2?repository_url=https://github.com/polarmutex/beancount-language-server",
+    "bin": "beancount-language-server",
+    "version": "1.9.2?repository_url=https://github.com/polarmutex/beancount-language-server",
+    "source_type": "cargo"
+  },
+  {
+    "name": "bicep-lsp",
+    "description": "Bicep is a declarative language for describing and deploying Azure resources",
+    "languages": ["Bicep"],
+    "source_id": "pkg:github/Azure/bicep@v0.41.2",
+    "bin": "bicep-lsp",
+    "assets": {
+      "any": {
+        "file": "vscode-bicep.vsix"
+      }
+    },
+    "version": "v0.41.2",
+    "source_type": "github"
+  },
+  {
+    "name": "biome",
+    "description": "Toolchain of the web. Successor to Rome.",
+    "languages": ["JSON", "JavaScript", "TypeScript"],
+    "source_id": "pkg:npm/@biomejs/biome@2.4.6",
+    "bin": "biome",
+    "version": "biomejs/biome@2.4.6",
+    "source_type": "npm"
+  },
+  {
+    "name": "bqls",
+    "description": "BigQuery language server",
+    "languages": ["SQL"],
+    "source_id": "pkg:github/kitagry/bqls@v0.4.3",
+    "bin": "bqls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "bqls_darwin_arm64.zip",
+        "bin": "bqls"
+      },
+      "darwin_x64": {
+        "file": "bqls_darwin_amd64.zip",
+        "bin": "bqls"
+      },
+      "linux_x64": {
+        "file": "bqls_linux_amd64.zip",
+        "bin": "bqls"
+      }
+    },
+    "version": "v0.4.3",
+    "source_type": "github"
+  },
+  {
+    "name": "brighterscript",
+    "description": "A superset of Roku's BrightScript language.",
+    "languages": ["BrighterScript"],
+    "source_id": "pkg:npm/brighterscript@0.70.3",
+    "bin": "bsc",
+    "version": "0.70.3",
+    "source_type": "npm"
+  },
+  {
+    "name": "bsl-language-server",
+    "description": "Implementation of Language Server Protocol for Language 1C (BSL).",
+    "languages": ["1\u0421:Enterprise", "OneScript"],
+    "source_id": "pkg:github/1c-syntax/bsl-language-server@v0.28.5",
+    "bin": "bsl-language-server",
+    "assets": {
+      "any": {
+        "file": "bsl-language-server-{{ version | strip_prefix \"v\" }}-exec.jar"
+      }
+    },
+    "version": "v0.28.5",
+    "source_type": "github"
+  },
+  {
+    "name": "buf",
+    "description": "The Buf CLI is a one stop shop for your local Protocol Buffers needs. It comes with a linter that enforces good API\ndesigns, a breaking change detector, a generator, a formatter that formats your Protobuf files in accordance with\nindustry standards. It also helps you manage your Protobuf assets on the Buf Schema Registry.",
+    "languages": ["Protobuf"],
+    "source_id": "pkg:github/bufbuild/buf@v1.66.1",
+    "bin": "buf",
+    "assets": {
+      "darwin_x64": {
+        "file": "buf-Darwin-x86_64"
+      },
+      "darwin_arm64": {
+        "file": "buf-Darwin-arm64"
+      },
+      "linux_x64": {
+        "file": "buf-Linux-x86_64"
+      },
+      "linux_arm64": {
+        "file": "buf-Linux-aarch64"
+      },
+      "win_x64": {
+        "file": "buf-Windows-x86_64.exe"
+      },
+      "win_arm64": {
+        "file": "buf-Windows-arm64.exe"
+      }
+    },
+    "version": "v1.66.1",
+    "source_type": "github"
+  },
+  {
+    "name": "buf-language-server",
+    "description": "buf-language-server is a prototype for the beginnings of a Protobuf language server compatible with Buf modules and workspaces.",
+    "languages": ["Protobuf"],
+    "source_id": "pkg:golang/github.com/bufbuild/buf-language-server@v0.0.0-20240213221648-8e42e5e2e24f#cmd/bufls",
+    "bin": "bufls",
+    "version": "v0.0.0-20240213221648-8e42e5e2e24f#cmd/bufls",
+    "source_type": "golang"
+  },
+  {
+    "name": "bzl",
+    "description": "Autocompletion, hover documentation, and debugging for BUILD files. Get a huge productivity boost with rule,\nattribute, and function definitions right in your IDE.",
+    "languages": ["Starlark"],
+    "source_id": "pkg:generic/bzl@v1.4.22",
+    "bin": "bzl",
+    "version": "v1.4.22",
+    "source_type": "generic"
+  },
+  {
+    "name": "c3-lsp",
+    "description": "c3-lsp is a language server for the c3 language, developed by pherrymason.\nIt provides IDE features to any LSP-compatible editor.",
+    "languages": ["C3"],
+    "source_id": "pkg:github/pherrymason/c3-lsp@v0.4.0",
+    "bin": "c3lsp",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "c3lsp-linux-amd64.tar.gz",
+        "bin": "server/bin/release/c3lsp"
+      },
+      "darwin_arm64": {
+        "file": "c3lsp-darwin-arm64.zip",
+        "bin": "server/bin/release/c3lsp"
+      },
+      "win_x64": {
+        "file": "c3lsp-windows-amd64.zip",
+        "bin": "server/bin/release/c3lsp.exe"
+      }
+    },
+    "version": "v0.4.0",
+    "source_type": "github"
+  },
+  {
+    "name": "cairo-language-server",
+    "description": "Starknet Cairo language server.",
+    "languages": ["Cairo"],
+    "source_id": "pkg:cargo/cairo-language-server@2.15.0",
+    "bin": "cairo-language-server",
+    "version": "2.15.0",
+    "source_type": "cargo"
+  },
+  {
+    "name": "cds-lsp",
+    "description": "Language server for CDS",
+    "languages": ["CDS"],
+    "source_id": "pkg:npm/%40sap/cds-lsp@9.8.0",
+    "bin": "cds-lsp",
+    "version": "9.8.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "circleci-yaml-language-server",
+    "description": "Language server for CircleCI YAML configurations",
+    "languages": ["YAML"],
+    "source_id": "pkg:github/CircleCI-Public/circleci-yaml-language-server@0.28.0",
+    "bin": "circleci-yaml-language-server",
+    "assets": {
+      "darwin_arm64": {
+        "file": "darwin-arm64-lsp",
+        "bin": "darwin-arm64-lsp"
+      },
+      "darwin_x64": {
+        "file": "darwin-amd64-lsp",
+        "bin": "darwin-amd64-lsp"
+      },
+      "linux_arm64_gnu": {
+        "file": "linux-arm64-lsp",
+        "bin": "linux-arm64-lsp"
+      },
+      "linux_x64_gnu": {
+        "file": "linux-amd64-lsp",
+        "bin": "linux-amd64-lsp"
+      },
+      "win_x64": {
+        "file": "windows-amd64-lsp.exe",
+        "bin": "windows-amd64-lsp.exe"
+      }
+    },
+    "version": "0.28.0",
+    "source_type": "github"
+  },
+  {
+    "name": "circom-lsp",
+    "description": "A Language Server Protocol Implementation for Circom",
+    "languages": ["Circom"],
+    "source_id": "pkg:cargo/circom-lsp@0.1.3",
+    "bin": "circom-lsp",
+    "version": "0.1.3",
+    "source_type": "cargo"
+  },
+  {
+    "name": "clangd",
+    "description": "clangd understands your C++ code and adds smart features to your editor: code completion, compile errors,\ngo-to-definition and more.",
+    "languages": ["C", "C++"],
+    "source_id": "pkg:github/clangd/clangd@21.1.8",
+    "bin": "clangd",
+    "assets": {
+      "darwin_x64": {
+        "file": "clangd-mac-{{version}}.zip",
+        "bin": "clangd_{{version}}/bin/clangd"
+      },
+      "darwin_arm64": {
+        "file": "clangd-mac-{{version}}.zip",
+        "bin": "clangd_{{version}}/bin/clangd"
+      },
+      "linux_x64_gnu": {
+        "file": "clangd-linux-{{version}}.zip",
+        "bin": "clangd_{{version}}/bin/clangd"
+      },
+      "win_x64": {
+        "file": "clangd-windows-{{version}}.zip",
+        "bin": "clangd_{{version}}/bin/clangd.exe"
+      }
+    },
+    "version": "21.1.8",
+    "source_type": "github"
+  },
+  {
+    "name": "clarinet",
+    "description": "Clarinet is a simple, modern and opinionated runtime for testing, integrating and deploying Clarity smart contracts.",
+    "languages": ["Clarity"],
+    "source_id": "pkg:github/hirosystems/clarinet@v3.15.0",
+    "bin": "clarinet",
+    "assets": {
+      "darwin_arm64": {
+        "file": "clarinet-darwin-arm64.tar.gz",
+        "bin": "clarinet"
+      },
+      "darwin_x64": {
+        "file": "clarinet-darwin-x64.tar.gz",
+        "bin": "clarinet"
+      },
+      "linux_x64": {
+        "file": "clarinet-linux-x64-glibc.tar.gz",
+        "bin": "clarinet"
+      }
+    },
+    "version": "v3.15.0",
+    "source_type": "github"
+  },
+  {
+    "name": "clarity-lsp",
+    "description": "Language Server Protocol implementation for Clarity.",
+    "languages": ["Clarity"],
+    "source_id": "pkg:github/hirosystems/clarity-lsp@v0.8.0",
+    "bin": "clarity-lsp",
+    "assets": {
+      "darwin_arm64": {
+        "file": "clarity-lsp-macos-x64.zip",
+        "bin": "clarity-lsp"
+      },
+      "darwin_x64": {
+        "file": "clarity-lsp-macos-x64.zip",
+        "bin": "clarity-lsp"
+      },
+      "linux_x64": {
+        "file": "clarity-lsp-linux-x64.zip",
+        "bin": "clarity-lsp"
+      },
+      "win_x64": {
+        "file": "clarity-lsp-windows-x64.zip",
+        "bin": "clarity-lsp.exe"
+      }
+    },
+    "version": "v0.8.0",
+    "source_type": "github"
+  },
+  {
+    "name": "clojure-lsp",
+    "description": "A Language Server for Clojure(script). Taking a Cursive-like approach of statically analyzing code.",
+    "languages": ["Clojure", "ClojureScript"],
+    "source_id": "pkg:github/clojure-lsp/clojure-lsp@2026.02.20-16.08.58",
+    "bin": "clojure-lsp",
+    "assets": {
+      "darwin_arm64": {
+        "file": "clojure-lsp-native-macos-aarch64.zip",
+        "bin": "clojure-lsp"
+      },
+      "darwin_x64": {
+        "file": "clojure-lsp-native-macos-amd64.zip",
+        "bin": "clojure-lsp"
+      },
+      "linux_x64_gnu": {
+        "file": "clojure-lsp-native-linux-amd64.zip",
+        "bin": "clojure-lsp"
+      },
+      "linux_x64": {
+        "file": "clojure-lsp-native-static-linux-amd64.zip",
+        "bin": "clojure-lsp"
+      },
+      "linux_arm64": {
+        "file": "clojure-lsp-native-linux-aarch64.zip",
+        "bin": "clojure-lsp"
+      },
+      "win_x64": {
+        "file": "clojure-lsp-native-windows-amd64.zip",
+        "bin": "clojure-lsp.exe"
+      }
+    },
+    "version": "2026.02.20-16.08.58",
+    "source_type": "github"
+  },
+  {
+    "name": "cmake-language-server",
+    "description": "CMake LSP Implementation.",
+    "languages": ["CMake"],
+    "source_id": "pkg:pypi/cmake-language-server@0.1.11",
+    "bin": "cmake-language-server",
+    "version": "0.1.11",
+    "source_type": "pypi"
+  },
+  {
+    "name": "cobol-language-support",
+    "description": "COBOL Language Support provides autocomplete, highlighting and diagnostics for COBOL code and copybooks",
+    "languages": ["COBOL"],
+    "source_id": "pkg:github/eclipse-che4z/che-che4z-lsp-for-cobol@2.4.3",
+    "bin": "cobol-language-support",
+    "assets": {
+      "darwin_arm64": {
+        "file": "cobol-language-support-darwin-arm64-{{version}}.vsix",
+        "bin": "extension/server/native/server-mac"
+      },
+      "darwin_x64": {
+        "file": "cobol-language-support-darwin-x64-{{version}}.vsix",
+        "bin": "extension/server/native/server-mac"
+      },
+      "linux_arm64": {
+        "file": "cobol-language-support-linux-arm64-{{version}}.vsix",
+        "bin": "extension/server/native/server-linux"
+      },
+      "linux_x64": {
+        "file": "cobol-language-support-linux-x64-{{version}}.vsix",
+        "bin": "extension/server/native/server-linux"
+      },
+      "win_arm64": {
+        "file": "cobol-language-support-win32-arm64-{{version}}-signed.vsix",
+        "bin": "extension/server/native/engine.exe"
+      },
+      "win_x64": {
+        "file": "cobol-language-support-win32-x64-{{version}}-signed.vsix",
+        "bin": "extension/server/native/engine.exe"
+      }
+    },
+    "version": "2.4.3",
+    "source_type": "github"
+  },
+  {
+    "name": "codebook",
+    "description": "An unholy spell checker for code.",
+    "languages": [
+      "C",
+      "CSS",
+      "Go",
+      "HTML",
+      "Haskell",
+      "Java",
+      "JavaScript",
+      "Lua",
+      "Markdown",
+      "PHP",
+      "Plain",
+      "Python",
+      "Ruby",
+      "Rust",
+      "TOML",
+      "TypeScript"
+    ],
+    "source_id": "pkg:github/blopker/codebook@v0.3.32",
+    "bin": "codebook-lsp",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "codebook-lsp-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "codebook-lsp"
+      },
+      "linux_arm64_gnu": {
+        "file": "codebook-lsp-aarch64-unknown-linux-musl.tar.gz",
+        "bin": "codebook-lsp"
+      },
+      "darwin_x64": {
+        "file": "codebook-lsp-x86_64-apple-darwin.tar.gz",
+        "bin": "codebook-lsp"
+      },
+      "darwin_arm64": {
+        "file": "codebook-lsp-aarch64-apple-darwin.tar.gz",
+        "bin": "codebook-lsp"
+      },
+      "win_x64": {
+        "file": "codebook-lsp-x86_64-pc-windows-msvc.zip",
+        "bin": "codebook-lsp.exe"
+      }
+    },
+    "version": "v0.3.32",
+    "source_type": "github"
+  },
+  {
+    "name": "codeql",
+    "description": "Discover vulnerabilities across a codebase with CodeQL, our industry-leading semantic code analysis engine. CodeQL\nlets you query code as though it were data. Write a query to find all variants of a vulnerability, eradicating it\nforever. Then share your query to help others do the same.",
+    "languages": ["CodeQL"],
+    "source_id": "pkg:github/github/codeql-cli-binaries@v2.24.3",
+    "bin": "codeql",
+    "assets": {
+      "darwin_x64": {
+        "file": "codeql-osx64.zip",
+        "bin": "codeql/codeql"
+      },
+      "darwin_arm64": {
+        "file": "codeql-osx64.zip",
+        "bin": "codeql/codeql"
+      },
+      "linux_x64": {
+        "file": "codeql-linux64.zip",
+        "bin": "codeql/codeql"
+      },
+      "win_x64": {
+        "file": "codeql-win64.zip",
+        "bin": "codeql/codeql.exe"
+      }
+    },
+    "version": "v2.24.3",
+    "source_type": "github"
+  },
+  {
+    "name": "coffeesense-language-server",
+    "description": "Language server for CoffeeScript.",
+    "languages": ["CoffeeScript"],
+    "source_id": "pkg:npm/coffeesense-language-server@1.15.0",
+    "bin": "coffeesense-language-server",
+    "version": "1.15.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "contextive",
+    "description": "Supports developers where a complex domain or project specific language is in use by surfacing definitions everywhere\nspecific words are used - code, comments, config or documentation.",
+    "languages": ["F#"],
+    "source_id": "pkg:github/dev-cycles/contextive@v1.17.8",
+    "bin": "Contextive.LanguageServer",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "Contextive.LanguageServer-linux-x64-{{ version | strip_prefix \"v\" }}.zip",
+        "bin": "Contextive.LanguageServer"
+      },
+      "linux_arm64_gnu": {
+        "file": "Contextive.LanguageServer-linux-arm64-{{ version | strip_prefix \"v\" }}.zip",
+        "bin": "Contextive.LanguageServer"
+      },
+      "darwin_x64": {
+        "file": "Contextive.LanguageServer-osx-x64-{{ version | strip_prefix \"v\" }}.zip",
+        "bin": "Contextive.LanguageServer"
+      },
+      "darwin_arm64": {
+        "file": "Contextive.LanguageServer-osx-arm64-{{ version | strip_prefix \"v\" }}.zip",
+        "bin": "Contextive.LanguageServer"
+      },
+      "win_x64": {
+        "file": "Contextive.LanguageServer-win-x64-{{ version | strip_prefix \"v\" }}.zip",
+        "bin": "Contextive.LanguageServer.exe"
+      }
+    },
+    "version": "v1.17.8",
+    "source_type": "github"
+  },
+  {
+    "name": "copilot-language-server",
+    "description": "The Copilot Language Server enables any editor or IDE to integrate with GitHub Copilot via the language server protocol.",
+    "languages": [],
+    "source_id": "pkg:npm/%40github/copilot-language-server@1.453.0",
+    "bin": "copilot-language-server",
+    "version": "1.453.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "coq-lsp",
+    "description": "Visual Studio Code Extension and Language Server Protocol for coq",
+    "languages": ["Coq"],
+    "source_id": "pkg:opam/coq-lsp@0.1.8+8.19",
+    "bin": "coq-lsp",
+    "version": "0.1.8+8.19",
+    "source_type": "opam"
+  },
+  {
+    "name": "cql-language-server",
+    "description": "A language server for Clinical Quality Language (CQL).",
+    "languages": ["CQL"],
+    "source_id": "pkg:generic/cqframework/cql-language-server@v4.2.0",
+    "bin": "cql-language-server",
+    "version": "v4.2.0",
+    "source_type": "generic"
+  },
+  {
+    "name": "crystalline",
+    "description": "A Language Server Protocol implementation for Crystal.",
+    "languages": ["Crystal"],
+    "source_id": "pkg:github/elbywan/crystalline@v0.17.1",
+    "bin": "crystalline",
+    "assets": {
+      "darwin_arm64": {
+        "file": "crystalline_arm64-apple-darwin.gz",
+        "bin": "crystalline_arm64-apple-darwin"
+      },
+      "darwin_x64": {
+        "file": "crystalline_x86_64-apple-darwin.gz",
+        "bin": "crystalline_x86_64-apple-darwin"
+      },
+      "linux_x64": {
+        "file": "crystalline_x86_64-unknown-linux-musl.gz",
+        "bin": "crystalline_x86_64-unknown-linux-musl"
+      }
+    },
+    "version": "v0.17.1",
+    "source_type": "github"
+  },
+  {
+    "name": "csharp-language-server",
+    "description": "Roslyn-based LSP language server for C#.",
+    "languages": ["C#"],
+    "source_id": "pkg:nuget/csharp-ls@0.22.0",
+    "bin": "csharp-ls",
+    "version": "0.22.0",
+    "source_type": "nuget"
+  },
+  {
+    "name": "cspell-lsp",
+    "description": "Language Server Protocol implementation for CSpell, a spell checker for code.",
+    "languages": [],
+    "source_id": "pkg:npm/@vlabo/cspell-lsp@1.1.5",
+    "bin": "cspell-lsp",
+    "version": "vlabo/cspell-lsp@1.1.5",
+    "source_type": "npm"
+  },
+  {
+    "name": "css-lsp",
+    "description": "Language Server Protocol implementation for CSS, SCSS & LESS.",
+    "languages": ["CSS", "SCSS", "LESS"],
+    "source_id": "pkg:npm/vscode-langservers-extracted@4.10.0",
+    "bin": "vscode-css-language-server",
+    "version": "4.10.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "css-variables-language-server",
+    "description": "Autocompletion and go-to-definition for project-wide CSS variables.",
+    "languages": ["CSS", "SCSS", "LESS"],
+    "source_id": "pkg:npm/css-variables-language-server@2.8.4",
+    "bin": "css-variables-language-server",
+    "version": "2.8.4",
+    "source_type": "npm"
+  },
+  {
+    "name": "cssmodules-language-server",
+    "description": "Autocompletion and go-to-definition for cssmodules.",
+    "languages": ["CSS"],
+    "source_id": "pkg:npm/cssmodules-language-server@1.5.2",
+    "bin": "cssmodules-language-server",
+    "version": "1.5.2",
+    "source_type": "npm"
+  },
+  {
+    "name": "cucumber-language-server",
+    "description": "Cucumber Language Server.",
+    "languages": ["Cucumber"],
+    "source_id": "pkg:npm/%40cucumber/language-server@1.7.0",
+    "bin": "cucumber-language-server",
+    "version": "1.7.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "cue",
+    "description": "The Official Language Server implementation for CUE.",
+    "languages": ["Cue"],
+    "source_id": "pkg:golang/cuelang.org/go@v0.16.0#cmd/cue",
+    "bin": "cue",
+    "version": "v0.16.0#cmd/cue",
+    "source_type": "golang"
+  },
+  {
+    "name": "cuelsp",
+    "description": "Language Server implementation for CUE, with built-in support for Dagger.",
+    "languages": ["Cue"],
+    "source_id": "pkg:golang/github.com/dagger/cuelsp@v0.3.4#cmd/cuelsp",
+    "bin": "cuelsp",
+    "version": "v0.3.4#cmd/cuelsp",
+    "source_type": "golang"
+  },
+  {
+    "name": "cuepls",
+    "description": "The Official Language Server implementation for CUE.",
+    "languages": ["Cue"],
+    "source_id": "pkg:golang/cuelang.org/go@v0.10.1#cmd/cuepls",
+    "bin": "cuepls",
+    "version": "v0.10.1#cmd/cuepls",
+    "source_type": "golang"
+  },
+  {
+    "name": "custom-elements-languageserver",
+    "description": "Custom Elements Language Server provides useful language features for Web Components. Features include code actions, completons, diagnostics and more.",
+    "languages": [],
+    "source_id": "pkg:npm/custom-elements-languageserver@1.0.4",
+    "bin": "custom-elements-languageserver",
+    "version": "1.0.4",
+    "source_type": "npm"
+  },
+  {
+    "name": "cypher-language-server",
+    "description": "Language Server for Cypher query language.",
+    "languages": ["Cypher"],
+    "source_id": "pkg:npm/%40neo4j-cypher/language-server@0.0.0-canary-20250423075344",
+    "bin": "cypher-language-server",
+    "version": "0.0.0-canary-20250423075344",
+    "source_type": "npm"
+  },
+  {
+    "name": "dcm",
+    "description": "Language server for DCM analyzer",
+    "languages": ["Dart"],
+    "source_id": "pkg:github/CQLabs/homebrew-dcm@1.35.2",
+    "bin": "dcm",
+    "assets": {
+      "darwin_arm64": {
+        "file": "dcm-macos-arm-release.zip",
+        "bin": "dcm"
+      },
+      "darwin_x64": {
+        "file": "dcm-macos-x64-release.zip",
+        "bin": "dcm"
+      },
+      "linux_x64": {
+        "file": "dcm-linux-x64-release.zip",
+        "bin": "dcm"
+      },
+      "win_x64": {
+        "file": "dcm-windows-release.zip",
+        "bin": "dcm.exe"
+      }
+    },
+    "version": "1.35.2",
+    "source_type": "github"
+  },
+  {
+    "name": "deno",
+    "description": "Deno (/\u02c8di\u02d0no\u028a/, pronounced dee-no) is a JavaScript, TypeScript, and WebAssembly runtime with secure defaults and a\ngreat developer experience.",
+    "languages": ["JavaScript", "TypeScript"],
+    "source_id": "pkg:github/denoland/deno@v2.7.5",
+    "bin": "deno",
+    "assets": {
+      "darwin_arm64": {
+        "file": "deno-aarch64-apple-darwin.zip",
+        "bin": "deno"
+      },
+      "linux_arm64_gnu": {
+        "file": "deno-aarch64-unknown-linux-gnu.zip",
+        "bin": "deno"
+      },
+      "darwin_x64": {
+        "file": "deno-x86_64-apple-darwin.zip",
+        "bin": "deno"
+      },
+      "linux_x64_gnu": {
+        "file": "deno-x86_64-unknown-linux-gnu.zip",
+        "bin": "deno"
+      },
+      "win_x64": {
+        "file": "deno-x86_64-pc-windows-msvc.zip",
+        "bin": "deno.exe"
+      }
+    },
+    "version": "v2.7.5",
+    "source_type": "github"
+  },
+  {
+    "name": "dhall-lsp",
+    "description": "LSP server implementation for Dhall.",
+    "languages": ["Dhall"],
+    "source_id": "pkg:github/dhall-lang/dhall-haskell@1.42.2",
+    "bin": "dhall-lsp-server",
+    "assets": {
+      "darwin_x64": {
+        "file": "dhall-lsp-server-1.1.4-x86_64-darwin.tar.bz2",
+        "bin": "bin/dhall-lsp-server"
+      },
+      "darwin_arm64": {
+        "file": "dhall-lsp-server-1.1.4-x86_64-darwin.tar.bz2",
+        "bin": "bin/dhall-lsp-server"
+      },
+      "linux_x64": {
+        "file": "dhall-lsp-server-1.1.4-x86_64-Linux.tar.bz2",
+        "bin": "bin/dhall-lsp-server"
+      },
+      "win_x64": {
+        "file": "dhall-lsp-server-1.1.4-x86_64-windows.zip",
+        "bin": "bin/dhall-lsp-server.exe"
+      }
+    },
+    "version": "1.42.2",
+    "source_type": "github"
+  },
+  {
+    "name": "diagnostic-languageserver",
+    "description": "Diagnostic language server that integrates with linters.",
+    "languages": [],
+    "source_id": "pkg:npm/diagnostic-languageserver@1.15.0",
+    "bin": "diagnostic-languageserver",
+    "version": "1.15.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "digestif",
+    "description": "A language server for TeX and friends",
+    "languages": ["LaTeX"],
+    "source_id": "pkg:luarocks/digestif@0.5.1-1",
+    "bin": "digestif",
+    "version": "0.5.1-1",
+    "source_type": "luarocks"
+  },
+  {
+    "name": "dingo-lsp",
+    "description": "Language Server Protocol implementation for Dingo. Wraps gopls and translates positions between .dingo\nand .go files using source maps, providing full IDE support including go-to-definition, hover, completion,\ndiagnostics, and rename refactoring.",
+    "languages": ["Dingo"],
+    "source_id": "pkg:golang/github.com/MadAppGang/dingo/cmd/dingo-lsp@v0.12.1",
+    "bin": "dingo-lsp",
+    "version": "v0.12.1",
+    "source_type": "golang"
+  },
+  {
+    "name": "django-language-server",
+    "description": "A language server for the Django web framework",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/django-language-server@6.0.2",
+    "bin": "djls",
+    "version": "6.0.2",
+    "source_type": "pypi"
+  },
+  {
+    "name": "django-template-lsp",
+    "description": "A language server for Django templates.",
+    "languages": ["Python", "Django", "HTML"],
+    "source_id": "pkg:pypi/django-template-lsp@1.2.2",
+    "bin": "djlsp",
+    "version": "1.2.2",
+    "source_type": "pypi"
+  },
+  {
+    "name": "docker-compose-language-service",
+    "description": "A language server for Docker Compose.",
+    "languages": ["Docker"],
+    "source_id": "pkg:npm/%40microsoft/compose-language-service@0.5.0",
+    "bin": "docker-compose-langserver",
+    "version": "0.5.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "docker-language-server",
+    "description": "Language server for Dockerfiles, Compose files, and Bake files.",
+    "languages": ["Docker"],
+    "source_id": "pkg:github/docker/docker-language-server@v0.20.1",
+    "bin": "docker-language-server",
+    "assets": {
+      "darwin_x64": {
+        "file": "docker-language-server-darwin-amd64-{{version}}"
+      },
+      "darwin_arm64": {
+        "file": "docker-language-server-darwin-arm64-{{version}}"
+      },
+      "linux_arm64_gnu": {
+        "file": "docker-language-server-linux-arm64-{{version}}"
+      },
+      "linux_arm64_musl": {
+        "file": "docker-language-server-linux-arm64-{{version}}"
+      },
+      "linux_x64_gnu": {
+        "file": "docker-language-server-linux-amd64-{{version}}"
+      },
+      "linux_x64_musl": {
+        "file": "docker-language-server-linux-amd64-{{version}}"
+      },
+      "win_arm64": {
+        "file": "docker-language-server-windows-arm64-{{version}}.exe"
+      },
+      "win_x64": {
+        "file": "docker-language-server-windows-amd64-{{version}}.exe"
+      }
+    },
+    "version": "v0.20.1",
+    "source_type": "github"
+  },
+  {
+    "name": "dockerfile-language-server",
+    "description": "A language server for Dockerfiles powered by Node.js, TypeScript, and VSCode technologies.",
+    "languages": ["Docker"],
+    "source_id": "pkg:npm/dockerfile-language-server-nodejs@0.15.0",
+    "bin": "docker-langserver",
+    "version": "0.15.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "dot-language-server",
+    "description": "A language server for the DOT language.",
+    "languages": ["DOT"],
+    "source_id": "pkg:npm/dot-language-server@3.0.3",
+    "bin": "dot-language-server",
+    "version": "3.0.3",
+    "source_type": "npm"
+  },
+  {
+    "name": "dprint",
+    "description": "A pluggable and configurable code formatting platform written in Rust.",
+    "languages": [],
+    "source_id": "pkg:github/dprint/dprint@0.52.0",
+    "bin": "dprint",
+    "assets": {
+      "darwin_arm64": {
+        "file": "dprint-aarch64-apple-darwin.zip",
+        "bin": "dprint"
+      },
+      "darwin_x64": {
+        "file": "dprint-x86_64-apple-darwin.zip",
+        "bin": "dprint"
+      },
+      "linux_x64_gnu": {
+        "file": "dprint-x86_64-unknown-linux-gnu.zip",
+        "bin": "dprint"
+      },
+      "linux_x64": {
+        "file": "dprint-x86_64-unknown-linux-musl.zip",
+        "bin": "dprint"
+      },
+      "linux_arm64_gnu": {
+        "file": "dprint-aarch64-unknown-linux-gnu.zip",
+        "bin": "dprint"
+      },
+      "win_x64": {
+        "file": "dprint-x86_64-pc-windows-msvc.zip",
+        "bin": "dprint.exe"
+      }
+    },
+    "version": "0.52.0",
+    "source_type": "github"
+  },
+  {
+    "name": "drools-lsp",
+    "description": "An implementation of a language server for the Drools Rule Language.",
+    "languages": ["Drools"],
+    "source_id": "pkg:github/kiegroup/drools-lsp@latest",
+    "assets": {
+      "any": {
+        "file": "drools-lsp-server-jar-with-dependencies.jar"
+      }
+    },
+    "version": "latest",
+    "source_type": "github"
+  },
+  {
+    "name": "earthlyls",
+    "description": "A fast language server for earthly.",
+    "languages": ["Earthly"],
+    "source_id": "pkg:github/glehmann/earthlyls@0.5.5",
+    "bin": "earthlyls",
+    "assets": {
+      "linux_x64": {
+        "file": "earthlyls-{{ version }}-linux-amd64.tar.gz",
+        "bin": "earthlyls-{{ version }}-linux-amd64/earthlyls"
+      },
+      "linux_arm64": {
+        "file": "earthlyls-{{ version }}-linux-arm64.tar.gz",
+        "bin": "earthlyls-{{ version }}-linux-arm64/earthlyls"
+      },
+      "darwin_x64": {
+        "file": "earthlyls-{{ version }}-macos-amd64.tar.gz",
+        "bin": "earthlyls-{{ version }}-macos-amd64/earthlyls"
+      },
+      "darwin_arm64": {
+        "file": "earthlyls-{{ version }}-macos-arm64.tar.gz",
+        "bin": "earthlyls-{{ version }}-macos-arm64/earthlyls"
+      },
+      "win_x64": {
+        "file": "earthlyls-{{ version }}-windows-amd64.zip",
+        "bin": "earthlyls-{{ version }}-windows-amd64/earthlyls.exe"
+      }
+    },
+    "version": "0.5.5",
+    "source_type": "github"
+  },
+  {
+    "name": "efm",
+    "description": "General purpose Language Server.",
+    "languages": [],
+    "source_id": "pkg:github/mattn/efm-langserver@v0.0.56",
+    "bin": "efm-langserver",
+    "assets": {
+      "darwin_x64": {
+        "file": "efm-langserver_{{version}}_darwin_amd64.zip",
+        "bin": "efm-langserver_{{version}}_darwin_amd64/efm-langserver"
+      },
+      "darwin_arm64": {
+        "file": "efm-langserver_{{version}}_darwin_arm64.zip",
+        "bin": "efm-langserver_{{version}}_darwin_arm64/efm-langserver"
+      },
+      "linux_x64": {
+        "file": "efm-langserver_{{version}}_linux_amd64.tar.gz",
+        "bin": "efm-langserver_{{version}}_linux_amd64/efm-langserver"
+      },
+      "linux_arm64": {
+        "file": "efm-langserver_{{version}}_linux_arm64.tar.gz",
+        "bin": "efm-langserver_{{version}}_linux_arm64/efm-langserver"
+      },
+      "win_x64": {
+        "file": "efm-langserver_{{version}}_windows_amd64.zip",
+        "bin": "efm-langserver_{{version}}_windows_amd64/efm-langserver.exe"
+      },
+      "win_arm64": {
+        "file": "efm-langserver_{{version}}_windows_arm64.zip",
+        "bin": "efm-langserver_{{version}}_windows_arm64/efm-langserver.exe"
+      }
+    },
+    "version": "v0.0.56",
+    "source_type": "github"
+  },
+  {
+    "name": "elixir-ls",
+    "description": "A frontend-independent IDE \"smartness\" server for Elixir. Implements the \"Language Server Protocol\" standard and\nprovides debugger support via the \"Debug Adapter Protocol\".",
+    "languages": ["Elixir"],
+    "source_id": "pkg:github/elixir-lsp/elixir-ls@v0.30.0",
+    "bin": "elixir-ls",
+    "assets": {
+      "unix": {
+        "file": "elixir-ls-{{version}}.zip",
+        "bin": "language_server.sh"
+      },
+      "win": {
+        "file": "elixir-ls-{{version}}.zip",
+        "bin": "language_server.bat"
+      }
+    },
+    "version": "v0.30.0",
+    "source_type": "github"
+  },
+  {
+    "name": "elm-language-server",
+    "description": "Language server implementation for Elm.",
+    "languages": ["Elm"],
+    "source_id": "pkg:npm/%40elm-tooling/elm-language-server@2.8.0",
+    "bin": "elm-language-server",
+    "version": "2.8.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "elp",
+    "description": "ELP integrates Erlang into modern IDEs via the language server protocol.",
+    "languages": ["Erlang"],
+    "source_id": "pkg:github/WhatsApp/erlang-language-platform@2026-02-27",
+    "bin": "elp",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "elp-linux-x86_64-unknown-linux-gnu-otp-27.3.tar.gz",
+        "bin": "elp"
+      },
+      "linux_arm64_gnu": {
+        "file": "elp-linux-aarch64-unknown-linux-gnu-otp-27.3.tar.gz",
+        "bin": "elp"
+      },
+      "darwin_x64": {
+        "file": "elp-macos-x86_64-apple-darwin-otp-27.3.tar.gz",
+        "bin": "elp"
+      },
+      "darwin_arm64": {
+        "file": "elp-macos-aarch64-apple-darwin-otp-27.3.tar.gz",
+        "bin": "elp"
+      }
+    },
+    "version": "2026-02-27",
+    "source_type": "github"
+  },
+  {
+    "name": "ember-language-server",
+    "description": "Language Server Protocol implementation for Ember.js and Glimmer projects.",
+    "languages": ["Ember"],
+    "source_id": "pkg:npm/%40ember-tooling/ember-language-server@2.30.9",
+    "bin": "ember-language-server",
+    "version": "2.30.9",
+    "source_type": "npm"
+  },
+  {
+    "name": "emmet-language-server",
+    "description": "A language server for emmet.io.",
+    "languages": ["Emmet"],
+    "source_id": "pkg:npm/@olrtg/emmet-language-server@2.8.0",
+    "bin": "emmet-language-server",
+    "version": "olrtg/emmet-language-server@2.8.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "emmet-ls",
+    "description": "Emmet support based on LSP.",
+    "languages": ["Emmet"],
+    "source_id": "pkg:npm/emmet-ls@0.4.2",
+    "bin": "emmet-ls",
+    "version": "0.4.2",
+    "source_type": "npm"
+  },
+  {
+    "name": "emmylua_ls",
+    "description": "The language server for Lua, offering extensive features for different Lua versions.",
+    "languages": ["Lua"],
+    "source_id": "pkg:github/CppCXY/emmylua-analyzer-rust@0.21.0",
+    "bin": "emmylua_ls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "emmylua_ls-darwin-arm64.tar.gz",
+        "bin": "emmylua_ls"
+      },
+      "darwin_x64": {
+        "file": "emmylua_ls-darwin-x64.tar.gz",
+        "bin": "emmylua_ls"
+      },
+      "linux_arm64_gnu": {
+        "file": "emmylua_ls-linux-aarch64-glibc.2.17.tar.gz",
+        "bin": "emmylua_ls"
+      },
+      "linux_x64_musl": {
+        "file": "emmylua_ls-linux-musl.tar.gz",
+        "bin": "emmylua_ls"
+      },
+      "linux_x64_gnu": {
+        "file": "emmylua_ls-linux-x64.tar.gz",
+        "bin": "emmylua_ls"
+      },
+      "win_arm64": {
+        "file": "emmylua_ls-win32-arm64.zip",
+        "bin": "emmylua_ls.exe"
+      },
+      "win_x86": {
+        "file": "emmylua_ls-win32-ia32.zip",
+        "bin": "emmylua_ls.exe"
+      },
+      "win_x64": {
+        "file": "emmylua_ls-win32-x64.zip",
+        "bin": "emmylua_ls.exe"
+      }
+    },
+    "version": "0.21.0",
+    "source_type": "github"
+  },
+  {
+    "name": "erg",
+    "description": "A statically typed language that can deeply improve the Python ecosystem.",
+    "languages": ["Erg"],
+    "source_id": "pkg:github/erg-lang/erg@v0.6.53",
+    "bin": "erg",
+    "assets": {
+      "darwin_x64": {
+        "file": "erg-x86_64-apple-darwin.tar.gz",
+        "bin": "erg"
+      },
+      "darwin_arm64": {
+        "file": "erg-aarch64-apple-darwin.tar.gz",
+        "bin": "erg"
+      },
+      "linux_x64_gnu": {
+        "file": "erg-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "erg"
+      },
+      "win_x64": {
+        "file": "erg-x86_64-pc-windows-msvc.zip",
+        "bin": "erg.exe"
+      }
+    },
+    "version": "v0.6.53",
+    "source_type": "github"
+  },
+  {
+    "name": "erg-language-server",
+    "description": "ELS is a language server for the Erg programing language.",
+    "languages": ["Erg"],
+    "source_id": "pkg:github/erg-lang/erg-language-server@v0.1.12",
+    "bin": "els",
+    "assets": {
+      "darwin_x64": {
+        "file": "els-x86_64-apple-darwin.tar.gz",
+        "bin": "els"
+      },
+      "darwin_arm64": {
+        "file": "els-aarch64-apple-darwin.tar.gz",
+        "bin": "els"
+      },
+      "linux_x64_gnu": {
+        "file": "els-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "els"
+      },
+      "win_x64": {
+        "file": "els-x86_64-pc-windows-msvc.zip",
+        "bin": "els.exe"
+      }
+    },
+    "version": "v0.1.12",
+    "source_type": "github"
+  },
+  {
+    "name": "erlang-ls",
+    "description": "Erlang LS is a language server providing language features for the Erlang programming language. The server works with\nEmacs, VSCode, Sublime Text 3, Vim and probably many more text editors and IDE which adhere to the LSP protocol.",
+    "languages": ["Erlang"],
+    "source_id": "pkg:github/erlang-ls/erlang_ls@1.1.0",
+    "bin": "erlang_ls",
+    "version": "1.1.0",
+    "source_type": "github"
+  },
+  {
+    "name": "esbonio",
+    "description": "A Language Server for Sphinx projects.",
+    "languages": ["Sphinx"],
+    "source_id": "pkg:pypi/esbonio@1.1.0",
+    "bin": "esbonio",
+    "version": "1.1.0",
+    "source_type": "pypi"
+  },
+  {
+    "name": "eslint-lsp",
+    "description": "Language Server Protocol implementation for ESLint. The server uses the ESLint library installed in the opened\nworkspace folder. If the folder doesn't provide one the extension looks for a global install version.",
+    "languages": ["JavaScript", "TypeScript"],
+    "source_id": "pkg:npm/vscode-langservers-extracted@4.10.0",
+    "bin": "vscode-eslint-language-server",
+    "version": "4.10.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "expert",
+    "description": "Expert is the official language server implementation for the Elixir programming language.",
+    "languages": ["Elixir"],
+    "source_id": "pkg:github/elixir-lang/expert@nightly",
+    "bin": "expert",
+    "assets": {
+      "darwin_x64": {
+        "file": "expert_darwin_amd64",
+        "bin": "expert_darwin_amd64"
+      },
+      "darwin_arm64": {
+        "file": "expert_darwin_arm64",
+        "bin": "expert_darwin_arm64"
+      },
+      "linux_x64_gnu": {
+        "file": "expert_linux_amd64",
+        "bin": "expert_linux_amd64"
+      },
+      "linux_arm64_gnu": {
+        "file": "expert_linux_arm64",
+        "bin": "expert_linux_arm64"
+      },
+      "win_x64": {
+        "file": "expert_windows_amd64.exe",
+        "bin": "expert_windows_amd64.exe"
+      }
+    },
+    "version": "nightly",
+    "source_type": "github"
+  },
+  {
+    "name": "facility-language-server",
+    "description": "Facility Service Definition language. This version of Facility Service Definition\nrequires dotnet (.NET 6.0) to be installed.",
+    "languages": ["Facility Service Definition"],
+    "source_id": "pkg:github/FacilityApi/FacilityLanguageServer@v2.5.1",
+    "bin": "facility-language-server",
+    "assets": {
+      "any": {
+        "file": "Facility.LanguageServer.zip:libexec/"
+      }
+    },
+    "version": "v2.5.1",
+    "source_type": "github"
+  },
+  {
+    "name": "fennel-language-server",
+    "description": "Fennel language server protocol (LSP) support.",
+    "languages": ["Fennel"],
+    "source_id": "pkg:cargo/fennel-language-server@59005549ca1191bf2aa364391e6bf2371889b4f8?repository_url=https://github.com/rydesun/fennel-language-server&rev=true",
+    "bin": "fennel-language-server",
+    "version": "59005549ca1191bf2aa364391e6bf2371889b4f8?repository_url=https://github.com/rydesun/fennel-language-server&rev=true",
+    "source_type": "cargo"
+  },
+  {
+    "name": "fennel-ls",
+    "description": "Language Server for Fennel",
+    "languages": ["Fennel"],
+    "source_id": "pkg:luarocks/fennel-ls@0.2.1-1",
+    "bin": "fennel-ls",
+    "version": "0.2.1-1",
+    "source_type": "luarocks"
+  },
+  {
+    "name": "fish-lsp",
+    "description": "LSP implementation for the fish shell language",
+    "languages": ["Fish"],
+    "source_id": "pkg:npm/fish-lsp@1.1.3",
+    "bin": "fish-lsp",
+    "version": "1.1.3",
+    "source_type": "npm"
+  },
+  {
+    "name": "flux-lsp",
+    "description": "Implementation of Language Server Protocol for the Flux language.",
+    "languages": ["Flux"],
+    "source_id": "pkg:cargo/flux-lsp@0.8.40?repository_url=https://github.com/influxdata/flux-lsp",
+    "bin": "flux-lsp",
+    "version": "0.8.40?repository_url=https://github.com/influxdata/flux-lsp",
+    "source_type": "cargo"
+  },
+  {
+    "name": "foam-language-server",
+    "description": "A language server for OpenFOAM case files.",
+    "languages": ["OpenFOAM"],
+    "source_id": "pkg:npm/foam-language-server@0.4.6",
+    "bin": "foam-ls",
+    "version": "0.4.6",
+    "source_type": "npm"
+  },
+  {
+    "name": "fortls",
+    "description": "fortls - Fortran Language Server.",
+    "languages": ["Fortran"],
+    "source_id": "pkg:pypi/fortls@3.2.2",
+    "bin": "fortls",
+    "version": "3.2.2",
+    "source_type": "pypi"
+  },
+  {
+    "name": "fsautocomplete",
+    "description": "F# language server using Language Server Protocol.",
+    "languages": ["F#"],
+    "source_id": "pkg:nuget/fsautocomplete@0.83.0",
+    "bin": "fsautocomplete",
+    "version": "0.83.0",
+    "source_type": "nuget"
+  },
+  {
+    "name": "gh-actions-language-server",
+    "description": "GitHub Actions Language Server",
+    "languages": ["YAML"],
+    "source_id": "pkg:npm/%40actions/languageserver@0.3.47",
+    "bin": "gh-actions-language-server",
+    "version": "0.3.47",
+    "source_type": "npm"
+  },
+  {
+    "name": "ginko_ls",
+    "description": "ginko_ls is meant to be a feature-complete language server for device-trees. Language servers can be used in many\neditors, such as Visual Studio Code, Emacs or Vim",
+    "languages": ["DTS"],
+    "source_id": "pkg:github/Schottkyc137/ginko@v0.0.8",
+    "bin": "ginko_ls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "ginko_ls-aarch64-apple-darwin.zip",
+        "bin": "ginko_ls-aarch64-apple-darwin/bin/ginko_ls"
+      },
+      "linux_x64_gnu": {
+        "file": "ginko_ls-x86_64-unknown-linux-gnu.zip",
+        "bin": "ginko_ls-x86_64-unknown-linux-gnu/bin/ginko_ls"
+      },
+      "win_x64": {
+        "file": "ginko_ls-x86_64-pc-windows-msvc.zip",
+        "bin": "ginko_ls-x86_64-pc-windows-msvc/bin/ginko_ls.exe"
+      }
+    },
+    "version": "v0.0.8",
+    "source_type": "github"
+  },
+  {
+    "name": "gitlab-ci-ls",
+    "description": "An experimental language server for Gitlab CI.",
+    "languages": ["YAML"],
+    "source_id": "pkg:cargo/gitlab-ci-ls@1.2.5",
+    "bin": "gitlab-ci-ls",
+    "version": "1.2.5",
+    "source_type": "cargo"
+  },
+  {
+    "name": "glint",
+    "description": "Glint is a set of tools to aid in developing code that uses the Glimmer VM for rendering, such as Ember.js v3.24+ and\nGlimmerX projects. Similar to Vetur for Vue projects or Svelte Language Tools, Glint consists of a CLI and a language\nserver to provide feedback and enforce correctness both locally during editing and project-wide in CI.",
+    "languages": ["Handlebars", "Glimmer", "TypeScript", "JavaScript"],
+    "source_id": "pkg:npm/%40glint/core@1.5.2",
+    "extra_packages": ["typescript"],
+    "bin": "glint",
+    "version": "1.5.2",
+    "source_type": "npm"
+  },
+  {
+    "name": "glsl_analyzer",
+    "description": "Language server for GLSL (autocomplete, goto-definition, formatter, and more)",
+    "languages": ["OpenGL"],
+    "source_id": "pkg:github/nolanderc/glsl_analyzer@v1.7.1",
+    "bin": "glsl_analyzer",
+    "assets": {
+      "darwin_x64": {
+        "file": "x86_64-macos.zip",
+        "bin": "bin/glsl_analyzer"
+      },
+      "darwin_arm64": {
+        "file": "aarch64-macos.zip",
+        "bin": "bin/glsl_analyzer"
+      },
+      "linux_x64": {
+        "file": "x86_64-linux-musl.zip",
+        "bin": "bin/glsl_analyzer"
+      },
+      "linux_arm64": {
+        "file": "aarch64-linux-musl.zip",
+        "bin": "bin/glsl_analyzer"
+      },
+      "win_x64": {
+        "file": "x86_64-windows.zip",
+        "bin": "bin/glsl_analyzer.exe"
+      },
+      "win_arm64": {
+        "file": "aarch64-windows.zip",
+        "bin": "bin/glsl_analyzer.exe"
+      }
+    },
+    "version": "v1.7.1",
+    "source_type": "github"
+  },
+  {
+    "name": "glslls",
+    "description": "Language server implementation for GLSL.",
+    "languages": ["GLSL"],
+    "source_id": "pkg:github/svenstaro/glsl-language-server@0.5.0",
+    "bin": "glslls",
+    "version": "0.5.0",
+    "source_type": "github"
+  },
+  {
+    "name": "gn-language-server",
+    "description": "A language server for GN, the build configuration language used in Chromium, Fuchsia, and other projects.",
+    "languages": ["GN"],
+    "source_id": "pkg:github/google/gn-language-server@v1.14.0",
+    "bin": "gn-language-server",
+    "assets": {
+      "darwin_arm64": {
+        "file": "gn-language-server-{{ version | strip_prefix \"v\" }}-darwin-aarch64"
+      },
+      "linux_x64": {
+        "file": "gn-language-server-{{ version | strip_prefix \"v\" }}-linux-x86_64"
+      },
+      "win_x64": {
+        "file": "gn-language-server-{{ version | strip_prefix \"v\" }}-windows-x86_64.exe"
+      }
+    },
+    "version": "v1.14.0",
+    "source_type": "github"
+  },
+  {
+    "name": "golangci-lint-langserver",
+    "description": "golangci-lint language server.",
+    "languages": ["Go"],
+    "source_id": "pkg:golang/github.com/nametake/golangci-lint-langserver@v0.0.12",
+    "bin": "golangci-lint-langserver",
+    "version": "v0.0.12",
+    "source_type": "golang"
+  },
+  {
+    "name": "gopls",
+    "description": "gopls (pronounced \"Go please\") is the official Go language server developed by the Go team. It provides IDE features\nto any LSP-compatible editor.",
+    "languages": ["Go"],
+    "source_id": "pkg:golang/golang.org/x/tools/gopls@v0.21.1",
+    "bin": "gopls",
+    "version": "v0.21.1",
+    "source_type": "golang"
+  },
+  {
+    "name": "gradle-language-server",
+    "description": "Gradle language server.",
+    "languages": ["Gradle"],
+    "source_id": "pkg:openvsx/vscjava/vscode-gradle@3.15.0",
+    "bin": "gradle-language-server",
+    "version": "3.15.0",
+    "source_type": "openvsx"
+  },
+  {
+    "name": "grammarly-languageserver",
+    "description": "A language server implementation on top of Grammarly's SDK.",
+    "languages": ["Markdown", "Text"],
+    "source_id": "pkg:npm/grammarly-languageserver@0.0.4",
+    "bin": "grammarly-languageserver",
+    "version": "0.0.4",
+    "source_type": "npm"
+  },
+  {
+    "name": "graphql-language-service-cli",
+    "description": "GraphQL Language Service provides an interface for building GraphQL language services for IDEs.",
+    "languages": ["GraphQL"],
+    "source_id": "pkg:npm/graphql-language-service-cli@3.5.0",
+    "bin": "graphql-lsp",
+    "version": "3.5.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "groovy-language-server",
+    "description": "A language server for Groovy.",
+    "languages": ["Groovy"],
+    "source_id": "pkg:github/GroovyLanguageServer/groovy-language-server@0746b250604c0a75bf620f7257aed8df12d025c3",
+    "bin": "groovy-language-server",
+    "version": "0746b250604c0a75bf620f7257aed8df12d025c3",
+    "source_type": "github"
+  },
+  {
+    "name": "harper-ls",
+    "description": "The Grammar Checker for Developers.",
+    "languages": [
+      "Markdown",
+      "Rust",
+      "TypeScript",
+      "JavaScript",
+      "Python",
+      "Go",
+      "C",
+      "C++",
+      "Ruby",
+      "C#",
+      "TOML",
+      "Lua",
+      "Java"
+    ],
+    "source_id": "pkg:github/elijah-potter/harper@v1.10.0",
+    "bin": "harper-ls",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "harper-ls-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "harper-ls"
+      },
+      "linux_x64_musl": {
+        "file": "harper-ls-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "harper-ls"
+      },
+      "linux_arm64_gnu": {
+        "file": "harper-ls-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "harper-ls"
+      },
+      "linux_arm64_musl": {
+        "file": "harper-ls-aarch64-unknown-linux-musl.tar.gz",
+        "bin": "harper-ls"
+      },
+      "darwin_x64": {
+        "file": "harper-ls-x86_64-apple-darwin.tar.gz",
+        "bin": "harper-ls"
+      },
+      "darwin_arm64": {
+        "file": "harper-ls-aarch64-apple-darwin.tar.gz",
+        "bin": "harper-ls"
+      },
+      "win_x64": {
+        "file": "harper-ls-x86_64-pc-windows-msvc.zip",
+        "bin": "harper-ls.exe"
+      }
+    },
+    "version": "v1.10.0",
+    "source_type": "github"
+  },
+  {
+    "name": "haskell-language-server",
+    "description": "Official Haskell Language Server implementation.",
+    "languages": ["Haskell"],
+    "source_id": "pkg:generic/haskell/haskell-language-server@2.13.0.0",
+    "bin": "haskell-language-server-wrapper",
+    "version": "2.13.0.0",
+    "source_type": "generic"
+  },
+  {
+    "name": "haxe-language-server",
+    "description": "Language Server Protocol implementation for the Haxe language.",
+    "languages": ["Haxe"],
+    "source_id": "pkg:openvsx/nadako/vshaxe@2.34.1",
+    "bin": "haxe-language-server",
+    "version": "2.34.1",
+    "source_type": "openvsx"
+  },
+  {
+    "name": "hdl-checker",
+    "description": "HDL Checker is a language server that wraps VHDL/Verilg/SystemVerilog tools that aims to reduce the boilerplate code needed to set things up",
+    "languages": ["VHDL", "Verilog", "SystemVerilog"],
+    "source_id": "pkg:pypi/hdl-checker@0.7.4",
+    "bin": "hdl_checker",
+    "version": "0.7.4",
+    "source_type": "pypi"
+  },
+  {
+    "name": "helm-ls",
+    "description": "A language server that offers Helm support in early development - programmed in Go.",
+    "languages": ["Helm"],
+    "source_id": "pkg:github/mrjosh/helm-ls@v0.5.4",
+    "bin": "helm_ls",
+    "assets": {
+      "darwin_x64": {
+        "file": "helm_ls_darwin_amd64"
+      },
+      "darwin_arm64": {
+        "file": "helm_ls_darwin_arm64"
+      },
+      "linux_x64_gnu": {
+        "file": "helm_ls_linux_amd64"
+      },
+      "linux_arm": {
+        "file": "helm_ls_linux_arm"
+      },
+      "linux_arm64": {
+        "file": "helm_ls_linux_arm64"
+      },
+      "win_x64": {
+        "file": "helm_ls_windows_amd64.exe"
+      }
+    },
+    "version": "v0.5.4",
+    "source_type": "github"
+  },
+  {
+    "name": "herb-language-server",
+    "description": "Powerful and seamless HTML-aware ERB parsing and tooling.",
+    "languages": ["HTML", "Ruby"],
+    "source_id": "pkg:npm/@herb-tools/language-server@0.8.10",
+    "bin": "herb-language-server",
+    "version": "herb-tools/language-server@0.8.10",
+    "source_type": "npm"
+  },
+  {
+    "name": "hoon-language-server",
+    "description": "Language Server for Hoon. Middleware to translate between the Language Server Protocol and your Urbit.",
+    "languages": ["Hoon"],
+    "source_id": "pkg:npm/%40urbit/hoon-language-server@0.1.2",
+    "bin": "hoon-language-server",
+    "version": "0.1.2",
+    "source_type": "npm"
+  },
+  {
+    "name": "html-lsp",
+    "description": "Language Server Protocol implementation for HTML.",
+    "languages": ["HTML"],
+    "source_id": "pkg:npm/vscode-langservers-extracted@4.10.0",
+    "bin": "vscode-html-language-server",
+    "version": "4.10.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "htmx-lsp",
+    "description": "An experimental LSP for HTMX.",
+    "languages": ["HTMX"],
+    "source_id": "pkg:cargo/htmx-lsp@0.1.0",
+    "bin": "htmx-lsp",
+    "version": "0.1.0",
+    "source_type": "cargo"
+  },
+  {
+    "name": "hydra-lsp",
+    "description": "LSP for Hydra config files",
+    "languages": ["YAML"],
+    "source_id": "pkg:pypi/hydra-lsp@0.1.3",
+    "bin": "hydra-lsp",
+    "version": "0.1.3",
+    "source_type": "pypi"
+  },
+  {
+    "name": "hylo-language-server",
+    "description": "hylo-language-server is an implementation of the Language Server Protocol for the\nHylo programming language that provides features like semantic highlighting, \ngo-to-definition, and more.",
+    "languages": ["Hylo"],
+    "source_id": "pkg:github/hylo-lang/hylo-language-server@v0.0.10",
+    "bin": "hylo-language-server",
+    "assets": {
+      "linux_x64": {
+        "file": "hylo-language-server-linux-x64.zip",
+        "bin": "hylo-language-server"
+      },
+      "linux_arm64": {
+        "file": "hylo-language-server-linux-arm64.zip",
+        "bin": "hylo-language-server"
+      },
+      "darwin_x64": {
+        "file": "hylo-language-server-macos-x64.zip",
+        "bin": "hylo-language-server"
+      },
+      "darwin_arm64": {
+        "file": "hylo-language-server-macos-arm64.zip",
+        "bin": "hylo-language-server"
+      },
+      "win_x64": {
+        "file": "hylo-language-server-windows-x64.zip",
+        "bin": "hylo-language-server.exe"
+      },
+      "win_arm64": {
+        "file": "hylo-language-server-windows-arm64.zip",
+        "bin": "hylo-language-server.exe"
+      }
+    },
+    "version": "v0.0.10",
+    "source_type": "github"
+  },
+  {
+    "name": "hyprls",
+    "description": "A LSP server for Hyprland config files",
+    "languages": ["Hypr"],
+    "source_id": "pkg:github/hyprland-community/hyprls@v0.13.0",
+    "bin": "hyprls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "hyprls-macos",
+        "bin": "hyprls-macos"
+      },
+      "win_x64": {
+        "file": "hyprls.exe",
+        "bin": "hyprls.exe"
+      },
+      "linux_x64_gnu": {
+        "file": "hyprls",
+        "bin": "hyprls"
+      }
+    },
+    "version": "v0.13.0",
+    "source_type": "github"
+  },
+  {
+    "name": "intelephense",
+    "description": "Professional PHP tooling for any Language Server Protocol capable editor.",
+    "languages": ["PHP"],
+    "source_id": "pkg:npm/intelephense@1.16.5",
+    "bin": "intelephense",
+    "version": "1.16.5",
+    "source_type": "npm"
+  },
+  {
+    "name": "java-language-server",
+    "description": "Java language server using the Java compiler API.",
+    "languages": ["Java"],
+    "source_id": "pkg:github/georgewfraser/java-language-server@v0.2.39",
+    "bin": "java-language-server",
+    "version": "v0.2.39",
+    "source_type": "github"
+  },
+  {
+    "name": "jayvee-language-server",
+    "description": "Jayvee is a domain-specific language and runtime for automated processing of data pipelines.",
+    "languages": ["Jayvee"],
+    "source_id": "pkg:github/jvalue/jayvee@v0.5.0-alpha",
+    "bin": "jayvee-language-server",
+    "assets": {
+      "any": {
+        "file": "jayvee.vsix"
+      }
+    },
+    "version": "v0.5.0-alpha",
+    "source_type": "github"
+  },
+  {
+    "name": "jdtls",
+    "description": "Java language server.",
+    "languages": ["Java"],
+    "source_id": "pkg:generic/eclipse/eclipse.jdt.ls@v1.57.0",
+    "bin": "jdtls",
+    "version": "v1.57.0",
+    "source_type": "generic"
+  },
+  {
+    "name": "jedi-language-server",
+    "description": "A Python language server exclusively for Jedi. If Jedi supports it well, this language server should too.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/jedi-language-server@0.46.0",
+    "bin": "jedi-language-server",
+    "version": "0.46.0",
+    "source_type": "pypi"
+  },
+  {
+    "name": "jinja-lsp",
+    "description": "Experimental jinja lsp server, with autocomplete, syntax highlighting, hover, goto definition, code actions and\nlinting.",
+    "languages": ["Django", "Jinja", "Nunjucks"],
+    "source_id": "pkg:cargo/jinja-lsp@0.1.91",
+    "bin": "jinja-lsp",
+    "version": "0.1.91",
+    "source_type": "cargo"
+  },
+  {
+    "name": "jq-lsp",
+    "description": "jq-lsp is a language server for the jq language, developed by Mattias Wadman. It provides IDE features to any\nLSP-compatible editor.",
+    "languages": ["Jq"],
+    "source_id": "pkg:golang/github.com/wader/jq-lsp@v0.1.17",
+    "bin": "jq-lsp",
+    "version": "v0.1.17",
+    "source_type": "golang"
+  },
+  {
+    "name": "json-lsp",
+    "description": "Language Server Protocol implementation for JSON.",
+    "languages": ["JSON"],
+    "source_id": "pkg:npm/vscode-langservers-extracted@4.10.0",
+    "bin": "vscode-json-language-server",
+    "version": "4.10.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "jsonld-lsp",
+    "description": "JSON-LD Language Server.",
+    "languages": ["JSON-LD"],
+    "source_id": "pkg:github/ajuvercr/jsonld-lsp@v1.0.5",
+    "bin": "jsonld-language-server",
+    "assets": {
+      "darwin_arm64": {
+        "file": "jsonld-language-server-x86_64-apple-darwin.tar.gz",
+        "bin": "jsonld-language-server"
+      },
+      "darwin_x64": {
+        "file": "jsonld-language-server-x86_64-apple-darwin.tar.gz",
+        "bin": "jsonld-language-server"
+      },
+      "linux_x64_gnu": {
+        "file": "jsonld-language-server-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "jsonld-language-server"
+      },
+      "win_x64": {
+        "file": "jsonld-language-server-x86_64-pc-windows-msvc.zip",
+        "bin": "jsonld-language-server.exe"
+      }
+    },
+    "version": "v1.0.5",
+    "source_type": "github"
+  },
+  {
+    "name": "jsonnet-language-server",
+    "description": "A Language Server Protocol (LSP) server for Jsonnet (https://jsonnet.org).",
+    "languages": ["Jsonnet"],
+    "source_id": "pkg:golang/github.com/grafana/jsonnet-language-server@v0.17.0",
+    "bin": "jsonnet-language-server",
+    "version": "v0.17.0",
+    "source_type": "golang"
+  },
+  {
+    "name": "julia-lsp",
+    "description": "An implementation of the Microsoft Language Server Protocol for the Julia language.",
+    "languages": ["Julia"],
+    "source_id": "pkg:github/mason-org/julia-lsp@v1.149.2",
+    "bin": "julia-lsp",
+    "assets": {
+      "unix": {
+        "file": "julia-lsp-{{version}}.zip:libexec/",
+        "bin": "exec:libexec/bin/julia-lsp"
+      },
+      "win": {
+        "file": "julia-lsp-{{version}}.zip",
+        "bin": "bin/julia-lsp.cmd"
+      }
+    },
+    "version": "v1.149.2",
+    "source_type": "github"
+  },
+  {
+    "name": "just-lsp",
+    "description": "just-lsp is a server implementation of the language server protocol for just, the command runner.",
+    "languages": ["Just"],
+    "source_id": "pkg:github/terror/just-lsp@0.3.4",
+    "bin": "just-lsp",
+    "assets": {
+      "darwin_arm64": {
+        "file": "just-lsp-{{version}}-aarch64-apple-darwin.tar.gz",
+        "bin": "just-lsp"
+      },
+      "win_arm64": {
+        "file": "just-lsp-{{version}}-aarch64-pc-windows-msvc.zip",
+        "bin": "just-lsp.exe"
+      },
+      "linux_arm64_gnu": {
+        "file": "just-lsp-{{version}}-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "just-lsp"
+      },
+      "linux_arm64_musl": {
+        "file": "just-lsp-{{version}}-aarch64-unknown-linux-musl.tar.gz",
+        "bin": "just-lsp"
+      },
+      "linux_arm_gnu": {
+        "file": "just-lsp-{{version}}-arm-unknown-linux-gnueabihf.tar.gz",
+        "bin": "just-lsp"
+      },
+      "linux_armv7_gnu": {
+        "file": "just-lsp-{{version}}-armv7-unknown-linux-gnueabihf.tar.gz",
+        "bin": "just-lsp"
+      },
+      "linux_arm": {
+        "file": "just-lsp-{{version}}-armv7-unknown-linux-musleabihf.tar.gz",
+        "bin": "just-lsp"
+      },
+      "darwin_x64": {
+        "file": "just-lsp-{{version}}-x86_64-apple-darwin.tar.gz",
+        "bin": "just-lsp"
+      },
+      "win_x64": {
+        "file": "just-lsp-{{version}}-x86_64-pc-windows-msvc.zip",
+        "bin": "just-lsp.exe"
+      },
+      "linux_x64_musl": {
+        "file": "just-lsp-{{version}}-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "just-lsp"
+      },
+      "linux_x64_gnu": {
+        "file": "just-lsp-{{version}}-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "just-lsp"
+      }
+    },
+    "version": "0.3.4",
+    "source_type": "github"
+  },
+  {
+    "name": "kakehashi",
+    "description": "Language server that bridges the gap between languages, editors, and tooling",
+    "languages": [],
+    "source_id": "pkg:github/atusy/kakehashi@v0.4.1",
+    "bin": "kakehashi",
+    "assets": {
+      "darwin_x64": {
+        "file": "kakehashi-{{ version }}-x86_64-apple-darwin.tar.gz",
+        "bin": "kakehashi"
+      },
+      "darwin_arm64": {
+        "file": "kakehashi-{{ version }}-aarch64-apple-darwin.tar.gz",
+        "bin": "kakehashi"
+      },
+      "linux_x64": {
+        "file": "kakehashi-{{ version }}-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "kakehashi"
+      },
+      "linux_arm64": {
+        "file": "kakehashi-{{ version }}-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "kakehashi"
+      },
+      "win_x64": {
+        "file": "kakehashi-{{ version }}-x86_64-pc-windows-msvc.zip",
+        "bin": "kakehashi.exe"
+      }
+    },
+    "version": "v0.4.1",
+    "source_type": "github"
+  },
+  {
+    "name": "kcl",
+    "description": "KCL is an open-source, constraint-based record and functional language that enhances the writing of complex\nconfigurations, including those for cloud-native scenarios.",
+    "languages": ["KCL"],
+    "source_id": "pkg:github/kcl-lang/kcl@v0.11.2",
+    "bin": "kcl",
+    "assets": {
+      "darwin_x64": {
+        "file": "kclvm-{{version}}-darwin-amd64.tar.gz",
+        "bin": "exec:kclvm/bin/kclvm_cli"
+      },
+      "darwin_arm64": {
+        "file": "kclvm-{{version}}-darwin-arm64.tar.gz",
+        "bin": "exec:kclvm/bin/kclvm_cli"
+      },
+      "linux_x64_gnu": {
+        "file": "kclvm-{{version}}-linux-amd64.tar.gz",
+        "bin": "exec:kclvm/bin/kclvm_cli"
+      },
+      "win_x64": {
+        "file": "kclvm-{{version}}-windows.zip",
+        "bin": "bin/kclvm_cli.exe"
+      }
+    },
+    "version": "v0.11.2",
+    "source_type": "github"
+  },
+  {
+    "name": "kos-language-server",
+    "description": "Language Server for Kerboscript from the kOS Kerbal Space Program mod.",
+    "languages": ["Kerboscript"],
+    "source_id": "pkg:npm/kos-language-server@1.1.5",
+    "bin": "kls",
+    "version": "1.1.5",
+    "source_type": "npm"
+  },
+  {
+    "name": "kotlin-language-server",
+    "description": "Kotlin code completion, linting and more for any editor/IDE using the Language Server Protocol.",
+    "languages": ["Kotlin"],
+    "source_id": "pkg:github/fwcd/kotlin-language-server@1.3.13",
+    "bin": "kotlin-language-server",
+    "assets": {
+      "unix": {
+        "file": "server.zip",
+        "bin": "server/bin/kotlin-language-server"
+      },
+      "win": {
+        "file": "server.zip",
+        "bin": "server/bin/kotlin-language-server.bat"
+      }
+    },
+    "version": "1.3.13",
+    "source_type": "github"
+  },
+  {
+    "name": "kotlin-lsp",
+    "description": "Kotlin Language Server and plugin for Visual Studio Code",
+    "languages": ["Kotlin"],
+    "source_id": "pkg:generic/Kotlin/kotlin-lsp@kotlin-lsp/v262.1817.0",
+    "bin": "kotlin-lsp",
+    "version": "kotlin-lsp/v262.1817.0",
+    "source_type": "generic"
+  },
+  {
+    "name": "language-server-bitbake",
+    "description": "A language server for BitBake.",
+    "languages": ["BitBake"],
+    "source_id": "pkg:npm/language-server-bitbake@2.8.0",
+    "bin": "language-server-bitbake",
+    "version": "2.8.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "laravel-ls",
+    "description": "Laravel Language Server written in go.",
+    "languages": ["PHP"],
+    "source_id": "pkg:github/laravel-ls/laravel-ls@v0.0.13",
+    "bin": "laravel-ls",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "laravel-ls-{{version}}-linux-amd64"
+      },
+      "win_x64": {
+        "file": "laravel-ls-{{version}}-windows-amd64"
+      },
+      "darwin_x64": {
+        "file": "laravel-ls-{{version}}-darwin-amd64"
+      },
+      "darwin_arm64": {
+        "file": "laravel-ls-{{version}}-darwin-arm64"
+      }
+    },
+    "version": "v0.0.13",
+    "source_type": "github"
+  },
+  {
+    "name": "lean-language-server",
+    "description": "Lean3 Language Server.",
+    "languages": ["Lean 3"],
+    "source_id": "pkg:npm/lean-language-server@3.4.0",
+    "bin": "lean-language-server",
+    "version": "3.4.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "lelwel",
+    "description": "LL(1) parser generator for Rust.",
+    "languages": ["Lelwel"],
+    "source_id": "pkg:cargo/lelwel@0.10.2?features=lsp,cli",
+    "bin": "lelwel-ls",
+    "version": "0.10.2?features=lsp,cli",
+    "source_type": "cargo"
+  },
+  {
+    "name": "lemminx",
+    "description": "XML Language Server.",
+    "languages": ["XML"],
+    "source_id": "pkg:github/redhat-developer/vscode-xml@0.29.0",
+    "bin": "lemminx",
+    "assets": {
+      "darwin_x64": {
+        "file": "lemminx-osx-x86_64.zip",
+        "bin": "lemminx-osx-x86_64"
+      },
+      "darwin_arm64": {
+        "file": "lemminx-osx-aarch_64.zip",
+        "bin": "lemminx-osx-aarch_64"
+      },
+      "linux_x64_gnu": {
+        "file": "lemminx-linux.zip",
+        "bin": "lemminx-linux"
+      },
+      "win_x86": {
+        "file": "lemminx-win32.zip",
+        "bin": "lemminx-win32.exe"
+      },
+      "win_x64": {
+        "file": "lemminx-win32.zip",
+        "bin": "lemminx-win32.exe"
+      }
+    },
+    "version": "0.29.0",
+    "source_type": "github"
+  },
+  {
+    "name": "lexical",
+    "description": "Lexical is a next-generation elixir language server",
+    "languages": ["Elixir"],
+    "source_id": "pkg:github/lexical-lsp/lexical@v0.7.3",
+    "bin": "lexical",
+    "assets": {
+      "unix": {
+        "file": "lexical-{{version}}.zip:libexec/",
+        "bin": "exec:libexec/lexical/bin/start_lexical.sh"
+      }
+    },
+    "version": "v0.7.3",
+    "source_type": "github"
+  },
+  {
+    "name": "llm-ls",
+    "description": "LSP server leveraging AI/LLMs based for code completion.",
+    "languages": [],
+    "source_id": "pkg:github/huggingface/llm-ls@0.5.3",
+    "bin": "llm-ls",
+    "assets": {
+      "darwin_x64": {
+        "file": "llm-ls-x86_64-apple-darwin.gz",
+        "bin": "llm-ls-x86_64-apple-darwin"
+      },
+      "darwin_arm64": {
+        "file": "llm-ls-aarch64-apple-darwin.gz",
+        "bin": "llm-ls-aarch64-apple-darwin"
+      },
+      "linux_x64_musl": {
+        "file": "llm-ls-x86_64-unknown-linux-musl.gz",
+        "bin": "llm-ls-x86_64-unknown-linux-musl"
+      },
+      "linux_arm64_gnu": {
+        "file": "llm-ls-aarch64-unknown-linux-gnu.gz",
+        "bin": "llm-ls-aarch64-unknown-linux-gnu"
+      },
+      "linux_x64_gnu": {
+        "file": "llm-ls-x86_64-unknown-linux-gnu.gz",
+        "bin": "llm-ls-x86_64-unknown-linux-gnu"
+      },
+      "win_x64": {
+        "file": "llm-ls-x86_64-pc-windows-msvc.zip",
+        "bin": "llm-ls.exe"
+      },
+      "win_x86": {
+        "file": "llm-ls-i686-pc-windows-msvc.zip",
+        "bin": "llm-ls.exe"
+      }
+    },
+    "version": "0.5.3",
+    "source_type": "github"
+  },
+  {
+    "name": "ltex-ls",
+    "description": "LTeX Language Server: LSP language server for LanguageTool \ud83d\udd0d\u2714\ufe0f with support for LaTeX \ud83c\udf93, Markdown \ud83d\udcdd, and others.",
+    "languages": ["Text", "Markdown", "LaTeX", "reStructuredText"],
+    "source_id": "pkg:github/valentjn/ltex-ls@16.0.0",
+    "bin": "ltex-ls",
+    "assets": {
+      "darwin": {
+        "file": "ltex-ls-{{version}}-mac-x64.tar.gz",
+        "bin": "ltex-ls-{{version}}/bin/ltex-ls"
+      },
+      "win": {
+        "file": "ltex-ls-{{version}}-windows-x64.zip",
+        "bin": "ltex-ls-{{version}}/bin/ltex-ls.bat"
+      },
+      "linux": {
+        "file": "ltex-ls-{{version}}.tar.gz",
+        "bin": "ltex-ls-{{version}}/bin/ltex-ls"
+      }
+    },
+    "version": "16.0.0",
+    "source_type": "github"
+  },
+  {
+    "name": "ltex-ls-plus",
+    "description": "LTeX Language Server+: LSP language server for LanguageTool \ud83d\udd0d\u2714\ufe0f with support for LaTeX \ud83c\udf93, Markdown \ud83d\udcdd, and others.",
+    "languages": ["Text", "Markdown", "LaTeX", "reStructuredText"],
+    "source_id": "pkg:github/ltex-plus/ltex-ls-plus@18.6.1",
+    "bin": "ltex-ls-plus",
+    "assets": {
+      "linux_arm64_gnu": {
+        "file": "ltex-ls-plus-{{version}}-linux-aarch64.tar.gz",
+        "bin": "ltex-ls-plus-{{version}}/bin/ltex-ls-plus"
+      },
+      "linux_x64_gnu": {
+        "file": "ltex-ls-plus-{{version}}-linux-x64.tar.gz",
+        "bin": "ltex-ls-plus-{{version}}/bin/ltex-ls-plus"
+      },
+      "darwin_arm64": {
+        "file": "ltex-ls-plus-{{version}}-mac-aarch64.tar.gz",
+        "bin": "ltex-ls-plus-{{version}}/bin/ltex-ls-plus"
+      },
+      "darwin_x64": {
+        "file": "ltex-ls-plus-{{version}}-mac-x64.tar.gz",
+        "bin": "ltex-ls-plus-{{version}}/bin/ltex-ls-plus"
+      },
+      "win_x64": {
+        "file": "ltex-ls-plus-{{version}}-windows-x64.zip",
+        "bin": "ltex-ls-plus-{{version}}/bin/ltex-ls-plus.bat"
+      },
+      "win_arm64": {
+        "file": "ltex-ls-plus-{{version}}-windows-aarch64.zip",
+        "bin": "ltex-ls-plus-{{version}}/bin/ltex-ls-plus.bat"
+      },
+      "linux": {
+        "file": "ltex-ls-plus-{{version}}.tar.gz",
+        "bin": "ltex-ls-plus-{{version}}/bin/ltex-ls-plus"
+      }
+    },
+    "version": "18.6.1",
+    "source_type": "github"
+  },
+  {
+    "name": "lua-language-server",
+    "description": "A language server that offers Lua language support - programmed in Lua.",
+    "languages": ["Lua"],
+    "source_id": "pkg:github/LuaLS/lua-language-server@3.17.1",
+    "bin": "lua-language-server",
+    "assets": {
+      "darwin_arm64": {
+        "file": "lua-language-server-{{version}}-darwin-arm64.tar.gz:libexec/",
+        "bin": "exec:libexec/bin/lua-language-server"
+      },
+      "darwin_x64": {
+        "file": "lua-language-server-{{version}}-darwin-x64.tar.gz:libexec/",
+        "bin": "exec:libexec/bin/lua-language-server"
+      },
+      "linux_arm64_gnu": {
+        "file": "lua-language-server-{{version}}-linux-arm64.tar.gz:libexec/",
+        "bin": "exec:libexec/bin/lua-language-server"
+      },
+      "linux_x64_gnu": {
+        "file": "lua-language-server-{{version}}-linux-x64.tar.gz:libexec/",
+        "bin": "exec:libexec/bin/lua-language-server"
+      },
+      "linux_x64_musl": {
+        "file": "lua-language-server-{{version}}-linux-x64-musl.tar.gz:libexec/",
+        "bin": "exec:libexec/bin/lua-language-server"
+      },
+      "win_x64": {
+        "file": "lua-language-server-{{version}}-win32-x64.zip",
+        "bin": "bin/lua-language-server.exe"
+      }
+    },
+    "version": "3.17.1",
+    "source_type": "github"
+  },
+  {
+    "name": "luau-lsp",
+    "description": "An implementation of a language server for the Luau programming language.",
+    "languages": ["Luau"],
+    "source_id": "pkg:github/JohnnyMorganz/luau-lsp@1.63.0",
+    "bin": "luau-lsp",
+    "assets": {
+      "darwin_arm64": {
+        "file": "luau-lsp-macos.zip",
+        "bin": "luau-lsp"
+      },
+      "darwin_x64": {
+        "file": "luau-lsp-macos.zip",
+        "bin": "luau-lsp"
+      },
+      "linux_x64": {
+        "file": "luau-lsp-linux-x86_64.zip",
+        "bin": "luau-lsp"
+      },
+      "linux_arm64": {
+        "file": "luau-lsp-linux-arm64.zip",
+        "bin": "luau-lsp"
+      },
+      "win_x64": {
+        "file": "luau-lsp-win64.zip",
+        "bin": "luau-lsp.exe"
+      }
+    },
+    "version": "1.63.0",
+    "source_type": "github"
+  },
+  {
+    "name": "lwc-language-server",
+    "description": "Language Server for Lightning Web Components.",
+    "languages": ["HTML", "JavaScript"],
+    "source_id": "pkg:npm/%40salesforce/lwc-language-server@4.12.13",
+    "bin": "lwc-language-server",
+    "version": "4.12.13",
+    "source_type": "npm"
+  },
+  {
+    "name": "m68k-lsp-server",
+    "description": "Language Server Protocol implementation for Motorola 68000 assembly",
+    "languages": ["M68K"],
+    "source_id": "pkg:npm/m68k-lsp-server@0.11.2",
+    "bin": "m68k-lsp-server",
+    "version": "0.11.2",
+    "source_type": "npm"
+  },
+  {
+    "name": "markdown-oxide",
+    "description": "Markdown language server with advanced linking support made to be completely compatible with Obsidian; An Obsidian\nLanguage Server.",
+    "languages": ["Markdown"],
+    "source_id": "pkg:github/feel-ix-343/markdown-oxide@v0.25.10",
+    "bin": "markdown-oxide",
+    "assets": {
+      "darwin_x64": {
+        "file": "markdown-oxide-{{version}}-x86_64-apple-darwin.tar.gz",
+        "bin": "markdown-oxide-{{version}}-x86_64-apple-darwin/markdown-oxide"
+      },
+      "darwin_arm64": {
+        "file": "markdown-oxide-{{version}}-aarch64-apple-darwin.tar.gz",
+        "bin": "markdown-oxide-{{version}}-aarch64-apple-darwin/markdown-oxide"
+      },
+      "linux_x64_gnu": {
+        "file": "markdown-oxide-{{version}}-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "markdown-oxide-{{version}}-x86_64-unknown-linux-gnu/markdown-oxide"
+      },
+      "linux_arm64_gnu": {
+        "file": "markdown-oxide-{{version}}-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "markdown-oxide-{{version}}-aarch64-unknown-linux-gnu/markdown-oxide"
+      },
+      "win_x64": {
+        "file": "markdown-oxide-{{version}}-x86_64-pc-windows-gnu.zip",
+        "bin": "markdown-oxide-{{version}}-x86_64-pc-windows-gnu/markdown-oxide.exe"
+      }
+    },
+    "version": "v0.25.10",
+    "source_type": "github"
+  },
+  {
+    "name": "marksman",
+    "description": "Markdown LSP server providing completion, cross-references, diagnostics, and more.",
+    "languages": ["Markdown"],
+    "source_id": "pkg:github/artempyanykh/marksman@2026-02-08",
+    "bin": "marksman",
+    "assets": {
+      "darwin_x64": {
+        "file": "marksman-macos"
+      },
+      "darwin_arm64": {
+        "file": "marksman-macos"
+      },
+      "linux_x64": {
+        "file": "marksman-linux-x64"
+      },
+      "linux_arm64": {
+        "file": "marksman-linux-arm64"
+      },
+      "win_x64": {
+        "file": "marksman.exe"
+      }
+    },
+    "version": "2026-02-08",
+    "source_type": "github"
+  },
+  {
+    "name": "matlab-language-server",
+    "description": "Language Server Protocol implementation for the MATLAB language.",
+    "languages": ["Matlab"],
+    "source_id": "pkg:github/mathworks/MATLAB-language-server@19438c8fbc02bdb8bb3bfd1eb17dbc8f39355fbd",
+    "bin": "matlab-language-server",
+    "version": "19438c8fbc02bdb8bb3bfd1eb17dbc8f39355fbd",
+    "source_type": "github"
+  },
+  {
+    "name": "mdx-analyzer",
+    "description": "This package provides a language server for MDX. The language server provides IntelliSense based on TypeScript, as\nwell as some markdown specific features.",
+    "languages": ["MDX"],
+    "source_id": "pkg:npm/%40mdx-js/language-server@0.6.3",
+    "bin": "mdx-language-server",
+    "version": "0.6.3",
+    "source_type": "npm"
+  },
+  {
+    "name": "mesonlsp",
+    "description": "An unofficial, unendorsed language server for meson written in C++",
+    "languages": ["Meson"],
+    "source_id": "pkg:github/JCWasmx86/mesonlsp@v4.3.7",
+    "bin": "mesonlsp",
+    "assets": {
+      "linux_x64": {
+        "file": "mesonlsp-x86_64-unknown-linux-musl.zip",
+        "bin": "mesonlsp"
+      },
+      "linux_arm64": {
+        "file": "mesonlsp-aarch64-unknown-linux-musl.zip",
+        "bin": "mesonlsp"
+      },
+      "darwin_x64": {
+        "file": "mesonlsp-x86_64-apple-darwin.zip",
+        "bin": "mesonlsp"
+      },
+      "darwin_arm64": {
+        "file": "mesonlsp-aarch64-apple-darwin.zip",
+        "bin": "mesonlsp"
+      },
+      "win_x64": {
+        "file": "mesonlsp-x86_64-pc-windows-gnu.zip",
+        "bin": "mesonlsp.exe"
+      }
+    },
+    "version": "v4.3.7",
+    "source_type": "github"
+  },
+  {
+    "name": "metamath-zero-lsp",
+    "description": "An MM0/MM1 server written in Rust.",
+    "languages": ["Metamath Zero"],
+    "source_id": "pkg:github/digama0/mm0@6d5f0d4fae8e2e3ae0b998bcbaa9d059cad99fad",
+    "bin": "mm0-rs",
+    "version": "6d5f0d4fae8e2e3ae0b998bcbaa9d059cad99fad",
+    "source_type": "github"
+  },
+  {
+    "name": "millet",
+    "description": "A language server for Standard ML.",
+    "languages": ["Standard ML"],
+    "source_id": "pkg:github/azdavis/millet@v0.15.0",
+    "bin": "millet",
+    "assets": {
+      "darwin_arm64": {
+        "file": "millet-ls-aarch64-apple-darwin.gz",
+        "bin": "millet-ls-aarch64-apple-darwin"
+      },
+      "win_arm64": {
+        "file": "millet-ls-aarch64-pc-windows-msvc.gz",
+        "bin": "millet-ls-aarch64-pc-windows-msvc"
+      },
+      "linux_arm64_gnu": {
+        "file": "millet-ls-aarch64-unknown-linux-gnu.gz",
+        "bin": "millet-ls-aarch64-unknown-linux-gnu"
+      },
+      "darwin_x64": {
+        "file": "millet-ls-x86_64-apple-darwin.gz",
+        "bin": "millet-ls-x86_64-apple-darwin"
+      },
+      "win_x64": {
+        "file": "millet-ls-x86_64-pc-windows-msvc.gz:millet-ls-x86_64-pc-windows-msvc.exe.gz",
+        "bin": "millet-ls-x86_64-pc-windows-msvc.exe"
+      },
+      "linux_x64_gnu": {
+        "file": "millet-ls-x86_64-unknown-linux-gnu.gz",
+        "bin": "millet-ls-x86_64-unknown-linux-gnu"
+      }
+    },
+    "version": "v0.15.0",
+    "source_type": "github"
+  },
+  {
+    "name": "motoko-lsp",
+    "description": "Language server for the Motoko programming language.",
+    "languages": ["Motoko"],
+    "source_id": "pkg:openvsx/dfinity-foundation/vscode-motoko@0.18.7",
+    "bin": "motoko-lsp",
+    "version": "0.18.7",
+    "source_type": "openvsx"
+  },
+  {
+    "name": "move-analyzer",
+    "description": "move-analyzer is a language server implementation for the Move programming language.",
+    "languages": ["Move"],
+    "source_id": "pkg:cargo/move-analyzer@ea70797099baea64f05194a918cebd69ed02b285?repository_url=https://github.com/move-language/move&rev=true&locked=false",
+    "bin": "move-analyzer",
+    "version": "ea70797099baea64f05194a918cebd69ed02b285?repository_url=https://github.com/move-language/move&rev=true&locked=false",
+    "source_type": "cargo"
+  },
+  {
+    "name": "mpls",
+    "description": "Markdown Preview Language Server",
+    "languages": ["Markdown"],
+    "source_id": "pkg:github/mhersson/mpls@v0.20.1",
+    "bin": "mpls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "mpls_{{ version | strip_prefix \"v\" }}_darwin_arm64.tar.gz",
+        "bin": "mpls"
+      },
+      "darwin_x64": {
+        "file": "mpls_{{ version | strip_prefix \"v\" }}_darwin_amd64.tar.gz",
+        "bin": "mpls"
+      },
+      "linux_arm64_gnu": {
+        "file": "mpls_{{ version | strip_prefix \"v\" }}_linux_arm64.tar.gz",
+        "bin": "mpls"
+      },
+      "linux_x64_gnu": {
+        "file": "mpls_{{ version | strip_prefix \"v\" }}_linux_amd64.tar.gz",
+        "bin": "mpls"
+      },
+      "win_arm64": {
+        "file": "mpls_{{ version | strip_prefix \"v\" }}_windows_arm64.zip",
+        "bin": "mpls.exe"
+      },
+      "win_x64": {
+        "file": "mpls_{{ version | strip_prefix \"v\" }}_windows_amd64.zip",
+        "bin": "mpls.exe"
+      }
+    },
+    "version": "v0.20.1",
+    "source_type": "github"
+  },
+  {
+    "name": "mutt-language-server",
+    "description": "A language server for (neo)mutt's muttrc.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/mutt-language-server@0.0.17",
+    "bin": "mutt-language-server",
+    "version": "0.0.17",
+    "source_type": "pypi"
+  },
+  {
+    "name": "neocmakelsp",
+    "description": "CMake LSP implementation based on Tower and Tree-sitter.",
+    "languages": ["CMake"],
+    "source_id": "pkg:github/neocmakelsp/neocmakelsp@v0.10.1",
+    "bin": "neocmakelsp",
+    "assets": {
+      "darwin": {
+        "file": "neocmakelsp-universal-apple-darwin.tar.gz",
+        "bin": "neocmakelsp"
+      },
+      "linux_arm64_gnu": {
+        "file": "neocmakelsp-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "neocmakelsp"
+      },
+      "linux_x64_gnu": {
+        "file": "neocmakelsp-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "neocmakelsp"
+      },
+      "linux_arm64": {
+        "file": "neocmakelsp-aarch64-unknown-linux-musl.tar.gz",
+        "bin": "neocmakelsp"
+      },
+      "linux_x64": {
+        "file": "neocmakelsp-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "neocmakelsp"
+      },
+      "win_arm64": {
+        "file": "neocmakelsp-aarch64-pc-windows-msvc.zip",
+        "bin": "neocmakelsp.exe"
+      },
+      "win_x64": {
+        "file": "neocmakelsp-x86_64-pc-windows-msvc.zip",
+        "bin": "neocmakelsp.exe"
+      }
+    },
+    "version": "v0.10.1",
+    "source_type": "github"
+  },
+  {
+    "name": "nextflow-language-server",
+    "description": "A language server for Nextflow.",
+    "languages": ["Nextflow"],
+    "source_id": "pkg:github/nextflow-io/language-server@v25.10.3",
+    "bin": "nextflow-language-server",
+    "assets": {
+      "any": {
+        "file": "language-server-all.jar"
+      }
+    },
+    "version": "v25.10.3",
+    "source_type": "github"
+  },
+  {
+    "name": "nextls",
+    "description": "NextLS is the language server for Elixir that just works.",
+    "languages": ["Elixir"],
+    "source_id": "pkg:github/elixir-tools/next-ls@v0.23.4",
+    "bin": "nextls",
+    "assets": {
+      "darwin_x64": {
+        "file": "next_ls_darwin_amd64"
+      },
+      "darwin_arm64": {
+        "file": "next_ls_darwin_arm64"
+      },
+      "linux_x64": {
+        "file": "next_ls_linux_amd64"
+      },
+      "linux_arm64": {
+        "file": "next_ls_linux_arm64"
+      },
+      "win_x64": {
+        "file": "next_ls_windows_amd64.exe"
+      }
+    },
+    "version": "v0.23.4",
+    "source_type": "github"
+  },
+  {
+    "name": "nginx-language-server",
+    "description": "A language server for nginx configuration files.",
+    "languages": ["nginx"],
+    "source_id": "pkg:pypi/nginx-language-server@0.9.0",
+    "bin": "nginx-language-server",
+    "version": "0.9.0",
+    "source_type": "pypi"
+  },
+  {
+    "name": "nickel-lang-lsp",
+    "description": "The Nickel Language Server (NLS) is a language server for the Nickel programming language. NLS offers error messages,\ntype hints, and auto-completion right in your favorite LSP-enabled editor.",
+    "languages": ["Nickel"],
+    "source_id": "pkg:cargo/nickel-lang-lsp@1.16.0",
+    "bin": "nls",
+    "version": "1.16.0",
+    "source_type": "cargo"
+  },
+  {
+    "name": "nil",
+    "description": "Language Server for Nix.",
+    "languages": ["Nix"],
+    "source_id": "pkg:cargo/nil@2025-06-13?repository_url=https://github.com/oxalica/nil",
+    "bin": "nil",
+    "version": "2025-06-13?repository_url=https://github.com/oxalica/nil",
+    "source_type": "cargo"
+  },
+  {
+    "name": "nimlangserver",
+    "description": "The Nim language server implementation (based on nimsuggest)",
+    "languages": ["Nim"],
+    "source_id": "pkg:github/nim-lang/langserver@v1.12.0",
+    "bin": "nimlangserver",
+    "assets": {
+      "linux_x64": {
+        "file": "nimlangserver-linux-amd64.tar.gz",
+        "bin": "nimlangserver"
+      },
+      "linux_arm64": {
+        "file": "nimlangserver-linux-arm64.tar.gz",
+        "bin": "nimlangserver"
+      },
+      "linux_x86": {
+        "file": "nimlangserver-linux-i686.tar.gz",
+        "bin": "nimlangserver"
+      },
+      "darwin_x64": {
+        "file": "nimlangserver-macos-amd64.zip",
+        "bin": "nimlangserver"
+      },
+      "darwin_arm64": {
+        "file": "nimlangserver-macos-arm64.zip",
+        "bin": "nimlangserver"
+      },
+      "win_x64": {
+        "file": "nimlangserver-windows-amd64.zip",
+        "bin": "nimlangserver.exe"
+      }
+    },
+    "version": "v1.12.0",
+    "source_type": "github"
+  },
+  {
+    "name": "nimlsp",
+    "description": "Language Server Protocol implementation for Nim.",
+    "languages": ["Nim"],
+    "source_id": "pkg:github/PMunch/nimlsp@v0.4.7",
+    "bin": "nimlsp",
+    "version": "v0.4.7",
+    "source_type": "github"
+  },
+  {
+    "name": "nomicfoundation-solidity-language-server",
+    "description": "Solidity language server by NomicFoundation",
+    "languages": ["Solidity"],
+    "source_id": "pkg:npm/%40nomicfoundation/solidity-language-server@0.8.25",
+    "bin": "nomicfoundation-solidity-language-server",
+    "version": "0.8.25",
+    "source_type": "npm"
+  },
+  {
+    "name": "ntt",
+    "description": "Modern tools for TTCN-3",
+    "languages": ["TTCN-3"],
+    "source_id": "pkg:github/nokia/ntt@v0.21.0",
+    "bin": "ntt",
+    "assets": {
+      "darwin_arm64": {
+        "file": "ntt_darwin_arm64.tar.gz",
+        "bin": "ntt"
+      },
+      "darwin_x64": {
+        "file": "ntt_darwin_x86_64.tar.gz",
+        "bin": "ntt"
+      },
+      "linux_arm64": {
+        "file": "ntt_linux_arm64.tar.gz",
+        "bin": "ntt"
+      },
+      "linux_x64": {
+        "file": "ntt_linux_x86_64.tar.gz",
+        "bin": "ntt"
+      },
+      "win_x64": {
+        "file": "ntt_windows_x86_64.zip",
+        "bin": "ntt.exe"
+      }
+    },
+    "version": "v0.21.0",
+    "source_type": "github"
+  },
+  {
+    "name": "nxls",
+    "description": "A language server that provides code completion and more for Nx workspaces.",
+    "languages": ["JSON"],
+    "source_id": "pkg:npm/nxls@1.11.0",
+    "bin": "nxls",
+    "version": "1.11.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "ocaml-lsp",
+    "description": "OCaml Language Server Protocol implementation.",
+    "languages": ["OCaml"],
+    "source_id": "pkg:opam/ocaml-lsp-server@1.24.0",
+    "bin": "ocamllsp",
+    "version": "1.24.0",
+    "source_type": "opam"
+  },
+  {
+    "name": "ols",
+    "description": "Language server for Odin. This project is still in early development.",
+    "languages": ["Odin"],
+    "source_id": "pkg:github/DanielGavin/ols@nightly",
+    "bin": "ols",
+    "assets": {
+      "darwin_arm64": {
+        "file": "ols-arm64-darwin.zip",
+        "bin": "ols-arm64-darwin"
+      },
+      "darwin_x64": {
+        "file": "ols-x86_64-darwin.zip",
+        "bin": "ols-x86_64-darwin"
+      },
+      "linux_x64_gnu": {
+        "file": "ols-x86_64-unknown-linux-gnu.zip",
+        "bin": "ols-x86_64-unknown-linux-gnu"
+      },
+      "linux_arm64_gnu": {
+        "file": "ols-arm64-unknown-linux-gnu.zip",
+        "bin": "ols-arm64-unknown-linux-gnu"
+      },
+      "win_x86": {
+        "file": "ols-x86_64-pc-windows-msvc.zip",
+        "bin": "ols-x86_64-pc-windows-msvc.exe"
+      },
+      "win_x64": {
+        "file": "ols-x86_64-pc-windows-msvc.zip",
+        "bin": "ols-x86_64-pc-windows-msvc.exe"
+      }
+    },
+    "version": "nightly",
+    "source_type": "github"
+  },
+  {
+    "name": "omnisharp",
+    "description": "OmniSharp language server based on Roslyn workspaces. This version of Omnisharp requires dotnet (.NET 6.0) to be\ninstalled.",
+    "languages": ["C#"],
+    "source_id": "pkg:github/OmniSharp/omnisharp-roslyn@v1.39.15",
+    "bin": "OmniSharp",
+    "assets": {
+      "darwin_x64": {
+        "file": "omnisharp-osx-x64-net6.0.zip:libexec/"
+      },
+      "darwin_arm64": {
+        "file": "omnisharp-osx-arm64-net6.0.zip:libexec/"
+      },
+      "linux_x64": {
+        "file": "omnisharp-linux-x64-net6.0.zip:libexec/"
+      },
+      "linux_arm64": {
+        "file": "omnisharp-linux-arm64-net6.0.zip:libexec/"
+      },
+      "win_x64": {
+        "file": "omnisharp-win-x64-net6.0.zip:libexec/"
+      },
+      "win_arm64": {
+        "file": "omnisharp-win-arm64-net6.0.zip:libexec/"
+      }
+    },
+    "version": "v1.39.15",
+    "source_type": "github"
+  },
+  {
+    "name": "omnisharp-mono",
+    "description": "OmniSharp language server based on Roslyn workspaces. This version of Omnisharp requires Mono to be installed on Linux\n& macOS.",
+    "languages": ["C#"],
+    "source_id": "pkg:github/OmniSharp/omnisharp-roslyn@v1.39.15",
+    "bin": "omnisharp-mono",
+    "assets": {
+      "darwin_arm64": {
+        "file": "omnisharp-osx.tar.gz",
+        "bin": "exec:run"
+      },
+      "darwin_x64": {
+        "file": "omnisharp-osx.tar.gz",
+        "bin": "exec:run"
+      },
+      "linux_x64": {
+        "file": "omnisharp-linux-x64.tar.gz",
+        "bin": "exec:run"
+      },
+      "linux_x86": {
+        "file": "omnisharp-linux-x86.tar.gz",
+        "bin": "exec:run"
+      },
+      "win_x64": {
+        "file": "omnisharp-win-x64.zip",
+        "bin": "OmniSharp.exe"
+      },
+      "win_x86": {
+        "file": "omnisharp-win-x86.zip",
+        "bin": "OmniSharp.exe"
+      }
+    },
+    "version": "v1.39.15",
+    "source_type": "github"
+  },
+  {
+    "name": "opencl-language-server",
+    "description": "Provides an OpenCL kernel diagnostics.",
+    "languages": ["OpenCL"],
+    "source_id": "pkg:github/Galarius/opencl-language-server@0.6.3",
+    "bin": "opencl-language-server",
+    "assets": {
+      "darwin_arm64": {
+        "file": "opencl-language-server-darwin-arm64.tar.gz",
+        "bin": "opencl-language-server"
+      },
+      "darwin_x64": {
+        "file": "opencl-language-server-darwin-x86_64.tar.gz",
+        "bin": "opencl-language-server"
+      },
+      "linux_arm64": {
+        "file": "opencl-language-server-linux-arm64.tar.gz",
+        "bin": "opencl-language-server"
+      },
+      "linux_x64": {
+        "file": "opencl-language-server-linux-x86_64.tar.gz",
+        "bin": "opencl-language-server"
+      },
+      "win_x64": {
+        "file": "opencl-language-server-win32-x86_64.zip",
+        "bin": "opencl-language-server.exe"
+      }
+    },
+    "version": "0.6.3",
+    "source_type": "github"
+  },
+  {
+    "name": "openedge-language-server",
+    "description": "OpenEdge Language Server.",
+    "languages": ["Progress", "OpenEdge"],
+    "source_id": "pkg:github/vscode-abl/vscode-abl@V1.4.21",
+    "assets": {
+      "any": {
+        "file": "abl-lsp.jar"
+      }
+    },
+    "version": "V1.4.21",
+    "source_type": "github"
+  },
+  {
+    "name": "openscad-language-server",
+    "description": "A Language Server Protocol server for OpenSCAD",
+    "languages": ["OpenSCAD"],
+    "source_id": "pkg:cargo/openscad-language-server@0.1.0",
+    "bin": "openscad-language-server",
+    "version": "0.1.0",
+    "source_type": "cargo"
+  },
+  {
+    "name": "openscad-lsp",
+    "description": "Language Server Protocol implementation for OpenSCAD, written in Rust.",
+    "languages": ["OpenSCAD"],
+    "source_id": "pkg:cargo/openscad-lsp@2.0.1",
+    "bin": "openscad-lsp",
+    "version": "2.0.1",
+    "source_type": "cargo"
+  },
+  {
+    "name": "oxlint",
+    "description": "High-performance linter for JavaScript and TypeScript written in Rust.",
+    "languages": ["JavaScript", "TypeScript"],
+    "source_id": "pkg:npm/oxlint@1.55.0",
+    "bin": "oxlint",
+    "version": "1.55.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "pbls",
+    "description": "A language server implementation for Google Protocol Buffers.",
+    "languages": ["Protobuf"],
+    "source_id": "pkg:cargo/pbls@1.0.1?repository_url=https://git.sr.ht/~rrc/pbls",
+    "bin": "pbls",
+    "version": "1.0.1?repository_url=https://git.sr.ht/~rrc/pbls",
+    "source_type": "cargo"
+  },
+  {
+    "name": "perlnavigator",
+    "description": "Perl Language Server that includes perl critic and code navigation.",
+    "languages": ["Perl"],
+    "source_id": "pkg:npm/perlnavigator-server@0.8.20",
+    "bin": "perlnavigator",
+    "version": "0.8.20",
+    "source_type": "npm"
+  },
+  {
+    "name": "pest-language-server",
+    "description": "A language server for Pest grammar.",
+    "languages": ["Pest"],
+    "source_id": "pkg:cargo/pest-language-server@0.3.13",
+    "bin": "pest-language-server",
+    "version": "0.3.13",
+    "source_type": "cargo"
+  },
+  {
+    "name": "phpactor",
+    "description": "Phpactor is an intelligent Completion and Refactoring tool for PHP which is available over it\u2019s own RPC protocol and\nas a Language Server.",
+    "languages": ["PHP"],
+    "source_id": "pkg:github/phpactor/phpactor@2025.12.21.1",
+    "bin": "phpactor",
+    "assets": {
+      "any": {
+        "file": "phpactor.phar"
+      }
+    },
+    "version": "2025.12.21.1",
+    "source_type": "github"
+  },
+  {
+    "name": "pico8-ls",
+    "description": "Full language support for the PICO-8 dialect of Lua.",
+    "languages": ["PICO-8"],
+    "source_id": "pkg:github/japhib/pico8-ls@40c53c2061a42b20b22f83467d241e668c2487a2",
+    "bin": "pico8-ls",
+    "version": "40c53c2061a42b20b22f83467d241e668c2487a2",
+    "source_type": "github"
+  },
+  {
+    "name": "pkgbuild-language-server",
+    "description": "Language server for ArchLinux/Windows Msys2's PKGBUILD and *.install.",
+    "languages": ["Bash"],
+    "source_id": "pkg:pypi/pkgbuild-language-server@0.0.6",
+    "bin": "pkgbuild-language-server",
+    "version": "0.0.6",
+    "source_type": "pypi"
+  },
+  {
+    "name": "pkl-lsp",
+    "description": "Language server for Pkl, implementing the server-side of the Language Server Protocol.",
+    "languages": ["Pkl"],
+    "source_id": "pkg:github/apple/pkl-lsp@0.6.0",
+    "bin": "pkl-lsp",
+    "assets": {
+      "any": {
+        "file": "pkl-lsp-{{ version }}.jar"
+      }
+    },
+    "version": "0.6.0",
+    "source_type": "github"
+  },
+  {
+    "name": "postgres-language-server",
+    "description": "A collection of language tools and a Language Server Protocol (LSP) implementation for Postgres, focusing on developer experience and reliable SQL tooling.",
+    "languages": ["Postgres", "SQL"],
+    "source_id": "pkg:github/supabase-community/postgres-language-server@0.22.1",
+    "bin": "postgres-language-server",
+    "assets": {
+      "darwin_arm64": {
+        "file": "postgres-language-server_aarch64-apple-darwin"
+      },
+      "darwin_x64": {
+        "file": "postgres-language-server_x86_64-apple-darwin"
+      },
+      "linux_x64_gnu": {
+        "file": "postgres-language-server_x86_64-unknown-linux-gnu"
+      },
+      "linux_x64_musl": {
+        "file": "postgres-language-server_x86_64-unknown-linux-musl"
+      },
+      "linux_arm64_gnu": {
+        "file": "postgres-language-server_aarch64-unknown-linux-gnu"
+      },
+      "win_x64": {
+        "file": "postgres-language-server_x86_64-pc-windows-msvc.exe"
+      },
+      "win_arm64": {
+        "file": "postgres-language-server_aarch64-pc-windows-msvc.exe"
+      }
+    },
+    "version": "0.22.1",
+    "source_type": "github"
+  },
+  {
+    "name": "postgrestools",
+    "description": "A collection of language tools and a Language Server Protocol (LSP) implementation for Postgres, focusing on developer experience and reliable SQL tooling.",
+    "languages": ["Postgres", "SQL"],
+    "source_id": "pkg:github/supabase-community/postgres-language-server@0.22.1",
+    "bin": "postgrestools",
+    "assets": {
+      "darwin_arm64": {
+        "file": "postgrestools_aarch64-apple-darwin"
+      },
+      "darwin_x64": {
+        "file": "postgrestools_x86_64-apple-darwin"
+      },
+      "linux_x64_gnu": {
+        "file": "postgrestools_x86_64-unknown-linux-gnu"
+      },
+      "linux_arm64_gnu": {
+        "file": "postgrestools_aarch64-unknown-linux-gnu"
+      },
+      "win_x64": {
+        "file": "postgrestools_x86_64-pc-windows-msvc.exe"
+      },
+      "win_arm64": {
+        "file": "postgrestools_aarch64-pc-windows-msvc.exe"
+      }
+    },
+    "version": "0.22.1",
+    "source_type": "github"
+  },
+  {
+    "name": "powershell-editor-services",
+    "description": "A common platform for PowerShell development support in any editor or application.",
+    "languages": ["PowerShell"],
+    "source_id": "pkg:github/PowerShell/PowerShellEditorServices@v4.4.0",
+    "assets": {
+      "any": {
+        "file": "PowerShellEditorServices.zip"
+      }
+    },
+    "version": "v4.4.0",
+    "source_type": "github"
+  },
+  {
+    "name": "prisma-language-server",
+    "description": "Any editor that is compatible with the Language Server Protocol can create clients that can use the features provided\nby this language server.",
+    "languages": ["Prisma"],
+    "source_id": "pkg:npm/%40prisma/language-server@31.6.0",
+    "bin": "prisma-language-server",
+    "version": "31.6.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "prosemd-lsp",
+    "description": "An experimental proofreading and linting language server for markdown files.",
+    "languages": ["Markdown"],
+    "source_id": "pkg:github/kitten/prosemd-lsp@v0.1.0",
+    "bin": "prosemd-lsp",
+    "assets": {
+      "darwin_x64": {
+        "file": "prosemd-lsp-macos"
+      },
+      "darwin_arm64": {
+        "file": "prosemd-lsp-macos"
+      },
+      "linux_x64_gnu": {
+        "file": "prosemd-lsp-linux"
+      },
+      "win_x64": {
+        "file": "prosemd-lsp-windows.exe"
+      }
+    },
+    "version": "v0.1.0",
+    "source_type": "github"
+  },
+  {
+    "name": "protols",
+    "description": "A Simple LSP for proto3 protobuf files.",
+    "languages": ["Protobuf"],
+    "source_id": "pkg:cargo/protols@0.13.3",
+    "bin": "protols",
+    "version": "0.13.3",
+    "source_type": "cargo"
+  },
+  {
+    "name": "psalm",
+    "description": "A static analysis tool for finding errors in PHP applications.",
+    "languages": ["PHP"],
+    "source_id": "pkg:composer/vimeo/psalm@6.15.1",
+    "bin": "psalm",
+    "version": "6.15.1",
+    "source_type": "composer"
+  },
+  {
+    "name": "pug-lsp",
+    "description": "An implementation of the Language Protocol Server for [Pug.js](http://pugjs.org)",
+    "languages": ["Pug"],
+    "source_id": "pkg:github/opa-oz/pug-lsp@v0.1.0",
+    "bin": "pug-lsp",
+    "assets": {
+      "darwin_arm64": {
+        "file": "pug-lsp_darwin_all.zip",
+        "bin": "pug-lsp"
+      },
+      "darwin_x64": {
+        "file": "pug-lsp_darwin_all.zip",
+        "bin": "pug-lsp"
+      },
+      "linux_arm64": {
+        "file": "pug-lsp_linux_arm64.zip",
+        "bin": "pug-lsp"
+      },
+      "linux_x64": {
+        "file": "pug-lsp_linux_amd64.zip",
+        "bin": "pug-lsp"
+      },
+      "win_x64": {
+        "file": "pug-lsp_windows_amd64.zip",
+        "bin": "pug-lsp.exe"
+      }
+    },
+    "version": "v0.1.0",
+    "source_type": "github"
+  },
+  {
+    "name": "puppet-editor-services",
+    "description": "Puppet Language Server for editors.",
+    "languages": ["Puppet"],
+    "source_id": "pkg:github/puppetlabs/puppet-editor-services@v2.0.4",
+    "bin": "puppet-languageserver",
+    "assets": {
+      "any": {
+        "file": "puppet_editor_services_{{version}}.zip:libexec/"
+      }
+    },
+    "version": "v2.0.4",
+    "source_type": "github"
+  },
+  {
+    "name": "purescript-language-server",
+    "description": "Node-based Language Server Protocol server for PureScript based on the PureScript IDE server (aka psc-ide / purs ide\nserver). Used as the vscode plugin backend but should be compatible with other Language Server Client implementations.",
+    "languages": ["PureScript"],
+    "source_id": "pkg:npm/purescript-language-server@0.18.5",
+    "bin": "purescript-language-server",
+    "version": "0.18.5",
+    "source_type": "npm"
+  },
+  {
+    "name": "pylyzer",
+    "description": "A fast static code analyzer & language server for Python.",
+    "languages": ["Python"],
+    "source_id": "pkg:github/mtshiba/pylyzer@v0.0.82",
+    "bin": "pylyzer",
+    "assets": {
+      "darwin_arm64": {
+        "file": "pylyzer-aarch64-apple-darwin.tar.gz",
+        "bin": "pylyzer"
+      },
+      "darwin_x64": {
+        "file": "pylyzer-x86_64-apple-darwin.tar.gz",
+        "bin": "pylyzer"
+      },
+      "linux_armv7l": {
+        "file": "pylyzer-armv7-unknown-linux-gnueabihf.tar.gz",
+        "bin": "pylyzer"
+      },
+      "linux_x64": {
+        "file": "pylyzer-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "pylyzer"
+      },
+      "linux_arm64": {
+        "file": "pylyzer-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "pylyzer"
+      },
+      "win_x64": {
+        "file": "pylyzer-x86_64-pc-windows-msvc.zip",
+        "bin": "pylyzer.exe"
+      }
+    },
+    "version": "v0.0.82",
+    "source_type": "github"
+  },
+  {
+    "name": "pyre",
+    "description": "Pyre is a performant type checker for Python compliant with PEP 484.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/pyre-check@0.9.25",
+    "bin": "pyre",
+    "version": "0.9.25",
+    "source_type": "pypi"
+  },
+  {
+    "name": "pyrefly",
+    "description": "Pyrefly, a faster Python type checker written in Rust",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/pyrefly@0.56.0",
+    "bin": "pyrefly",
+    "version": "0.56.0",
+    "source_type": "pypi"
+  },
+  {
+    "name": "pyright",
+    "description": "Static type checker for Python.",
+    "languages": ["Python"],
+    "source_id": "pkg:npm/pyright@1.1.408",
+    "bin": "pyright",
+    "version": "1.1.408",
+    "source_type": "npm"
+  },
+  {
+    "name": "python-lsp-server",
+    "description": "Fork of the python-language-server project, maintained by the Spyder IDE team and the community.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/python-lsp-server@1.14.0?extra=all",
+    "bin": "pylsp",
+    "version": "1.14.0?extra=all",
+    "source_type": "pypi"
+  },
+  {
+    "name": "qmlls",
+    "description": "QML Language Server is a tool shipped with Qt that helps you write code in your favorite (LSP-supporting) editor.",
+    "languages": ["QML"],
+    "source_id": "pkg:github/TheQtCompanyRnD/qmlls-workflow@0.5",
+    "bin": "qmlls",
+    "assets": {
+      "darwin_x64": {
+        "file": "qmlls-macos-{{version}}.zip",
+        "bin": "qmlls"
+      },
+      "darwin_arm64": {
+        "file": "qmlls-macos-{{version}}.zip",
+        "bin": "qmlls"
+      },
+      "linux_x64_gnu": {
+        "file": "qmlls-ubuntu-{{version}}.zip",
+        "bin": "qmlls"
+      },
+      "win_x64": {
+        "file": "qmlls-windows-{{version}}.zip",
+        "bin": "qmlls.exe"
+      }
+    },
+    "version": "0.5",
+    "source_type": "github"
+  },
+  {
+    "name": "quick-lint-js",
+    "description": "Over 130\u00d7 faster than ESLint, quick-lint-js gives you instant feedback as you code. Find bugs in your JavaScript\nbefore your finger leaves the keyboard. Lint any JavaScript file with no configuration.",
+    "languages": ["JavaScript", "TypeScript"],
+    "source_id": "pkg:generic/quick-lint/quick-lint-js@3.2.0",
+    "bin": "quick-lint-js",
+    "version": "3.2.0",
+    "source_type": "generic"
+  },
+  {
+    "name": "r-languageserver",
+    "description": "An implementation of the Language Server Protocol for R.",
+    "languages": ["R"],
+    "source_id": "pkg:github/mason-org/r-languageserver@v0.3.16",
+    "bin": "r-languageserver",
+    "version": "v0.3.16",
+    "source_type": "github"
+  },
+  {
+    "name": "raku-navigator",
+    "description": "Raku Language Server that includes Raku critic and code navigation.",
+    "languages": ["Raku"],
+    "source_id": "pkg:github/bscan/RakuNavigator@1aca1abb976e85d0af58178909ff179d45648d20",
+    "bin": "raku-navigator",
+    "version": "1aca1abb976e85d0af58178909ff179d45648d20",
+    "source_type": "github"
+  },
+  {
+    "name": "rassumfrassum",
+    "description": "Connect an LSP client to multiple LSP servers.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/rassumfrassum@0.3.3",
+    "bin": "rass",
+    "version": "0.3.3",
+    "source_type": "pypi"
+  },
+  {
+    "name": "reason-language-server",
+    "description": "A language server for reason, in reason.",
+    "languages": ["Reason"],
+    "source_id": "pkg:github/jaredly/reason-language-server@1.7.13",
+    "bin": "reason-language-server",
+    "assets": {
+      "darwin_x64": {
+        "file": "rls-macos.zip",
+        "bin": "rls-macos/reason-language-server"
+      },
+      "darwin_arm64": {
+        "file": "rls-macos.zip",
+        "bin": "rls-macos/reason-language-server"
+      },
+      "linux_x64": {
+        "file": "rls-linux.zip",
+        "bin": "rls-linux/reason-language-server"
+      },
+      "win_x64": {
+        "file": "rls-windows.zip",
+        "bin": "rls-windows/reason-language-server.exe"
+      }
+    },
+    "version": "1.7.13",
+    "source_type": "github"
+  },
+  {
+    "name": "regal",
+    "description": "A linter for Rego, with support for running as an LSP server.",
+    "languages": ["Rego"],
+    "source_id": "pkg:github/styrainc/regal@v0.39.0",
+    "bin": "regal",
+    "assets": {
+      "darwin_arm64": {
+        "file": "regal_Darwin_arm64"
+      },
+      "darwin_x64": {
+        "file": "regal_Darwin_x86_64"
+      },
+      "linux_arm64": {
+        "file": "regal_Linux_arm64"
+      },
+      "linux_x64": {
+        "file": "regal_Linux_x86_64"
+      },
+      "win_x64": {
+        "file": "regal_Windows_x86_64.exe"
+      }
+    },
+    "version": "v0.39.0",
+    "source_type": "github"
+  },
+  {
+    "name": "regols",
+    "description": "OPA Rego language server",
+    "languages": ["Rego"],
+    "source_id": "pkg:golang/github.com/kitagry/regols@v0.2.4",
+    "bin": "regols",
+    "version": "v0.2.4",
+    "source_type": "golang"
+  },
+  {
+    "name": "remark-language-server",
+    "description": "A language server to lint and format markdown files with remark.",
+    "languages": ["Markdown"],
+    "source_id": "pkg:npm/remark-language-server@3.0.0",
+    "bin": "remark-language-server",
+    "version": "3.0.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "rescript-language-server",
+    "description": "Language Server for ReScript.",
+    "languages": ["ReScript"],
+    "source_id": "pkg:npm/%40rescript/language-server@1.72.0",
+    "bin": "rescript-language-server",
+    "version": "1.72.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "rescript-lsp",
+    "description": "Language Server for ReScript.",
+    "languages": ["ReScript"],
+    "source_id": "pkg:github/rescript-lang/rescript-vscode@1.42.0",
+    "bin": "rescript-lsp",
+    "assets": {
+      "any": {
+        "file": "rescript-vscode-{{version}}.vsix"
+      }
+    },
+    "version": "1.42.0",
+    "source_type": "github"
+  },
+  {
+    "name": "rnix-lsp",
+    "description": "Language Server for Nix.",
+    "languages": ["Nix"],
+    "source_id": "pkg:cargo/rnix-lsp@0.2.5",
+    "bin": "rnix-lsp",
+    "version": "0.2.5",
+    "source_type": "cargo"
+  },
+  {
+    "name": "robotcode",
+    "description": "The Ultimate Robot Framework Toolset",
+    "languages": ["Robot Framework"],
+    "source_id": "pkg:pypi/robotcode@2.3.1?extra=all",
+    "bin": "robotcode",
+    "version": "2.3.1?extra=all",
+    "source_type": "pypi"
+  },
+  {
+    "name": "robotframework-lsp",
+    "description": "Language Server Protocol implementation for Robot Framework.",
+    "languages": ["Robot Framework"],
+    "source_id": "pkg:pypi/robotframework-lsp@1.13.0",
+    "bin": "robotframework_ls",
+    "version": "1.13.0",
+    "source_type": "pypi"
+  },
+  {
+    "name": "roc_language_server",
+    "description": "This is a basic language server for Roc.",
+    "languages": ["Roc"],
+    "source_id": "pkg:github/roc-lang/roc@alpha4-rolling",
+    "bin": "roc_language_server",
+    "assets": {
+      "linux_arm64": {
+        "file": "roc-linux_arm64-{{version}}.tar.gz",
+        "bin": "roc_nightly-linux_arm64-2025-09-09-d73ea10/roc_language_server"
+      },
+      "linux_x64": {
+        "file": "roc-linux_x86_64-{{version}}.tar.gz",
+        "bin": "roc_nightly-linux_x86_64-2025-09-09-d73ea109/roc_language_server"
+      },
+      "darwin_arm64": {
+        "file": "roc-macos_apple_silicon-{{version}}.tar.gz",
+        "bin": "roc_nightly-macos_apple_silicon-2025-09-09-d73ea109cc2/roc_language_server"
+      },
+      "darwin_x64": {
+        "file": "roc-macos_x86_64-{{version}}.tar.gz",
+        "bin": "roc_nightly-macos_x86_64-2025-09-09-d73ea109/roc_language_server"
+      }
+    },
+    "version": "alpha4-rolling",
+    "source_type": "github"
+  },
+  {
+    "name": "rome",
+    "description": "Rome is a formatter, linter, bundler, and more for JavaScript, TypeScript, JSON, HTML, Markdown, and CSS.",
+    "languages": ["JSON", "JavaScript", "TypeScript"],
+    "source_id": "pkg:npm/rome@12.1.3",
+    "bin": "rome",
+    "version": "12.1.3",
+    "source_type": "npm"
+  },
+  {
+    "name": "rpm_lsp_server",
+    "description": "Language server protocol (LSP) support for RPM Spec files.",
+    "languages": ["Spec"],
+    "source_id": "pkg:pypi/rpm-spec-language-server@0.0.2",
+    "bin": "rpm_lsp_server",
+    "version": "0.0.2",
+    "source_type": "pypi"
+  },
+  {
+    "name": "rshtml-analyzer",
+    "description": "rshtml-analyzer is an implementation of the Language Server Protocol (LSP)\nfor the RsHtml templating language which elegantly combines Rust and HTML.",
+    "languages": ["RsHtml"],
+    "source_id": "pkg:github/rshtml/rshtml-analyzer@v0.1.7",
+    "bin": "rshtml-analyzer",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "rshtml-analyzer-linux-x64.tar.gz",
+        "bin": "rshtml-analyzer"
+      },
+      "linux_arm64_gnu": {
+        "file": "rshtml-analyzer-linux-arm64.tar.gz",
+        "bin": "rshtml-analyzer"
+      },
+      "linux_x64_musl": {
+        "file": "rshtml-analyzer-linux-x64-musl.tar.gz",
+        "bin": "rshtml-analyzer"
+      },
+      "darwin_x64": {
+        "file": "rshtml-analyzer-macos-x64.tar.gz",
+        "bin": "rshtml-analyzer"
+      },
+      "darwin_arm64": {
+        "file": "rshtml-analyzer-macos-arm64.tar.gz",
+        "bin": "rshtml-analyzer"
+      },
+      "win_x64": {
+        "file": "rshtml-analyzer-windows-x64.tar.gz",
+        "bin": "rshtml-analyzer.exe"
+      },
+      "win_arm64": {
+        "file": "rshtml-analyzer-windows-arm64.tar.gz",
+        "bin": "rshtml-analyzer.exe"
+      }
+    },
+    "version": "v0.1.7",
+    "source_type": "github"
+  },
+  {
+    "name": "rubocop",
+    "description": "The Ruby Linter/Formatter that Serves and Protects.",
+    "languages": ["Ruby"],
+    "source_id": "pkg:gem/rubocop@1.85.1",
+    "bin": "rubocop",
+    "version": "1.85.1",
+    "source_type": "gem"
+  },
+  {
+    "name": "ruby-lsp",
+    "description": "This gem is an implementation of the language server protocol specification for Ruby, used to improve editor features.",
+    "languages": ["Ruby"],
+    "source_id": "pkg:gem/ruby-lsp@0.26.8",
+    "extra_packages": ["ruby-lsp-rails"],
+    "bin": "ruby-lsp",
+    "version": "0.26.8",
+    "source_type": "gem"
+  },
+  {
+    "name": "ruff",
+    "description": "An extremely fast Python linter and code formatter, written in Rust.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/ruff@0.15.6",
+    "bin": "ruff",
+    "version": "0.15.6",
+    "source_type": "pypi"
+  },
+  {
+    "name": "ruff-lsp",
+    "description": "A Language Server Protocol implementation for Ruff - An extremely fast Python linter, written in Rust.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/ruff-lsp@0.0.62",
+    "bin": "ruff-lsp",
+    "version": "0.0.62",
+    "source_type": "pypi"
+  },
+  {
+    "name": "rumdl",
+    "description": "Fast Markdown linter and formatter.",
+    "languages": ["Markdown"],
+    "source_id": "pkg:github/rvben/rumdl@v0.1.47",
+    "bin": "rumdl",
+    "assets": {
+      "darwin_arm64": {
+        "file": "rumdl-{{version}}-aarch64-apple-darwin.tar.gz",
+        "bin": "rumdl"
+      },
+      "darwin_x64": {
+        "file": "rumdl-{{version}}-x86_64-apple-darwin.tar.gz",
+        "bin": "rumdl"
+      },
+      "linux_x64_gnu": {
+        "file": "rumdl-{{version}}-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "rumdl"
+      },
+      "linux_arm64_gnu": {
+        "file": "rumdl-{{version}}-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "rumdl"
+      },
+      "linux_x64": {
+        "file": "rumdl-{{version}}-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "rumdl"
+      },
+      "linux_arm64": {
+        "file": "rumdl-{{version}}-aarch64-unknown-linux-musl.tar.gz",
+        "bin": "rumdl"
+      },
+      "win_x64": {
+        "file": "rumdl-{{version}}-x86_64-pc-windows-msvc.zip",
+        "bin": "rumdl.exe"
+      }
+    },
+    "version": "v0.1.47",
+    "source_type": "github"
+  },
+  {
+    "name": "rust-analyzer",
+    "description": "rust-analyzer is an implementation of the Language Server Protocol for the\nRust programming language. It provides features like completion and goto\ndefinition for many code editors, including VS Code, Emacs and Vim.",
+    "languages": ["Rust"],
+    "source_id": "pkg:github/rust-lang/rust-analyzer@2026-03-09",
+    "bin": "rust-analyzer",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "rust-analyzer-x86_64-unknown-linux-gnu.gz",
+        "bin": "rust-analyzer-x86_64-unknown-linux-gnu"
+      },
+      "linux_arm64_gnu": {
+        "file": "rust-analyzer-aarch64-unknown-linux-gnu.gz",
+        "bin": "rust-analyzer-aarch64-unknown-linux-gnu"
+      },
+      "linux_x64_musl": {
+        "file": "rust-analyzer-x86_64-unknown-linux-musl.gz",
+        "bin": "rust-analyzer-x86_64-unknown-linux-musl"
+      },
+      "darwin_x64": {
+        "file": "rust-analyzer-x86_64-apple-darwin.gz",
+        "bin": "rust-analyzer-x86_64-apple-darwin"
+      },
+      "darwin_arm64": {
+        "file": "rust-analyzer-aarch64-apple-darwin.gz",
+        "bin": "rust-analyzer-aarch64-apple-darwin"
+      },
+      "win_x64": {
+        "file": "rust-analyzer-x86_64-pc-windows-msvc.zip",
+        "bin": "rust-analyzer.exe"
+      },
+      "win_arm64": {
+        "file": "rust-analyzer-aarch64-pc-windows-msvc.zip",
+        "bin": "rust-analyzer.exe"
+      }
+    },
+    "version": "2026-03-09",
+    "source_type": "github"
+  },
+  {
+    "name": "rust_hdl",
+    "description": "rust_hdl is a VHDL language server and analysis library written in Rust. A complete VHDL language server protocol\nimplementation with diagnostics, navigate to symbol, find all references etc.",
+    "languages": ["VHDL"],
+    "source_id": "pkg:github/vhdl-ls/rust_hdl@v0.86.0",
+    "bin": "vhdl_ls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "vhdl_ls-aarch64-apple-darwin.zip",
+        "bin": "vhdl_ls-aarch64-apple-darwin/bin/vhdl_ls"
+      },
+      "linux_x64": {
+        "file": "vhdl_ls-x86_64-unknown-linux-musl.zip",
+        "bin": "vhdl_ls-x86_64-unknown-linux-musl/bin/vhdl_ls"
+      },
+      "win_x64": {
+        "file": "vhdl_ls-x86_64-pc-windows-msvc.zip",
+        "bin": "vhdl_ls-x86_64-pc-windows-msvc/bin/vhdl_ls.exe"
+      }
+    },
+    "version": "v0.86.0",
+    "source_type": "github"
+  },
+  {
+    "name": "salt-lsp",
+    "description": "Salt Language Server Protocol Server.",
+    "languages": ["Salt"],
+    "source_id": "pkg:pypi/salt-lsp@0.0.1",
+    "bin": "salt_lsp_server",
+    "version": "0.0.1",
+    "source_type": "pypi"
+  },
+  {
+    "name": "serve-d",
+    "description": "Microsoft language server protocol implementation for D using workspace-d.",
+    "languages": ["D"],
+    "source_id": "pkg:github/Pure-D/serve-d@v0.7.6",
+    "bin": "serve-d",
+    "assets": {
+      "darwin_x64": {
+        "file": "serve-d_{{ version | strip_prefix \"v\" }}-osx-x86_64.tar.xz",
+        "bin": "serve-d"
+      },
+      "darwin_arm64": {
+        "file": "serve-d_{{ version | strip_prefix \"v\" }}-osx-x86_64.tar.xz",
+        "bin": "serve-d"
+      },
+      "linux_x64": {
+        "file": "serve-d_{{ version | strip_prefix \"v\" }}-linux-x86_64.tar.xz",
+        "bin": "serve-d"
+      },
+      "win_x64": {
+        "file": "serve-d_{{ version | strip_prefix \"v\" }}-windows-x86_64.zip",
+        "bin": "serve-d.exe"
+      },
+      "win_x86": {
+        "file": "serve-d_{{ version | strip_prefix \"v\" }}-windows-x86.zip",
+        "bin": "serve-d.exe"
+      }
+    },
+    "version": "v0.7.6",
+    "source_type": "github"
+  },
+  {
+    "name": "shopify-cli",
+    "description": "Command-line interface tool that helps you generate and work with Shopify apps, themes and custom storefronts.",
+    "languages": ["Liquid"],
+    "source_id": "pkg:npm/%40shopify/cli@3.92.1",
+    "bin": "shopify",
+    "version": "3.92.1",
+    "source_type": "npm"
+  },
+  {
+    "name": "shopify-theme-check",
+    "description": "The Ultimate Shopify Theme Linter.",
+    "languages": ["Liquid"],
+    "source_id": "pkg:gem/theme-check@1.15.0",
+    "bin": "theme-check-language-server",
+    "version": "1.15.0",
+    "source_type": "gem"
+  },
+  {
+    "name": "sith-language-server",
+    "description": "An experimental language server for the Python programming language. - made in Rust.",
+    "languages": ["Python"],
+    "source_id": "pkg:github/LaBatata101/sith-language-server@v0.2.2-alpha",
+    "bin": "sith-lsp",
+    "assets": {
+      "darwin_arm64": {
+        "file": "sith-lsp-aarch64-apple-darwin.tar.gz",
+        "bin": "sith-lsp-aarch64-apple-darwin/sith-lsp"
+      },
+      "darwin_x64": {
+        "file": "sith-lsp-x86_64-apple-darwin.tar.gz",
+        "bin": "sith-lsp-x86_64-apple-darwin/sith-lsp"
+      },
+      "linux_arm64_gnu": {
+        "file": "sith-lsp-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "sith-lsp-aarch64-unknown-linux-gnu/sith-lsp"
+      },
+      "linux_arm64_musl": {
+        "file": "sith-lsp-aarch64-unknown-linux-musl.tar.gz",
+        "bin": "sith-lsp-aarch64-unknown-linux-musl/sith-lsp"
+      },
+      "linux_x64_gnu": {
+        "file": "sith-lsp-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "sith-lsp-x86_64-unknown-linux-gnu/sith-lsp"
+      },
+      "linux_x64_musl": {
+        "file": "sith-lsp-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "sith-lsp-x86_64-unknown-linux-musl/sith-lsp"
+      },
+      "win_x64": {
+        "file": "sith-lsp-x86_64-pc-windows-msvc.zip",
+        "bin": "sith-lsp.exe"
+      },
+      "win_arm64": {
+        "file": "sith-lsp-aarch64-pc-windows-msvc.zip",
+        "bin": "sith-lsp.exe"
+      }
+    },
+    "version": "v0.2.2-alpha",
+    "source_type": "github"
+  },
+  {
+    "name": "slang",
+    "description": "Slang is a shading language that makes it easier to build and maintain large shader codebases in a modular and\nextensible fashion, while also maintaining the highest possible performance on modern GPUs and graphics APIs. Slang is\nbased on years of collaboration between researchers at NVIDIA, Carnegie Mellon University, and Stanford.",
+    "languages": ["Slang"],
+    "source_id": "pkg:github/shader-slang/slang@v2026.4.2",
+    "bin": "slangd",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "slang-{{ version | strip_prefix \"v\" }}-linux-x86_64.tar.gz",
+        "bin": "bin/slangd"
+      },
+      "darwin_x64": {
+        "file": "slang-{{ version | strip_prefix \"v\" }}-macos-x86_64.tar.gz",
+        "bin": "bin/slangd"
+      },
+      "darwin_arm64": {
+        "file": "slang-{{ version | strip_prefix \"v\" }}-macos-aarch64.tar.gz",
+        "bin": "bin/slangd"
+      },
+      "win_x64": {
+        "file": "slang-{{ version | strip_prefix \"v\" }}-windows-x86_64.zip",
+        "bin": "bin/slangd.exe"
+      },
+      "win_arm64": {
+        "file": "slang-{{ version | strip_prefix \"v\" }}-windows-aarch64.zip",
+        "bin": "bin/slangd.exe"
+      }
+    },
+    "version": "v2026.4.2",
+    "source_type": "github"
+  },
+  {
+    "name": "slint-lsp",
+    "description": "A LSP Server that adds features like auto-complete and live preview of the .slint files to many editors.",
+    "languages": ["Slint"],
+    "source_id": "pkg:github/slint-ui/slint@v1.15.1",
+    "bin": "slint-lsp",
+    "assets": {
+      "linux_x64": {
+        "file": "slint-lsp-linux.tar.gz",
+        "bin": "slint-lsp/slint-lsp"
+      },
+      "win_x64": {
+        "file": "slint-lsp-windows-x86_64.zip",
+        "bin": "slint-lsp.exe"
+      },
+      "darwin_x64": {
+        "file": "slint-lsp-macos.tar.gz",
+        "bin": "slint-lsp/slint-lsp"
+      },
+      "darwin_arm64": {
+        "file": "slint-lsp-macos.tar.gz",
+        "bin": "slint-lsp/slint-lsp"
+      }
+    },
+    "version": "v1.15.1",
+    "source_type": "github"
+  },
+  {
+    "name": "smithy-language-server",
+    "description": "A Language Server Protocol implementation for the Smithy IDL.",
+    "languages": ["Smithy"],
+    "source_id": "pkg:github/awslabs/smithy-language-server@0.8.0",
+    "bin": "smithy-language-server",
+    "assets": {
+      "darwin_x64": {
+        "file": "smithy-language-server-darwin-x86_64.zip",
+        "bin": "bin/smithy-language-server"
+      },
+      "darwin_arm64": {
+        "file": "smithy-language-server-darwin-aarch64.zip",
+        "bin": "bin/smithy-language-server"
+      },
+      "linux_x64": {
+        "file": "smithy-language-server-linux-x86_64.zip",
+        "bin": "bin/smithy-language-server"
+      },
+      "linux_arm64": {
+        "file": "smithy-language-server-linux-aarch64.zip",
+        "bin": "bin/smithy-language-server"
+      },
+      "win_x64": {
+        "file": "smithy-language-server-windows-x86_64.zip",
+        "bin": "bin/smithy-language-server.bat"
+      }
+    },
+    "version": "0.8.0",
+    "source_type": "github"
+  },
+  {
+    "name": "snakeskin-cli",
+    "description": "Snakeskin is an awesome JavaScript template engine with the best support for inheritance.",
+    "languages": ["Snakeskin"],
+    "source_id": "pkg:npm/%40snakeskin/cli@0.0.8",
+    "bin": "snakeskin-cli",
+    "version": "0.0.8",
+    "source_type": "npm"
+  },
+  {
+    "name": "snyk",
+    "description": "Snyk CLI scans and monitors your projects for security vulnerabilities",
+    "languages": [
+      ".NET",
+      "Apex",
+      "C#",
+      "C++",
+      "Dart",
+      "Docker",
+      "Elixir",
+      "Go",
+      "Groovy",
+      "Helm",
+      "Java",
+      "JavaScript",
+      "Kotlin",
+      "PHP",
+      "Python",
+      "Ruby",
+      "Rust",
+      "Scala",
+      "Swift",
+      "Terraform",
+      "TypeScript"
+    ],
+    "source_id": "pkg:github/snyk/cli@v1.1303.1",
+    "bin": "snyk",
+    "assets": {
+      "darwin_x64": {
+        "file": "snyk-macos"
+      },
+      "darwin_arm64": {
+        "file": "snyk-macos-arm64"
+      },
+      "linux_x64_gnu": {
+        "file": "snyk-linux"
+      },
+      "linux_arm64_gnu": {
+        "file": "snyk-linux-arm64"
+      },
+      "win_x64": {
+        "file": "snyk-win.exe"
+      }
+    },
+    "version": "v1.1303.1",
+    "source_type": "github"
+  },
+  {
+    "name": "snyk-ls",
+    "description": "The language server follows the Language Server Protocol and integrates with Snyk Open Source, Snyk Infrastructure as\nCode and Snyk Code. For the former two, it uses the Snyk CLI as a data provider, for the latter it is connecting\ndirectly to the Snyk Code API.",
+    "languages": ["Snyk"],
+    "source_id": "pkg:github/snyk/snyk-ls@v20250325.145416",
+    "bin": "snyk-ls",
+    "assets": {
+      "darwin_x64": {
+        "file": "snyk-ls_{{ version | strip_prefix \"v\" }}_darwin_amd64"
+      },
+      "darwin_arm64": {
+        "file": "snyk-ls_{{ version | strip_prefix \"v\" }}_darwin_arm64"
+      },
+      "linux_x64": {
+        "file": "snyk-ls_{{ version | strip_prefix \"v\" }}_linux_amd64"
+      },
+      "linux_x86": {
+        "file": "snyk-ls_{{ version | strip_prefix \"v\" }}_linux_386"
+      },
+      "linux_arm64": {
+        "file": "snyk-ls_{{ version | strip_prefix \"v\" }}_linux_arm64"
+      },
+      "win_x86": {
+        "file": "snyk-ls_{{ version | strip_prefix \"v\" }}_windows_386.exe"
+      },
+      "win_x64": {
+        "file": "snyk-ls_{{ version | strip_prefix \"v\" }}_windows_amd64.exe"
+      }
+    },
+    "version": "v20250325.145416",
+    "source_type": "github"
+  },
+  {
+    "name": "solang",
+    "description": "Solidity Compiler for Solana, Substrate, and ewasm.",
+    "languages": ["Solidity"],
+    "source_id": "pkg:github/hyperledger-labs/solang@v0.3.4",
+    "bin": "solang",
+    "assets": {
+      "darwin_x64": {
+        "file": "solang-mac-intel",
+        "bin": "solang-mac-intel"
+      },
+      "darwin_arm64": {
+        "file": "solang-mac-arm",
+        "bin": "solang-mac-arm"
+      },
+      "linux_arm64": {
+        "file": "solang-linux-arm64",
+        "bin": "solang-linux-arm64"
+      },
+      "linux_x64": {
+        "file": "solang-linux-x86-64",
+        "bin": "solang-linux-x86-64"
+      },
+      "win_x64": {
+        "file": "solang.exe",
+        "bin": "solang.exe"
+      }
+    },
+    "version": "v0.3.4",
+    "source_type": "github"
+  },
+  {
+    "name": "solang-llvm",
+    "description": "Solang requires Solana's LLVM fork. We provide pre-built binaries compatible with Solang.",
+    "languages": ["Solidity"],
+    "source_id": "pkg:github/hyperledger/solang-llvm@llvm15-0",
+    "assets": {
+      "darwin_x64": {
+        "file": "llvm15.0-mac-intel.tar.xz"
+      },
+      "darwin_arm64": {
+        "file": "llvm15.0-mac-arm.tar.xz"
+      },
+      "linux_arm64": {
+        "file": "llvm15.0-linux-arm64.tar.xz"
+      },
+      "linux_x64": {
+        "file": "llvm15.0-linux-x86-64.tar.xz"
+      },
+      "win_x64": {
+        "file": "llvm15.0-win.zip"
+      }
+    },
+    "version": "llvm15-0",
+    "source_type": "github"
+  },
+  {
+    "name": "solargraph",
+    "description": "Solargraph is a Ruby gem that provides intellisense features through the language server protocol.",
+    "languages": ["Ruby"],
+    "source_id": "pkg:gem/solargraph@0.58.3",
+    "bin": "solargraph",
+    "version": "0.58.3",
+    "source_type": "gem"
+  },
+  {
+    "name": "solidity",
+    "description": "Solidity, the Smart Contract Programming Language.",
+    "languages": ["Solidity"],
+    "source_id": "pkg:github/ethereum/solidity@v0.8.34",
+    "bin": "solc",
+    "assets": {
+      "darwin_x64": {
+        "file": "solc-macos"
+      },
+      "darwin_arm64": {
+        "file": "solc-macos"
+      },
+      "linux_x64": {
+        "file": "solc-static-linux"
+      },
+      "win_x64": {
+        "file": "solc-windows.exe"
+      }
+    },
+    "version": "v0.8.34",
+    "source_type": "github"
+  },
+  {
+    "name": "solidity-ls",
+    "description": "Solidity language server.",
+    "languages": ["Solidity"],
+    "source_id": "pkg:npm/solidity-ls@0.5.4",
+    "bin": "solidity-ls",
+    "version": "0.5.4",
+    "source_type": "npm"
+  },
+  {
+    "name": "some-sass-language-server",
+    "description": "Full support for @use and @forward, including aliases, prefixes and hiding. Rich documentation through SassDoc. Workspace-wide code navigation and refactoring.",
+    "languages": ["SCSS"],
+    "source_id": "pkg:npm/some-sass-language-server@2.3.7",
+    "bin": "some-sass-language-server",
+    "version": "2.3.7",
+    "source_type": "npm"
+  },
+  {
+    "name": "sorbet",
+    "description": "Sorbet is a fast, powerful type checker designed for Ruby.",
+    "languages": ["Ruby"],
+    "source_id": "pkg:gem/sorbet@0.6.13023",
+    "bin": "srb",
+    "version": "0.6.13023",
+    "source_type": "gem"
+  },
+  {
+    "name": "sourcery",
+    "description": "Sourcery is a tool available in your IDE, GitHub, or as a CLI that suggests refactoring improvements to help make your\ncode more readable and generally higher quality.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/sourcery@1.43.0",
+    "bin": "sourcery",
+    "version": "1.43.0",
+    "source_type": "pypi"
+  },
+  {
+    "name": "spectral-language-server",
+    "description": "Awesome Spectral JSON/YAML linter with OpenAPI/AsyncAPI support. Spectral is a flexible object linter with out of the\nbox support for OpenAPI v2 and v3, JSON Schema, and AsyncAPI.",
+    "languages": ["JSON", "YAML"],
+    "source_id": "pkg:github/stoplightio/vscode-spectral@v1.1.4",
+    "bin": "spectral-language-server",
+    "version": "v1.1.4",
+    "source_type": "github"
+  },
+  {
+    "name": "spyglassmc-language-server",
+    "description": "This is a language server wrapped around some other Spyglass packages.",
+    "languages": ["MCFunction"],
+    "source_id": "pkg:npm/%40spyglassmc/language-server@0.4.56",
+    "bin": "spyglassmc-language-server",
+    "version": "0.4.56",
+    "source_type": "npm"
+  },
+  {
+    "name": "sqlls",
+    "description": "SQL Language Server.",
+    "languages": ["SQL"],
+    "source_id": "pkg:npm/sql-language-server@1.7.1",
+    "bin": "sql-language-server",
+    "version": "1.7.1",
+    "source_type": "npm"
+  },
+  {
+    "name": "sqls",
+    "description": "SQL language server written in Go.",
+    "languages": ["SQL"],
+    "source_id": "pkg:golang/github.com/sqls-server/sqls@v0.2.46",
+    "bin": "sqls",
+    "version": "v0.2.46",
+    "source_type": "golang"
+  },
+  {
+    "name": "starlark-rust",
+    "description": "A Rust implementation of the Starlark language",
+    "languages": ["Starlark"],
+    "source_id": "pkg:cargo/starlark_bin@0.13.0",
+    "bin": "starlark",
+    "version": "0.13.0",
+    "source_type": "cargo"
+  },
+  {
+    "name": "starpls",
+    "description": "Starpls is an LSP implementation for Starlark, the configuration language used by Bazel and Buck2.",
+    "languages": ["Starlark"],
+    "source_id": "pkg:github/withered-magic/starpls@v0.1.22",
+    "bin": "starpls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "starpls-darwin-arm64"
+      },
+      "linux_x64": {
+        "file": "starpls-linux-amd64"
+      },
+      "win_x64": {
+        "file": "starpls-windows-amd64.exe"
+      }
+    },
+    "version": "v0.1.22",
+    "source_type": "github"
+  },
+  {
+    "name": "steep",
+    "description": "Static type checker for Ruby",
+    "languages": ["Ruby"],
+    "source_id": "pkg:gem/steep@1.10.0",
+    "bin": "steep",
+    "version": "1.10.0",
+    "source_type": "gem"
+  },
+  {
+    "name": "stimulus-language-server",
+    "description": "Intelligent Stimulus tooling",
+    "languages": ["Blade", "HTML", "PHP", "Ruby"],
+    "source_id": "pkg:npm/stimulus-language-server@1.0.4",
+    "bin": "stimulus-language-server",
+    "version": "1.0.4",
+    "source_type": "npm"
+  },
+  {
+    "name": "stree",
+    "description": "A fast Ruby parser and formatter.",
+    "languages": ["Ruby"],
+    "source_id": "pkg:gem/syntax_tree@6.3.0",
+    "bin": "stree",
+    "version": "6.3.0",
+    "source_type": "gem"
+  },
+  {
+    "name": "stylelint-lsp",
+    "description": "A stylelint Language Server.",
+    "languages": ["Stylelint"],
+    "source_id": "pkg:npm/stylelint-lsp@2.0.1",
+    "bin": "stylelint-lsp",
+    "version": "2.0.1",
+    "source_type": "npm"
+  },
+  {
+    "name": "stylua",
+    "description": "An opinionated Lua code formatter.",
+    "languages": ["Lua", "Luau"],
+    "source_id": "pkg:github/johnnymorganz/stylua@v2.4.0",
+    "bin": "stylua",
+    "assets": {
+      "darwin_arm64": {
+        "file": "stylua-macos-aarch64.zip",
+        "bin": "stylua"
+      },
+      "darwin_x64": {
+        "file": "stylua-macos-x86_64.zip",
+        "bin": "stylua"
+      },
+      "linux_x64_gnu": {
+        "file": "stylua-linux-x86_64.zip",
+        "bin": "stylua"
+      },
+      "linux_arm64_gnu": {
+        "file": "stylua-linux-aarch64.zip",
+        "bin": "stylua"
+      },
+      "linux_x64": {
+        "file": "stylua-linux-x86_64-musl.zip",
+        "bin": "stylua"
+      },
+      "win_x64": {
+        "file": "stylua-windows-x86_64.zip",
+        "bin": "stylua.exe"
+      }
+    },
+    "version": "v2.4.0",
+    "source_type": "github"
+  },
+  {
+    "name": "superhtml",
+    "description": "HTML Language Server & Templating Language Library",
+    "languages": ["HTML", "SuperHTML"],
+    "source_id": "pkg:github/kristoff-it/superhtml@v0.6.2",
+    "bin": "superhtml",
+    "assets": {
+      "darwin_arm64": {
+        "file": "aarch64-macos.zip",
+        "bin": "superhtml"
+      },
+      "linux_arm64": {
+        "file": "aarch64-linux.tar.xz",
+        "bin": "superhtml"
+      },
+      "win_arm64": {
+        "file": "aarch64-windows.zip",
+        "bin": "superhtml.exe"
+      },
+      "darwin_x64": {
+        "file": "x86_64-macos.zip",
+        "bin": "superhtml"
+      },
+      "linux_x64": {
+        "file": "x86_64-linux-musl.tar.xz",
+        "bin": "superhtml"
+      },
+      "win_x64": {
+        "file": "x86_64-windows.zip",
+        "bin": "superhtml.exe"
+      }
+    },
+    "version": "v0.6.2",
+    "source_type": "github"
+  },
+  {
+    "name": "svelte-language-server",
+    "description": "A language server (implementing the language server protocol) for Svelte.",
+    "languages": ["Svelte"],
+    "source_id": "pkg:npm/svelte-language-server@0.17.29",
+    "extra_packages": ["typescript-svelte-plugin"],
+    "bin": "svelteserver",
+    "version": "0.17.29",
+    "source_type": "npm"
+  },
+  {
+    "name": "svlangserver",
+    "description": "A language server for systemverilog that has been tested to work with coc.nvim, VSCode, Sublime Text 4, emacs, and\nNeovim.",
+    "languages": ["SystemVerilog"],
+    "source_id": "pkg:npm/%40imc-trading/svlangserver@0.4.1",
+    "bin": "svlangserver",
+    "version": "0.4.1",
+    "source_type": "npm"
+  },
+  {
+    "name": "svls",
+    "description": "SystemVerilog language server",
+    "languages": ["SystemVerilog"],
+    "source_id": "pkg:cargo/svls@0.2.14",
+    "bin": "svls",
+    "version": "0.2.14",
+    "source_type": "cargo"
+  },
+  {
+    "name": "swift-mesonlsp",
+    "description": "An unofficial, unendorsed language server for meson written in Swift.",
+    "languages": ["Meson"],
+    "source_id": "pkg:github/JCWasmx86/Swift-MesonLSP@v3.1.3",
+    "bin": "Swift-MesonLSP",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "Swift-MesonLSP.zip",
+        "bin": "Swift-MesonLSP"
+      },
+      "darwin": {
+        "file": "Swift-MesonLSP-macos13.zip",
+        "bin": "Swift-MesonLSP"
+      },
+      "win_x64": {
+        "file": "Swift-MesonLSP-win64.zip",
+        "bin": "Swift-MesonLSP.exe"
+      }
+    },
+    "version": "v3.1.3",
+    "source_type": "github"
+  },
+  {
+    "name": "systemd-language-server",
+    "description": "Language Server for Systemd unit files",
+    "languages": ["systemd"],
+    "source_id": "pkg:pypi/systemd-language-server@0.3.5",
+    "bin": "systemd-language-server",
+    "version": "0.3.5",
+    "source_type": "pypi"
+  },
+  {
+    "name": "systemd-lsp",
+    "description": "a language server implementation for systemd unit files made in rust",
+    "languages": ["systemd"],
+    "source_id": "pkg:github/JFryy/systemd-lsp@v2026.01.17",
+    "bin": "systemd-lsp",
+    "assets": {
+      "darwin_x64": {
+        "file": "systemd-lsp-x86_64-apple-darwin"
+      },
+      "darwin_arm64": {
+        "file": "systemd-lsp-x86_64-apple-darwin"
+      },
+      "linux_x64_gnu": {
+        "file": "systemd-lsp-x86_64-unknown-linux-gnu"
+      },
+      "win_x64": {
+        "file": "systemd-lsp-x86_64-pc-windows-msvc.exe"
+      }
+    },
+    "version": "v2026.01.17",
+    "source_type": "github"
+  },
+  {
+    "name": "tabby-agent",
+    "description": "Tabby is a self-hosted AI coding assistant, offering an open-source and on-premises alternative to GitHub Copilot.",
+    "languages": [],
+    "source_id": "pkg:npm/tabby-agent@1.8.0",
+    "bin": "tabby-agent",
+    "version": "1.8.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "tailwindcss-language-server",
+    "description": "Language Server Protocol implementation for Tailwind CSS.",
+    "languages": ["CSS"],
+    "source_id": "pkg:npm/%40tailwindcss/language-server@0.14.29",
+    "bin": "tailwindcss-language-server",
+    "version": "0.14.29",
+    "source_type": "npm"
+  },
+  {
+    "name": "taplo",
+    "description": "A versatile, feature-rich TOML toolkit.",
+    "languages": ["TOML"],
+    "source_id": "pkg:github/tamasfe/taplo@0.10.0",
+    "bin": "taplo",
+    "assets": {
+      "darwin_arm64": {
+        "file": "taplo-darwin-aarch64.gz",
+        "bin": "taplo-darwin-aarch64"
+      },
+      "darwin_x64": {
+        "file": "taplo-darwin-x86_64.gz",
+        "bin": "taplo-darwin-x86_64"
+      },
+      "linux_x64": {
+        "file": "taplo-linux-x86_64.gz",
+        "bin": "taplo-linux-x86_64"
+      },
+      "linux_x86": {
+        "file": "taplo-linux-x86.gz",
+        "bin": "taplo-linux-x86"
+      },
+      "linux_arm64": {
+        "file": "taplo-linux-aarch64.gz",
+        "bin": "taplo-linux-aarch64"
+      },
+      "linux_armv7_gnu": {
+        "file": "taplo-linux-armv7.gz",
+        "bin": "taplo-linux-armv7"
+      },
+      "win_x64": {
+        "file": "taplo-windows-x86_64.zip",
+        "bin": "taplo.exe"
+      },
+      "win_x86": {
+        "file": "taplo-windows-x86.zip",
+        "bin": "taplo.exe"
+      }
+    },
+    "version": "0.10.0",
+    "source_type": "github"
+  },
+  {
+    "name": "tclint",
+    "description": "Modern dev tools for Tcl \u2022 includes a linter, formatter, and editor integration.",
+    "languages": ["Tcl"],
+    "source_id": "pkg:pypi/tclint@0.7.0",
+    "bin": "tclint",
+    "version": "0.7.0",
+    "source_type": "pypi"
+  },
+  {
+    "name": "teal-language-server",
+    "description": "A language server for Teal, a typed dialect of Lua.",
+    "languages": ["Teal"],
+    "source_id": "pkg:luarocks/teal-language-server@dev-1?dev=true",
+    "bin": "teal-language-server",
+    "version": "dev-1?dev=true",
+    "source_type": "luarocks"
+  },
+  {
+    "name": "templ",
+    "description": "templ is the official language server for the templ HTML templating language. It provides IDE features\nto any LSP-compatible editor.",
+    "languages": ["Go", "HTML"],
+    "source_id": "pkg:github/a-h/templ@v0.3.1001",
+    "bin": "templ",
+    "assets": {
+      "linux_arm64": {
+        "file": "templ_Linux_arm64.tar.gz",
+        "bin": "templ"
+      },
+      "linux_x86": {
+        "file": "templ_Linux_i386.tar.gz",
+        "bin": "templ"
+      },
+      "linux_x64": {
+        "file": "templ_Linux_x86_64.tar.gz",
+        "bin": "templ"
+      },
+      "darwin_x64": {
+        "file": "templ_Darwin_x86_64.tar.gz",
+        "bin": "templ"
+      },
+      "darwin_arm64": {
+        "file": "templ_Darwin_arm64.tar.gz",
+        "bin": "templ"
+      },
+      "win_arm64": {
+        "file": "templ_Windows_arm64.tar.gz",
+        "bin": "templ.exe"
+      },
+      "win_x64": {
+        "file": "templ_Windows_x86_64.tar.gz",
+        "bin": "templ.exe"
+      },
+      "win_x86": {
+        "file": "templ_Windows_i386.tar.gz",
+        "bin": "templ.exe"
+      }
+    },
+    "version": "v0.3.1001",
+    "source_type": "github"
+  },
+  {
+    "name": "termux-language-server",
+    "description": "A language server for some specific bash scripts.",
+    "languages": ["Bash"],
+    "source_id": "pkg:pypi/termux-language-server@0.0.31",
+    "bin": "termux-language-server",
+    "version": "0.0.31",
+    "source_type": "pypi"
+  },
+  {
+    "name": "terraform-ls",
+    "description": "Terraform Language Server.",
+    "languages": ["Terraform"],
+    "source_id": "pkg:generic/hashicorp/terraform-ls@v0.38.5",
+    "bin": "terraform-ls",
+    "version": "v0.38.5",
+    "source_type": "generic"
+  },
+  {
+    "name": "texlab",
+    "description": "An implementation of the Language Server Protocol for LaTeX.",
+    "languages": ["LaTeX"],
+    "source_id": "pkg:github/latex-lsp/texlab@v5.25.1",
+    "bin": "texlab",
+    "assets": {
+      "darwin_arm64": {
+        "file": "texlab-aarch64-macos.tar.gz",
+        "bin": "texlab"
+      },
+      "darwin_x64": {
+        "file": "texlab-x86_64-macos.tar.gz",
+        "bin": "texlab"
+      },
+      "linux_x64_gnu": {
+        "file": "texlab-x86_64-linux.tar.gz",
+        "bin": "texlab"
+      },
+      "linux_x64_musl": {
+        "file": "texlab-x86_64-alpine.tar.gz",
+        "bin": "texlab"
+      },
+      "linux_arm64_gnu": {
+        "file": "texlab-aarch64-linux.tar.gz",
+        "bin": "texlab"
+      },
+      "linux_armv7_gnu": {
+        "file": "texlab-armv7hf-linux.tar.gz",
+        "bin": "texlab"
+      },
+      "win_arm64": {
+        "file": "texlab-aarch64-windows.zip",
+        "bin": "texlab.exe"
+      },
+      "win_x64": {
+        "file": "texlab-x86_64-windows.zip",
+        "bin": "texlab.exe"
+      },
+      "win_x86": {
+        "file": "texlab-i686-windows.zip",
+        "bin": "texlab.exe"
+      }
+    },
+    "version": "v5.25.1",
+    "source_type": "github"
+  },
+  {
+    "name": "textlsp",
+    "description": "Language server for text spell and grammar check with various tools.",
+    "languages": ["Text", "LaTeX", "Org"],
+    "source_id": "pkg:pypi/textLSP@0.4.0",
+    "bin": "textlsp",
+    "version": "0.4.0",
+    "source_type": "pypi"
+  },
+  {
+    "name": "tflint",
+    "description": "A Pluggable Terraform Linter.",
+    "languages": ["Terraform"],
+    "source_id": "pkg:github/terraform-linters/tflint@v0.61.0",
+    "bin": "tflint",
+    "assets": {
+      "darwin_x64": {
+        "file": "tflint_darwin_amd64.zip",
+        "bin": "tflint"
+      },
+      "darwin_arm64": {
+        "file": "tflint_darwin_arm64.zip",
+        "bin": "tflint"
+      },
+      "linux_x64": {
+        "file": "tflint_linux_amd64.zip",
+        "bin": "tflint"
+      },
+      "linux_arm64": {
+        "file": "tflint_linux_arm64.zip",
+        "bin": "tflint"
+      },
+      "linux_x86": {
+        "file": "tflint_linux_386.zip",
+        "bin": "tflint"
+      },
+      "win_x64": {
+        "file": "tflint_windows_amd64.zip",
+        "bin": "tflint.exe"
+      }
+    },
+    "version": "v0.61.0",
+    "source_type": "github"
+  },
+  {
+    "name": "thriftls",
+    "description": "thriftls is a Thrift language server. It provides IDE features\nto any LSP-compatible editor.",
+    "languages": ["Thrift"],
+    "source_id": "pkg:github/joyme123/thrift-ls@v0.2.10",
+    "bin": "thriftls",
+    "assets": {
+      "darwin_x64": {
+        "file": "thriftls-darwin-amd64"
+      },
+      "darwin_arm64": {
+        "file": "thriftls-darwin-arm64"
+      },
+      "win_x64": {
+        "file": "thriftls-windows-amd64.exe"
+      },
+      "win_x86": {
+        "file": "thriftls-windows-386.exe"
+      },
+      "linux_x86": {
+        "file": "thriftls-linux-386"
+      },
+      "linux_x64": {
+        "file": "thriftls-linux-amd64"
+      },
+      "linux_arm64": {
+        "file": "thriftls-linux-arm64"
+      }
+    },
+    "version": "v0.2.10",
+    "source_type": "github"
+  },
+  {
+    "name": "tilt",
+    "description": "Define your dev environment as code. For microservice apps on Kubernetes.",
+    "languages": ["Starlark"],
+    "source_id": "pkg:github/tilt-dev/tilt@v0.37.0",
+    "bin": "tilt",
+    "assets": {
+      "darwin_arm64": {
+        "file": "tilt.{{ version | strip_prefix \"v\" }}.mac.arm64.tar.gz",
+        "bin": "tilt"
+      },
+      "darwin_x64": {
+        "file": "tilt.{{ version | strip_prefix \"v\" }}.mac.x86_64.tar.gz",
+        "bin": "tilt"
+      },
+      "linux_arm": {
+        "file": "tilt.{{ version | strip_prefix \"v\" }}.linux.arm.tar.gz",
+        "bin": "tilt"
+      },
+      "linux_arm64": {
+        "file": "tilt.{{ version | strip_prefix \"v\" }}.linux.arm64.tar.gz",
+        "bin": "tilt"
+      },
+      "linux_arm64_musl": {
+        "file": "tilt.{{ version | strip_prefix \"v\" }}.linux-alpine.arm64.tar.gz",
+        "bin": "tilt"
+      },
+      "linux_x64": {
+        "file": "tilt.{{ version | strip_prefix \"v\" }}.linux.x86_64.tar.gz",
+        "bin": "tilt"
+      },
+      "linux_x64_musl": {
+        "file": "tilt.{{ version | strip_prefix \"v\" }}.linux-alpine.x86_64.tar.gz",
+        "bin": "tilt"
+      },
+      "win_x64": {
+        "file": "tilt.{{ version | strip_prefix \"v\" }}.windows.x86_64.zip",
+        "bin": "tilt.exe"
+      }
+    },
+    "version": "v0.37.0",
+    "source_type": "github"
+  },
+  {
+    "name": "tinymist",
+    "description": "Tinymist [\u02c8ta\u026ani m\u026ast] is an integrated language service for Typst [ta\u026apst]. You can also call it \"\u5fae\u972d\" [w\u0113i \u01cei] in\nChinese.",
+    "languages": ["Typst"],
+    "source_id": "pkg:github/Myriad-Dreamin/tinymist@v0.14.10",
+    "bin": "tinymist",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "tinymist-linux-x64"
+      },
+      "linux_x64_musl": {
+        "file": "tinymist-alpine-x64"
+      },
+      "linux_arm64_gnu": {
+        "file": "tinymist-linux-arm64"
+      },
+      "linux_arm64_musl": {
+        "file": "tinymist-alpine-arm64"
+      },
+      "darwin_x64": {
+        "file": "tinymist-darwin-x64"
+      },
+      "darwin_arm64": {
+        "file": "tinymist-darwin-arm64"
+      },
+      "win_x64": {
+        "file": "tinymist-win32-x64.exe"
+      },
+      "win_arm64": {
+        "file": "tinymist-win32-arm64.exe"
+      }
+    },
+    "version": "v0.14.10",
+    "source_type": "github"
+  },
+  {
+    "name": "tofu-ls",
+    "description": "OpenTofu Language Server",
+    "languages": ["OpenTofu"],
+    "source_id": "pkg:github/opentofu/tofu-ls@v0.4.0",
+    "bin": "tofu-ls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "tofu-ls_Darwin_arm64.tar.gz",
+        "bin": "tofu-ls"
+      },
+      "darwin_x64": {
+        "file": "tofu-ls_Darwin_x86_64.tar.gz",
+        "bin": "tofu-ls"
+      },
+      "linux_arm64": {
+        "file": "tofu-ls_Linux_arm64.tar.gz",
+        "bin": "tofu-ls"
+      },
+      "linux_x86": {
+        "file": "tofu-ls_Linux_i386.tar.gz",
+        "bin": "tofu-ls"
+      },
+      "linux_x64": {
+        "file": "tofu-ls_Linux_x86_64.tar.gz",
+        "bin": "tofu-ls"
+      },
+      "win_arm64": {
+        "file": "tofu-ls_Windows_arm64.tar.gz",
+        "bin": "tofu-ls.exe"
+      },
+      "win_x86": {
+        "file": "tofu-ls_Windows_i386.tar.gz",
+        "bin": "tofu-ls.exe"
+      },
+      "win_x64": {
+        "file": "tofu-ls_Windows_x86_64.tar.gz",
+        "bin": "tofu-ls.exe"
+      }
+    },
+    "version": "v0.4.0",
+    "source_type": "github"
+  },
+  {
+    "name": "tombi",
+    "description": "TOML Formatter / Linter / Language Server",
+    "languages": ["TOML"],
+    "source_id": "pkg:pypi/tombi@0.9.4",
+    "bin": "tombi",
+    "version": "0.9.4",
+    "source_type": "pypi"
+  },
+  {
+    "name": "ts_query_ls",
+    "description": "An LSP implementation for Tree-sitter's query files",
+    "languages": ["Query"],
+    "source_id": "pkg:github/ribru17/ts_query_ls@v3.16.0",
+    "bin": "ts_query_ls",
+    "assets": {
+      "darwin_x64": {
+        "file": "ts_query_ls-x86_64-apple-darwin.tar.gz",
+        "bin": "ts_query_ls"
+      },
+      "darwin_arm64": {
+        "file": "ts_query_ls-aarch64-apple-darwin.tar.gz",
+        "bin": "ts_query_ls"
+      },
+      "linux_x64_gnu": {
+        "file": "ts_query_ls-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "ts_query_ls"
+      },
+      "linux_arm64_gnu": {
+        "file": "ts_query_ls-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "ts_query_ls"
+      },
+      "win_x64": {
+        "file": "ts_query_ls-x86_64-pc-windows-msvc.zip",
+        "bin": "ts_query_ls.exe"
+      }
+    },
+    "version": "v3.16.0",
+    "source_type": "github"
+  },
+  {
+    "name": "tsgo",
+    "description": "Native TypeScript compiler port. Language Server Protocol support with partial\nfeatures including errors, hover, go to definition, references, and signature help.",
+    "languages": ["TypeScript", "JavaScript"],
+    "source_id": "pkg:npm/@typescript/native-preview@7.0.0-dev.20260313.1",
+    "bin": "tsgo",
+    "version": "typescript/native-preview@7.0.0-dev.20260313.1",
+    "source_type": "npm"
+  },
+  {
+    "name": "tsp-server",
+    "description": "The language server for TypeSpec, a language for defining cloud service APIs and shapes.",
+    "languages": ["Typespec"],
+    "source_id": "pkg:npm/%40typespec/compiler@1.10.0",
+    "bin": "tsp-server",
+    "version": "1.10.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "turtle-language-server",
+    "description": "A language server (by Stardog) for Turtle",
+    "languages": ["Turtle"],
+    "source_id": "pkg:npm/turtle-language-server@3.5.0",
+    "bin": "turtle-language-server",
+    "version": "3.5.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "twiggy-language-server",
+    "description": "Twig Language Server.",
+    "languages": ["Twig", "HTML"],
+    "source_id": "pkg:npm/twiggy-language-server@0.19.1",
+    "bin": "twiggy-language-server",
+    "version": "0.19.1",
+    "source_type": "npm"
+  },
+  {
+    "name": "ty",
+    "description": "An extremely fast Python type checker and language server, written in Rust.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/ty@0.0.23",
+    "bin": "ty",
+    "version": "0.0.23",
+    "source_type": "pypi"
+  },
+  {
+    "name": "typescript-language-server",
+    "description": "TypeScript & JavaScript Language Server.",
+    "languages": ["TypeScript", "JavaScript"],
+    "source_id": "pkg:npm/typescript-language-server@5.1.3",
+    "extra_packages": ["typescript"],
+    "bin": "typescript-language-server",
+    "version": "5.1.3",
+    "source_type": "npm"
+  },
+  {
+    "name": "typos-lsp",
+    "description": "Source code spell checker",
+    "languages": [],
+    "source_id": "pkg:github/tekumara/typos-vscode@v0.1.50",
+    "bin": "typos-lsp",
+    "assets": {
+      "darwin_x64": {
+        "file": "typos-lsp-{{ version }}-x86_64-apple-darwin.tar.gz",
+        "bin": "typos-lsp"
+      },
+      "darwin_arm64": {
+        "file": "typos-lsp-{{ version }}-aarch64-apple-darwin.tar.gz",
+        "bin": "typos-lsp"
+      },
+      "linux_x64_gnu": {
+        "file": "typos-lsp-{{ version }}-x86_64-unknown-linux-gnu.tar.gz",
+        "bin": "typos-lsp"
+      },
+      "linux_x64": {
+        "file": "typos-lsp-{{ version }}-x86_64-unknown-linux-musl.tar.gz",
+        "bin": "typos-lsp"
+      },
+      "linux_arm64_gnu": {
+        "file": "typos-lsp-{{ version }}-aarch64-unknown-linux-gnu.tar.gz",
+        "bin": "typos-lsp"
+      },
+      "linux_arm_gnu": {
+        "file": "typos-lsp-{{ version }}-arm-unknown-linux-gnueabihf.tar.gz",
+        "bin": "typos-lsp"
+      },
+      "linux_arm64": {
+        "file": "typos-lsp-{{ version }}-aarch64-unknown-linux-musl.tar.gz",
+        "bin": "typos-lsp"
+      },
+      "win_x64": {
+        "file": "typos-lsp-{{ version }}-x86_64-pc-windows-msvc.zip",
+        "bin": "target/x86_64-pc-windows-msvc/release/typos-lsp.exe"
+      },
+      "win_arm64": {
+        "file": "typos-lsp-{{ version }}-aarch64-pc-windows-msvc.zip",
+        "bin": "target/aarch64-pc-windows-msvc/release/typos-lsp.exe"
+      }
+    },
+    "version": "v0.1.50",
+    "source_type": "github"
+  },
+  {
+    "name": "typst-lsp",
+    "description": "A brand-new language server for Typst.",
+    "languages": ["Typst"],
+    "source_id": "pkg:github/nvarner/typst-lsp@v0.13.0",
+    "bin": "typst-lsp",
+    "assets": {
+      "darwin_arm64": {
+        "file": "typst-lsp-aarch64-apple-darwin"
+      },
+      "darwin_x64": {
+        "file": "typst-lsp-x86_64-apple-darwin"
+      },
+      "linux_arm64_gnu": {
+        "file": "typst-lsp-aarch64-unknown-linux-gnu"
+      },
+      "linux_x64_gnu": {
+        "file": "typst-lsp-x86_64-unknown-linux-gnu"
+      },
+      "linux_x64": {
+        "file": "typst-lsp-x86_64-unknown-linux-musl"
+      },
+      "win_x64": {
+        "file": "typst-lsp-x86_64-pc-windows-msvc.exe"
+      },
+      "win_arm64": {
+        "file": "typst-lsp-aarch64-pc-windows-msvc.exe"
+      }
+    },
+    "version": "v0.13.0",
+    "source_type": "github"
+  },
+  {
+    "name": "unocss-language-server",
+    "description": "Language Server Protocol implementation for UnoCSS.",
+    "languages": ["CSS"],
+    "source_id": "pkg:npm/unocss-language-server@0.1.8",
+    "bin": "unocss-language-server",
+    "version": "0.1.8",
+    "source_type": "npm"
+  },
+  {
+    "name": "v-analyzer",
+    "description": "The @vlang language server, for all your editing needs like go-to-definition, code completion, type hints, and more.",
+    "languages": ["V"],
+    "source_id": "pkg:github/vlang/v-analyzer@0.0.6",
+    "bin": "v-analyzer",
+    "assets": {
+      "darwin_arm64": {
+        "file": "v-analyzer-darwin-arm64.zip",
+        "bin": "v-analyzer"
+      },
+      "darwin_x64": {
+        "file": "v-analyzer-darwin-x86_64.zip",
+        "bin": "v-analyzer"
+      },
+      "linux_x64_gnu": {
+        "file": "v-analyzer-linux-x86_64.zip",
+        "bin": "v-analyzer"
+      },
+      "win_x64": {
+        "file": "v-analyzer-windows-x86_64.zip",
+        "bin": "v-analyzer.exe"
+      }
+    },
+    "version": "0.0.6",
+    "source_type": "github"
+  },
+  {
+    "name": "vala-language-server",
+    "description": "Code Intelligence for Vala & Genie.",
+    "languages": ["Vala"],
+    "source_id": "pkg:github/vala-lang/vala-language-server@c66ce433375815fb65d3aefddf68122817c0073d",
+    "bin": "vala-language-server",
+    "version": "c66ce433375815fb65d3aefddf68122817c0073d",
+    "source_type": "github"
+  },
+  {
+    "name": "vale-ls",
+    "description": "An implementation of the Language Server Protocol (LSP) for the Vale command-line tool.",
+    "languages": ["Text", "Markdown"],
+    "source_id": "pkg:github/errata-ai/vale-ls@v0.4.0",
+    "bin": "vale-ls",
+    "assets": {
+      "darwin_x64": {
+        "file": "vale-ls-x86_64-apple-darwin.zip",
+        "bin": "vale-ls"
+      },
+      "darwin_arm64": {
+        "file": "vale-ls-aarch64-apple-darwin.zip",
+        "bin": "vale-ls"
+      },
+      "linux_x64_gnu": {
+        "file": "vale-ls-x86_64-unknown-linux-gnu.zip",
+        "bin": "vale-ls"
+      },
+      "linux_arm64_gnu": {
+        "file": "vale-ls-aarch64-unknown-linux-gnu.zip",
+        "bin": "vale-ls"
+      },
+      "win_x64": {
+        "file": "vale-ls-x86_64-pc-windows-gnu.zip",
+        "bin": "vale-ls.exe"
+      }
+    },
+    "version": "v0.4.0",
+    "source_type": "github"
+  },
+  {
+    "name": "vectorcode",
+    "description": "A code repository indexing tool to supercharge your LLM experience.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/VectorCode@0.7.20?extra=lsp,mcp",
+    "bin": "vectorcode",
+    "version": "0.7.20?extra=lsp,mcp",
+    "source_type": "pypi"
+  },
+  {
+    "name": "verible",
+    "description": "Verible is a suite of SystemVerilog developer tools, including a parser, style-linter, and formatter.",
+    "languages": ["SystemVerilog"],
+    "source_id": "pkg:github/chipsalliance/verible@v0.0-4051-g9fdb4057",
+    "bin": "verible-verilog-diff",
+    "assets": {
+      "linux_x64": {
+        "file": "verible-{{version}}-linux-static-x86_64.tar.gz",
+        "bin": "verible-{{version}}/bin/verible-verilog-diff"
+      },
+      "linux_arm64": {
+        "file": "verible-{{version}}-linux-static-arm64.tar.gz",
+        "bin": "verible-{{version}}/bin/verible-verilog-diff"
+      },
+      "win_x64": {
+        "file": "verible-{{version}}-win64.zip",
+        "bin": "verible-{{version}}-win64/verible-verilog-diff.exe"
+      },
+      "darwin_x64": {
+        "file": "verible-{{version}}-macOS.tar.gz",
+        "bin": "verible-{{version}}-macOS/bin/verible-verilog-diff"
+      },
+      "darwin_arm64": {
+        "file": "verible-{{version}}-macOS.tar.gz",
+        "bin": "verible-{{version}}-macOS/bin/verible-verilog-diff"
+      }
+    },
+    "version": "v0.0-4051-g9fdb4057",
+    "source_type": "github"
+  },
+  {
+    "name": "veryl-ls",
+    "description": "Veryl language server.",
+    "languages": ["Veryl"],
+    "source_id": "pkg:github/veryl-lang/veryl@v0.19.0",
+    "bin": "veryl-ls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "veryl-aarch64-mac.zip",
+        "bin": "veryl-ls"
+      },
+      "darwin_x64": {
+        "file": "veryl-x86_64-mac.zip",
+        "bin": "veryl-ls"
+      },
+      "linux_x64": {
+        "file": "veryl-x86_64-linux.zip",
+        "bin": "veryl-ls"
+      },
+      "win_x64": {
+        "file": "veryl-x86_64-windows.zip",
+        "bin": "veryl-ls.exe"
+      }
+    },
+    "version": "v0.19.0",
+    "source_type": "github"
+  },
+  {
+    "name": "vetur-vls",
+    "description": "VLS (Vue Language Server) is a language server implementation compatible with Language Server Protocol.",
+    "languages": ["Vue"],
+    "source_id": "pkg:npm/vls@0.8.5",
+    "bin": "vls",
+    "version": "0.8.5",
+    "source_type": "npm"
+  },
+  {
+    "name": "vim-language-server",
+    "description": "VimScript language server.",
+    "languages": ["VimScript"],
+    "source_id": "pkg:npm/vim-language-server@2.3.1",
+    "bin": "vim-language-server",
+    "version": "2.3.1",
+    "source_type": "npm"
+  },
+  {
+    "name": "visualforce-language-server",
+    "description": "Visualforce language server.",
+    "languages": ["Visualforce"],
+    "source_id": "pkg:github/forcedotcom/salesforcedx-vscode@v66.1.1",
+    "bin": "visualforce-language-server",
+    "assets": {
+      "any": {
+        "file": "salesforcedx-vscode-visualforce-{{ version | strip_prefix \"v\" }}.vsix"
+      }
+    },
+    "version": "v66.1.1",
+    "source_type": "github"
+  },
+  {
+    "name": "vls",
+    "description": "V language server.",
+    "languages": ["V"],
+    "source_id": "pkg:github/vlang/vls@latest",
+    "bin": "vls",
+    "assets": {
+      "darwin_x64": {
+        "file": "vls_macos_x64"
+      },
+      "darwin_arm64": {
+        "file": "vls_macos_x64"
+      },
+      "linux_x64": {
+        "file": "vls_linux_x64"
+      },
+      "win_x64": {
+        "file": "vls_windows_x64.exe"
+      }
+    },
+    "version": "latest",
+    "source_type": "github"
+  },
+  {
+    "name": "vscode-home-assistant",
+    "description": "Language Server Protocol implementation for Home Assistant.",
+    "languages": ["YAML"],
+    "source_id": "pkg:openvsx/keesschollaart/vscode-home-assistant@2.2.0",
+    "bin": "vscode-home-assistant",
+    "version": "2.2.0",
+    "source_type": "openvsx"
+  },
+  {
+    "name": "vscode-solidity-server",
+    "description": "Solidity language server.",
+    "languages": ["Solidity"],
+    "source_id": "pkg:npm/vscode-solidity-server@0.0.187",
+    "bin": "vscode-solidity-server",
+    "version": "0.0.187",
+    "source_type": "npm"
+  },
+  {
+    "name": "vscode-spring-boot-tools",
+    "description": "VS Code Language Server for Spring Boot\nVSCode extension and Language Server providing support for working with Spring Boot application.properties, application.yml and .java files.\n\nNote: this extension has a dependency on VS Code extension of Language Support for Java\u2122 by Red Hat.",
+    "languages": ["Java"],
+    "source_id": "pkg:openvsx/VMware/vscode-spring-boot@1.63.0",
+    "version": "1.63.0",
+    "source_type": "openvsx"
+  },
+  {
+    "name": "vtsls",
+    "description": "LSP wrapper around the TypeScript extension bundled with VSCode.",
+    "languages": ["JavaScript", "TypeScript"],
+    "source_id": "pkg:npm/%40vtsls/language-server@0.3.0",
+    "bin": "vtsls",
+    "version": "0.3.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "vue-language-server",
+    "description": "\u26a1 Explore high-performance tooling for Vue.",
+    "languages": ["Vue"],
+    "source_id": "pkg:npm/%40vue/language-server@3.2.5",
+    "extra_packages": ["typescript", "@vue/typescript-plugin"],
+    "bin": "vue-language-server",
+    "version": "3.2.5",
+    "source_type": "npm"
+  },
+  {
+    "name": "wasm-language-tools",
+    "description": "Language server and other tools for WebAssembly.",
+    "languages": ["WebAssembly"],
+    "source_id": "pkg:github/g-plane/wasm-language-tools@v0.10.4",
+    "bin": "wat_server",
+    "assets": {
+      "darwin_arm64": {
+        "file": "wat_server-arm64-macos.zip",
+        "bin": "wat_server"
+      },
+      "darwin_x64": {
+        "file": "wat_server-x86_64-macos.zip",
+        "bin": "wat_server"
+      },
+      "linux_x64_gnu": {
+        "file": "wat_server-x86_64-linux.zip",
+        "bin": "wat_server"
+      },
+      "linux_x64": {
+        "file": "wat_server-x86_64-alpine.zip",
+        "bin": "wat_server"
+      },
+      "linux_arm64_gnu": {
+        "file": "wat_server-arm64-linux.zip",
+        "bin": "wat_server"
+      },
+      "linux_arm64": {
+        "file": "wat_server-arm64-alpine.zip",
+        "bin": "wat_server"
+      },
+      "win_x64": {
+        "file": "wat_server-x86_64-windows.zip",
+        "bin": "wat_server.exe"
+      }
+    },
+    "version": "v0.10.4",
+    "source_type": "github"
+  },
+  {
+    "name": "wc-language-server",
+    "description": "Language server that surfaces Web Components metadata, completions, and diagnostics.\nProvides rich language features for HTML, JSX/TSX, Vue, Svelte, Astro, and other\ntemplating languages that use Custom Elements.",
+    "languages": ["HTML", "JavaScript", "TypeScript"],
+    "source_id": "pkg:github/wc-toolkit/wc-language-server@%40wc-toolkit%2Flanguage-server%400.0.6",
+    "bin": "wc-language-server",
+    "assets": {
+      "linux_x64": {
+        "file": "wc-language-server-linux-x64"
+      },
+      "linux_arm64": {
+        "file": "wc-language-server-linux-arm64"
+      },
+      "darwin_x64": {
+        "file": "wc-language-server-macos-x64"
+      },
+      "darwin_arm64": {
+        "file": "wc-language-server-macos-arm64"
+      },
+      "win_x64": {
+        "file": "wc-language-server-windows-x64.exe"
+      }
+    },
+    "version": "%40wc-toolkit%2Flanguage-server%400.0.6",
+    "source_type": "github"
+  },
+  {
+    "name": "wgsl-analyzer",
+    "description": "A language server implementation for the WGSL shading language.",
+    "languages": ["WGSL"],
+    "source_id": "pkg:github/wgsl-analyzer/wgsl-analyzer@2025-11-14",
+    "bin": "wgsl-analyzer",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "wgsl-analyzer-x86_64-unknown-linux-gnu.gz",
+        "bin": "wgsl-analyzer-x86_64-unknown-linux-gnu"
+      },
+      "linux_arm64_gnu": {
+        "file": "wgsl-analyzer-aarch64-unknown-linux-gnu.gz",
+        "bin": "wgsl-analyzer-aarch64-unknown-linux-gnu"
+      },
+      "linux_x64_musl": {
+        "file": "wgsl-analyzer-x86_64-unknown-linux-musl.gz",
+        "bin": "wgsl-analyzer-x86_64-unknown-linux-musl"
+      },
+      "darwin_x64": {
+        "file": "wgsl-analyzer-x86_64-apple-darwin.gz",
+        "bin": "wgsl-analyzer-x86_64-apple-darwin"
+      },
+      "darwin_arm64": {
+        "file": "wgsl-analyzer-aarch64-apple-darwin.gz",
+        "bin": "wgsl-analyzer-aarch64-apple-darwin"
+      },
+      "win_x64": {
+        "file": "wgsl-analyzer-x86_64-pc-windows-msvc.zip",
+        "bin": "wgsl-analyzer.exe"
+      },
+      "win_arm64": {
+        "file": "wgsl-analyzer-aarch64-pc-windows-msvc.zip",
+        "bin": "wgsl-analyzer.exe"
+      }
+    },
+    "version": "2025-11-14",
+    "source_type": "github"
+  },
+  {
+    "name": "wing",
+    "description": "A programming language for the cloud",
+    "languages": ["Wing"],
+    "source_id": "pkg:npm/winglang@0.85.49",
+    "bin": "wing",
+    "version": "0.85.49",
+    "source_type": "npm"
+  },
+  {
+    "name": "xcode-build-server",
+    "description": "a build server protocol implementation for integrate xcode with sourcekit-lsp",
+    "languages": ["Swift"],
+    "source_id": "pkg:github/SolaWing/xcode-build-server@v1.3.0",
+    "bin": "xcode-build-server",
+    "version": "v1.3.0",
+    "source_type": "github"
+  },
+  {
+    "name": "yaml-language-server",
+    "description": "Language Server for YAML Files.",
+    "languages": ["YAML"],
+    "source_id": "pkg:npm/yaml-language-server@1.21.0",
+    "bin": "yaml-language-server",
+    "version": "1.21.0",
+    "source_type": "npm"
+  },
+  {
+    "name": "yls-yara",
+    "description": "Language server for the YARA language.",
+    "languages": ["YARA"],
+    "source_id": "pkg:pypi/yls-yara@1.4.4",
+    "bin": "yls",
+    "version": "1.4.4",
+    "source_type": "pypi"
+  },
+  {
+    "name": "zeek-language-server",
+    "description": "This project implements a language server for Zeek script.",
+    "languages": ["Zeek"],
+    "source_id": "pkg:github/bbannier/zeek-language-server@v0.73.4",
+    "bin": "zeek-language-server",
+    "assets": {
+      "linux_x64_gnu": {
+        "file": "zeek-language-server-x86_64-unknown-linux-gnu.tar.xz",
+        "bin": "zeek-language-server-x86_64-unknown-linux-gnu/zeek-language-server"
+      },
+      "darwin_arm64": {
+        "file": "zeek-language-server-aarch64-apple-darwin.tar.xz",
+        "bin": "zeek-language-server-aarch64-apple-darwin/zeek-language-server"
+      },
+      "darwin_x64": {
+        "file": "zeek-language-server-x86_64-apple-darwin.tar.xz",
+        "bin": "zeek-language-server-x86_64-apple-darwin/zeek-language-server"
+      }
+    },
+    "version": "v0.73.4",
+    "source_type": "github"
+  },
+  {
+    "name": "zk",
+    "description": "A plain text note-taking assistant.",
+    "languages": ["Markdown"],
+    "source_id": "pkg:github/zk-org/zk@v0.15.2",
+    "bin": "zk",
+    "assets": {
+      "linux_arm64": {
+        "file": "zk-{{version}}-linux-arm64.tar.gz"
+      },
+      "linux_x64": {
+        "file": "zk-{{version}}-linux-amd64.tar.gz"
+      },
+      "linux_x86": {
+        "file": "zk-{{version}}-linux-i386.tar.gz"
+      },
+      "darwin_arm64": {
+        "file": "zk-{{version}}-macos-arm64.tar.gz"
+      },
+      "darwin_x64": {
+        "file": "zk-{{version}}-macos-x86_64.tar.gz"
+      }
+    },
+    "version": "v0.15.2",
+    "source_type": "github"
+  },
+  {
+    "name": "zls",
+    "description": "Zig LSP implementation + Zig Language Server.",
+    "languages": ["Zig"],
+    "source_id": "pkg:github/zigtools/zls@0.15.1",
+    "bin": "zls",
+    "assets": {
+      "darwin_arm64": {
+        "file": "zls-aarch64-macos.tar.xz",
+        "bin": "zls"
+      },
+      "darwin_x64": {
+        "file": "zls-x86_64-macos.tar.xz",
+        "bin": "zls"
+      },
+      "linux_arm64": {
+        "file": "zls-aarch64-linux.tar.xz",
+        "bin": "zls"
+      },
+      "linux_x64": {
+        "file": "zls-x86_64-linux.tar.xz",
+        "bin": "zls"
+      },
+      "linux_x86": {
+        "file": "zls-x86-linux.tar.xz",
+        "bin": "zls"
+      },
+      "win_x86": {
+        "file": "zls-x86-windows.zip",
+        "bin": "zls.exe"
+      },
+      "win_x64": {
+        "file": "zls-x86_64-windows.zip",
+        "bin": "zls.exe"
+      }
+    },
+    "version": "0.15.1",
+    "source_type": "github"
+  },
+  {
+    "name": "zuban",
+    "description": "Zuban is a high-performant Mypy-compatible LSP and type checker built in Rust.",
+    "languages": ["Python"],
+    "source_id": "pkg:pypi/zuban@0.6.1",
+    "bin": "zuban",
+    "version": "0.6.1",
+    "source_type": "pypi"
+  }
+]

@@ -5,8 +5,15 @@ import type { IDisposable } from "monaco-editor";
 import { TauriLspTransport } from "./transport";
 import { LspClient } from "./client";
 import { registerLspProviders } from "./monaco-bridge";
+import { useToastStore } from "../toast-store";
 
-export type ServerStatus = "starting" | "running" | "stopped" | "error" | "unavailable";
+export type ServerStatus =
+  | "starting"
+  | "running"
+  | "stopped"
+  | "error"
+  | "unavailable"
+  | "installing";
 
 export interface ServerAvailability {
   language_id: string;
@@ -38,16 +45,30 @@ interface LspState {
   getClient: (workspacePath: string, languageId: string) => LspClient | null;
   stopWorkspace: (workspacePath: string) => Promise<void>;
   checkAvailability: (workspacePath: string) => Promise<void>;
+  installServer: (workspacePath: string, serverName: string) => Promise<void>;
 }
 
-// Map Monaco language IDs to the server-level language ID
-function resolveServerLanguage(languageId: string): string {
+// Store monaco instance for restarting servers after install
+let monacoRef: Monaco | null = null;
+
+// Track in-flight startServer calls to prevent duplicates
+const pending = new Set<string>();
+
+// Map Monaco language IDs to the server-level language group.
+// Must match backend's server_language_group() in detection.rs.
+export function resolveServerLanguage(languageId: string): string {
   switch (languageId) {
     case "javascript":
-    case "typescript":
     case "typescriptreact":
     case "javascriptreact":
       return "typescript";
+    case "cpp":
+      return "c";
+    case "scss":
+    case "less":
+      return "css";
+    case "jsonc":
+      return "json";
     default:
       return languageId;
   }
@@ -58,24 +79,14 @@ function getMonacoLanguages(serverLanguage: string): string[] {
   switch (serverLanguage) {
     case "typescript":
       return ["typescript", "javascript", "typescriptreact", "javascriptreact"];
+    case "c":
+      return ["c", "cpp"];
+    case "css":
+      return ["css", "scss", "less"];
+    case "json":
+      return ["json", "jsonc"];
     default:
       return [serverLanguage];
-  }
-}
-
-// Map language IDs to human-readable server names
-function getServerDisplayName(languageId: string): string {
-  switch (languageId) {
-    case "typescript":
-      return "typescript-language-server";
-    case "rust":
-      return "rust-analyzer";
-    case "python":
-      return "pylsp";
-    case "go":
-      return "gopls";
-    default:
-      return `${languageId}-server`;
   }
 }
 
@@ -100,6 +111,9 @@ export const useLspStore = create<LspState>((set, get) => ({
   },
 
   startServer: async (workspacePath, languageId, monaco) => {
+    // Store monaco ref for later use (install → restart)
+    monacoRef = monaco;
+
     const serverLang = resolveServerLanguage(languageId);
 
     // Already running or starting?
@@ -108,38 +122,24 @@ export const useLspStore = create<LspState>((set, get) => ({
       return existing.client;
     }
 
-    // Don't retry if we know it's unavailable
-    if (existing?.status === "unavailable") {
+    // Don't retry if we know it's unavailable or installing
+    if (existing?.status === "unavailable" || existing?.status === "installing") {
       return null;
     }
 
-    const serverName = getServerDisplayName(serverLang);
-
-    // Mark as starting
-    set((state) => ({
-      servers: {
-        ...state.servers,
-        [workspacePath]: {
-          ...state.servers[workspacePath],
-          [serverLang]: {
-            serverId: "",
-            languageId: serverLang,
-            client: null as unknown as LspClient,
-            status: "starting" as const,
-            serverName,
-            errorMessage: null,
-            providerDisposables: [],
-          },
-        },
-      },
-    }));
+    // Prevent duplicate in-flight requests
+    const pendingKey = `${workspacePath}:${serverLang}`;
+    if (pending.has(pendingKey)) return null;
+    pending.add(pendingKey);
 
     try {
       // Ask Rust to spawn the language server
-      const serverId = await invoke<string>("lsp_start", {
+      const result = await invoke<{ server_id: string; server_name: string }>("lsp_start", {
         workspacePath,
         languageId,
       });
+      const serverId = result.server_id;
+      const serverName = result.server_name;
 
       // Create transport and client
       const transport = new TauriLspTransport(serverId);
@@ -186,6 +186,12 @@ export const useLspStore = create<LspState>((set, get) => ({
       return client;
     } catch (err) {
       const errorStr = String(err);
+
+      // No server configured for this language — silently ignore
+      if (errorStr.includes("No language server configured")) {
+        return null;
+      }
+
       // Detect "not found" errors (binary not on PATH)
       const isNotFound =
         errorStr.includes("not found") ||
@@ -194,10 +200,15 @@ export const useLspStore = create<LspState>((set, get) => ({
         errorStr.includes("os error 2") ||
         errorStr.includes("The system cannot find");
 
+      // Extract server name from backend error like "Failed to start <cmd>: ..."
+      // or fall back to the language group name
+      const nameMatch = errorStr.match(/Failed to start ([^:]+):/);
+      const displayName = nameMatch?.[1] ?? serverLang;
+
       const status: ServerStatus = isNotFound ? "unavailable" : "error";
       const errorMessage = isNotFound
-        ? `${serverName} is not installed`
-        : `${serverName} failed to start`;
+        ? `${displayName} is not installed`
+        : `${displayName} failed to start`;
 
       console.error(`LSP ${status} for ${serverLang}:`, err);
 
@@ -211,14 +222,30 @@ export const useLspStore = create<LspState>((set, get) => ({
               languageId: serverLang,
               client: null as unknown as LspClient,
               status,
-              serverName,
+              serverName: displayName,
               errorMessage,
               providerDisposables: [],
             },
           },
         },
       }));
+
+      // Show toast notification for unavailable servers
+      if (isNotFound) {
+        const { installServer } = get();
+        useToastStore.getState().addToast({
+          message: `${displayName} is not installed`,
+          type: "warning",
+          action: {
+            label: "Install",
+            onClick: () => installServer(workspacePath, displayName),
+          },
+        });
+      }
+
       return null;
+    } finally {
+      pending.delete(pendingKey);
     }
   },
 
@@ -226,6 +253,88 @@ export const useLspStore = create<LspState>((set, get) => ({
     const serverLang = resolveServerLanguage(languageId);
     const info = get().servers[workspacePath]?.[serverLang];
     return info?.status === "running" ? info.client : null;
+  },
+
+  installServer: async (workspacePath, serverName) => {
+    // Find which language entry this server belongs to
+    const workspace = get().servers[workspacePath];
+    const langEntry = workspace
+      ? Object.entries(workspace).find(([, info]) => info.serverName === serverName)
+      : null;
+    const serverLang = langEntry?.[0];
+
+    // Update status to installing
+    if (serverLang) {
+      set((state) => ({
+        servers: {
+          ...state.servers,
+          [workspacePath]: {
+            ...state.servers[workspacePath],
+            [serverLang]: {
+              ...state.servers[workspacePath][serverLang],
+              status: "installing" as const,
+              errorMessage: null,
+            },
+          },
+        },
+      }));
+    }
+
+    try {
+      await invoke("lsp_install_server", { name: serverName });
+
+      useToastStore.getState().addToast({
+        message: `${serverName} installed successfully`,
+        type: "success",
+      });
+
+      // Clear the old entry so startServer can retry
+      if (serverLang) {
+        set((state) => ({
+          servers: {
+            ...state.servers,
+            [workspacePath]: {
+              ...state.servers[workspacePath],
+              [serverLang]: {
+                ...state.servers[workspacePath][serverLang],
+                status: "stopped" as const,
+                errorMessage: null,
+              },
+            },
+          },
+        }));
+      }
+
+      // Restart the server if we have a stored monaco reference
+      if (monacoRef && serverLang) {
+        await get().startServer(workspacePath, serverLang, monacoRef);
+      }
+    } catch (err) {
+      const errorMessage = `Failed to install ${serverName}: ${err}`;
+      console.error(errorMessage);
+
+      useToastStore.getState().addToast({
+        message: errorMessage,
+        type: "error",
+        duration: 12000,
+      });
+
+      if (serverLang) {
+        set((state) => ({
+          servers: {
+            ...state.servers,
+            [workspacePath]: {
+              ...state.servers[workspacePath],
+              [serverLang]: {
+                ...state.servers[workspacePath][serverLang],
+                status: "unavailable" as const,
+                errorMessage,
+              },
+            },
+          },
+        }));
+      }
+    }
   },
 
   stopWorkspace: async (workspacePath) => {

@@ -1,9 +1,8 @@
 import { useRef, useState, useCallback } from "react";
 import type { PaneNode } from "../../types";
 import { useLayoutStore } from "../../store";
+import { usePaneContainer } from "./PanePortalContext";
 import { TabBar } from "./TabBar";
-import { TabContent } from "./TabContent";
-import { ScrollArea } from "../shared/ScrollArea";
 
 interface PaneContainerProps {
   node: PaneNode;
@@ -96,21 +95,17 @@ function SplitView({ node }: { node: Extract<PaneNode, { type: "split" }> }) {
 }
 
 function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
-  const activeTabId = node.activeTabId ?? node.tabs[0]?.id;
+  const contentRef = useRef<HTMLDivElement>(null);
+  usePaneContainer(node.id, contentRef);
 
   return (
     <div className="flex flex-col w-full h-full min-w-0 min-h-0">
       <TabBar paneId={node.id} tabs={node.tabs} activeTabId={node.activeTabId} />
-      <ScrollArea
+      <div
+        ref={contentRef}
         data-pane-content={node.id}
-        className="flex-1 min-h-0 bg-[var(--color-bg-page)] relative"
-      >
-        {node.tabs.map((tab) => (
-          <div key={tab.id} className={tab.id === activeTabId ? "h-full" : "hidden"}>
-            <TabContent tab={tab} paneId={node.id} />
-          </div>
-        ))}
-      </ScrollArea>
+        className="flex-1 min-h-0 bg-[var(--color-bg-page)] relative overflow-hidden"
+      />
     </div>
   );
 }
