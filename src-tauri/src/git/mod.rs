@@ -7,6 +7,12 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 pub struct FsWatcherState {
     pub watcher: Mutex<
         Option<(
@@ -17,12 +23,13 @@ pub struct FsWatcherState {
 }
 
 fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>, String> {
-    let output = Command::new("git")
-        .args(args)
+    let mut cmd = Command::new("git");
+    cmd.args(args)
         .current_dir(path)
-        .env("GIT_OPTIONAL_LOCKS", "0")
-        .output()
-        .map_err(|e| e.to_string())?;
+        .env("GIT_OPTIONAL_LOCKS", "0");
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    let output = cmd.output().map_err(|e| e.to_string())?;
 
     if !output.status.success() {
         return Ok(None);
@@ -39,11 +46,11 @@ fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>, String> {
 }
 
 fn run_git_strict(path: &Path, args: &[&str]) -> Result<(), String> {
-    let output = Command::new("git")
-        .args(args)
-        .current_dir(path)
-        .output()
-        .map_err(|e| e.to_string())?;
+    let mut cmd = Command::new("git");
+    cmd.args(args).current_dir(path);
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    let output = cmd.output().map_err(|e| e.to_string())?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();

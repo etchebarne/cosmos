@@ -6,6 +6,12 @@ use portable_pty::{native_pty_system, CommandBuilder, PtySize, Child};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 pub struct TerminalInstance {
     writer: Box<dyn Write + Send>,
     master: Box<dyn portable_pty::MasterPty + Send>,
@@ -70,9 +76,12 @@ pub fn terminal_list_shells() -> Vec<ShellInfo> {
         });
 
         // WSL distributions
-        if let Ok(output) = std::process::Command::new("wsl")
-            .args(["--list", "--quiet"])
-            .output()
+        if let Ok(output) = {
+            let mut cmd = std::process::Command::new("wsl");
+            cmd.args(["--list", "--quiet"]);
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            cmd.output()
+        }
         {
             if output.status.success() {
                 let stdout = decode_utf16le(&output.stdout);

@@ -10,6 +10,9 @@ use tokio::io::BufReader;
 use tokio::process::{Child, ChildStdin};
 use tokio::sync::Mutex;
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 use detection::{
     check_availability, resolve_command, resolve_server_for_language, server_language_group,
     ServerAvailability,
@@ -50,6 +53,8 @@ fn make_server_id(workspace_path: &str, language_id: &str) -> String {
 fn spawn_server(command: &str, args: &[String], working_dir: &str) -> std::io::Result<Child> {
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
+
         if command.ends_with(".cmd") || command.ends_with(".bat") {
             tokio::process::Command::new("cmd")
                 .arg("/C")
@@ -59,6 +64,7 @@ fn spawn_server(command: &str, args: &[String], working_dir: &str) -> std::io::R
                 .stdin(std::process::Stdio::piped())
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::null())
+                .creation_flags(CREATE_NO_WINDOW)
                 .spawn()
         } else {
             tokio::process::Command::new(command)
@@ -67,6 +73,7 @@ fn spawn_server(command: &str, args: &[String], working_dir: &str) -> std::io::R
                 .stdin(std::process::Stdio::piped())
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::null())
+                .creation_flags(CREATE_NO_WINDOW)
                 .spawn()
         }
     }
