@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { Setting } from "../../components/shared/Setting";
 import { SectionTitle } from "../../components/shared/SectionTitle";
@@ -82,38 +84,59 @@ function SettingControlRenderer({
   }
 }
 
-function SectionContent({
+function AccordionSection({
   section,
+  expanded,
+  onToggle,
   values,
   onChange,
 }: {
   section: SettingsSection;
+  expanded: boolean;
+  onToggle: () => void;
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
 }) {
   return (
-    <div className="flex flex-col">
-      {section.groups.map((group) => (
-        <div key={group.title} className="flex flex-col">
-          <SectionTitle>{group.title}</SectionTitle>
-          {group.settings.map((entry) => (
-            <Setting key={entry.key} label={entry.label} description={entry.description}>
-              <SettingControlRenderer
-                control={entry.control}
-                value={values[entry.key] ?? entry.defaultValue}
-                onChange={(v) => onChange(entry.key, v)}
-              />
-            </Setting>
+    <div className="border-b border-[var(--color-border-primary)]">
+      <button
+        className="flex items-center gap-2 w-full px-4 py-2.5 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+        onClick={onToggle}
+      >
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
+          size={12}
+          className={`text-[var(--color-text-tertiary)] transition-transform ${expanded ? "" : "-rotate-90"}`}
+        />
+        <span className="text-xs font-semibold text-[var(--color-text-primary)]">
+          {section.label}
+        </span>
+      </button>
+      {expanded && (
+        <div className="px-4 pb-3">
+          {section.groups.map((group) => (
+            <div key={group.title} className="flex flex-col">
+              <SectionTitle>{group.title}</SectionTitle>
+              {group.settings.map((entry) => (
+                <Setting key={entry.key} label={entry.label} description={entry.description}>
+                  <SettingControlRenderer
+                    control={entry.control}
+                    value={values[entry.key] ?? entry.defaultValue}
+                    onChange={(v) => onChange(entry.key, v)}
+                  />
+                </Setting>
+              ))}
+            </div>
           ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
 
 export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [schema, setSchema] = useState<SettingsSchema | null>(null);
-  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [values, setValues] = useState<Record<string, unknown>>({
     "theme.colorTheme": getTheme().name,
   });
@@ -121,16 +144,24 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   useEffect(() => {
     invoke<SettingsSchema>("get_settings_schema").then((s) => {
       setSchema(s);
-      if (s.sections.length > 0) {
-        setActiveSection(s.sections[0].id);
+    });
+  }, []);
+
+  const toggleSection = useCallback((id: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
       }
+      return next;
     });
   }, []);
 
   const handleChange = useCallback((key: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [key]: value }));
 
-    // Apply side effects for known settings
     if (key === "theme.colorTheme") {
       applyTheme(String(value));
     }
@@ -144,44 +175,20 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     );
   }
 
-  const currentSection = schema.sections.find((s) => s.id === activeSection);
-
   return (
-    <div className="flex h-full min-h-0">
-      {/* Sidebar */}
-      <div className="w-40 shrink-0 h-full border-r border-[var(--color-border-primary)] bg-[var(--color-bg-primary)]">
-        <div className="flex flex-col py-2">
-          {schema.sections.map((section) => (
-            <button
-              key={section.id}
-              className={`text-left px-4 py-1.5 text-xs transition-colors ${
-                activeSection === section.id
-                  ? "text-[var(--color-text-primary)] bg-[var(--color-bg-hover)]"
-                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
-              }`}
-              onClick={() => setActiveSection(section.id)}
-            >
-              {section.label}
-            </button>
-          ))}
-        </div>
+    <ScrollArea className="h-full">
+      <div className="max-w-2xl mx-auto py-2">
+        {schema.sections.map((section) => (
+          <AccordionSection
+            key={section.id}
+            section={section}
+            expanded={expandedSections.has(section.id)}
+            onToggle={() => toggleSection(section.id)}
+            values={values}
+            onChange={handleChange}
+          />
+        ))}
       </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0 min-h-0 h-full">
-        <ScrollArea className="h-full">
-          <div className="max-w-xl mx-auto p-6">
-            {currentSection && (
-              <>
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">
-                  {currentSection.label}
-                </h3>
-                <SectionContent section={currentSection} values={values} onChange={handleChange} />
-              </>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-    </div>
+    </ScrollArea>
   );
 }
