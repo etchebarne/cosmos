@@ -5,57 +5,63 @@ import { PatchDiff } from "@pierre/diffs/react";
 import { registerCustomTheme } from "@pierre/diffs";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
+import { getTheme } from "../../lib/themes";
 import type { TabContentProps } from "../types";
 
-// Register a custom theme that matches the cosmos editor colors
+// Register a custom theme — the callback reads getTheme() at invocation time
+// so it always returns the current theme colors.
 let themeRegistered = false;
 function ensureTheme() {
   if (themeRegistered) return;
   themeRegistered = true;
-  registerCustomTheme("cosmos-dark", async () => {
+  registerCustomTheme("cosmos", async () => {
+    const t = getTheme();
     const m = (await import("@pierre/theme/themes/pierre-dark.json")) as {
       default: Record<string, unknown>;
     };
     const base = m.default ?? m;
     return {
       ...base,
-      name: "cosmos-dark",
+      name: "cosmos",
       colors: {
         ...(base.colors as Record<string, string>),
-        "editor.background": "#111116",
-        "editor.foreground": "#e8e8ed",
-        "editorLineNumber.foreground": "#4a4a58",
-        "editorLineNumber.activeForeground": "#6b6b78",
+        "editor.background": t.editor.background,
+        "editor.foreground": t.editor.foreground,
+        "editorLineNumber.foreground": t.editor.lineNumber,
+        "editorLineNumber.activeForeground": t.ui.text.tertiary,
       },
     };
   });
 }
 ensureTheme();
 
-const THEME_CSS = `
+function buildThemeCss(): string {
+  const t = getTheme();
+  return `
   [data-separator] [data-separator-wrapper] {
-    background-color: #1a1a22 !important;
+    background-color: ${t.ui.bg.surface} !important;
     border-radius: 0 !important;
   }
   [data-separator-content] {
-    color: #6b6b78 !important;
+    color: ${t.ui.text.tertiary} !important;
   }
   :host {
-    --diffs-bg-buffer-override: #111116;
-    --diffs-bg-hover-override: #1a1a22;
-    --diffs-bg-context-override: #111116;
-    --diffs-bg-separator-override: #1a1a22;
-    --diffs-fg-number-override: #4a4a58;
-    --diffs-bg-deletion-override: rgba(248, 113, 113, 0.06);
-    --diffs-bg-deletion-number-override: rgba(248, 113, 113, 0.10);
-    --diffs-bg-deletion-hover-override: rgba(248, 113, 113, 0.10);
-    --diffs-bg-deletion-emphasis-override: rgba(248, 113, 113, 0.20);
-    --diffs-bg-addition-override: rgba(52, 211, 153, 0.06);
-    --diffs-bg-addition-number-override: rgba(52, 211, 153, 0.10);
-    --diffs-bg-addition-hover-override: rgba(52, 211, 153, 0.10);
-    --diffs-bg-addition-emphasis-override: rgba(52, 211, 153, 0.20);
+    --diffs-bg-buffer-override: ${t.ui.bg.page};
+    --diffs-bg-hover-override: ${t.ui.bg.surface};
+    --diffs-bg-context-override: ${t.ui.bg.page};
+    --diffs-bg-separator-override: ${t.ui.bg.surface};
+    --diffs-fg-number-override: ${t.ui.text.muted};
+    --diffs-bg-deletion-override: ${t.diff.deletionBg};
+    --diffs-bg-deletion-number-override: ${t.diff.deletionNumberBg};
+    --diffs-bg-deletion-hover-override: ${t.diff.deletionHoverBg};
+    --diffs-bg-deletion-emphasis-override: ${t.diff.deletionEmphasis};
+    --diffs-bg-addition-override: ${t.diff.additionBg};
+    --diffs-bg-addition-number-override: ${t.diff.additionNumberBg};
+    --diffs-bg-addition-hover-override: ${t.diff.additionHoverBg};
+    --diffs-bg-addition-emphasis-override: ${t.diff.additionEmphasis};
   }
 `;
+}
 
 export function ChangesTab({ tab }: TabContentProps) {
   const workspace = useActiveWorkspace();
@@ -64,6 +70,7 @@ export function ChangesTab({ tab }: TabContentProps) {
 
   const [patch, setPatch] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [themeCss, setThemeCss] = useState(buildThemeCss);
 
   const loadDiff = useCallback(async () => {
     if (!workspace?.path || !filePath) return;
@@ -102,6 +109,13 @@ export function ChangesTab({ tab }: TabContentProps) {
       unlisten.then((fn) => fn());
     };
   }, [loadDiff]);
+
+  // Re-build diff CSS when the app theme changes
+  useEffect(() => {
+    const handler = () => setThemeCss(buildThemeCss());
+    window.addEventListener("theme-changed", handler);
+    return () => window.removeEventListener("theme-changed", handler);
+  }, []);
 
   if (error) {
     return (
@@ -142,13 +156,13 @@ export function ChangesTab({ tab }: TabContentProps) {
       <PatchDiff
         patch={patch}
         options={{
-          theme: "cosmos-dark",
-          themeType: "dark",
+          theme: "cosmos",
+          themeType: getTheme().type,
           diffStyle: "unified",
           disableFileHeader: true,
           disableLineNumbers: false,
           overflow: "wrap",
-          unsafeCSS: THEME_CSS,
+          unsafeCSS: themeCss,
         }}
       />
     </OverlayScrollbarsComponent>

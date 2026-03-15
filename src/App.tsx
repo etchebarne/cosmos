@@ -11,8 +11,11 @@ import { useLayoutStore } from "./store/layout.store";
 import { useWorkspaceStore } from "./store/workspace.store";
 import type { Workspace } from "./store/workspace.store";
 import type { PaneNode } from "./types";
+import { applyTheme } from "./lib/themes";
 import "overlayscrollbars/overlayscrollbars.css";
 import "./styles/globals.css";
+
+applyTheme("cosmos-dark");
 
 function WorkspacePane({
   workspace,

@@ -5,6 +5,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { TabIcon } from "../../components/shared/TabIcon";
+import { getTheme } from "../../lib/themes";
 import type { TabContentProps } from "../types";
 import "@xterm/xterm/css/xterm.css";
 
@@ -77,32 +78,33 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
     const MIN_FONT_SIZE = 8;
     const MAX_FONT_SIZE = 30;
 
+    const t = getTheme().terminal;
     const terminal = new Terminal({
       fontSize: DEFAULT_FONT_SIZE,
       fontFamily: "'Cascadia Code', 'Consolas', 'Courier New', monospace",
       cursorBlink: true,
       theme: {
-        background: "#111116",
-        foreground: "#e8e8ed",
-        cursor: "#e8e8ed",
-        cursorAccent: "#111116",
-        selectionBackground: "rgba(255, 255, 255, 0.15)",
-        black: "#000000",
-        red: "#f87171",
-        green: "#34d399",
-        yellow: "#fbbf24",
-        blue: "#4b8ef5",
-        magenta: "#c678dd",
-        cyan: "#56b6c2",
-        white: "#e8e8ed",
-        brightBlack: "#6b6b78",
-        brightRed: "#f87171",
-        brightGreen: "#34d399",
-        brightYellow: "#fbbf24",
-        brightBlue: "#5e9df7",
-        brightMagenta: "#c678dd",
-        brightCyan: "#56b6c2",
-        brightWhite: "#ffffff",
+        background: t.background,
+        foreground: t.foreground,
+        cursor: t.cursor,
+        cursorAccent: t.cursorAccent,
+        selectionBackground: t.selection,
+        black: t.black,
+        red: t.red,
+        green: t.green,
+        yellow: t.yellow,
+        blue: t.blue,
+        magenta: t.magenta,
+        cyan: t.cyan,
+        white: t.white,
+        brightBlack: t.brightBlack,
+        brightRed: t.brightRed,
+        brightGreen: t.brightGreen,
+        brightYellow: t.brightYellow,
+        brightBlue: t.brightBlue,
+        brightMagenta: t.brightMagenta,
+        brightCyan: t.brightCyan,
+        brightWhite: t.brightWhite,
       },
     });
 
@@ -140,6 +142,36 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
 
     let disposed = false;
     const cleanups: (() => void)[] = [];
+
+    // Update xterm colors when the app theme changes
+    const onThemeChanged = () => {
+      const nt = getTheme().terminal;
+      terminal.options.theme = {
+        background: nt.background,
+        foreground: nt.foreground,
+        cursor: nt.cursor,
+        cursorAccent: nt.cursorAccent,
+        selectionBackground: nt.selection,
+        black: nt.black,
+        red: nt.red,
+        green: nt.green,
+        yellow: nt.yellow,
+        blue: nt.blue,
+        magenta: nt.magenta,
+        cyan: nt.cyan,
+        white: nt.white,
+        brightBlack: nt.brightBlack,
+        brightRed: nt.brightRed,
+        brightGreen: nt.brightGreen,
+        brightYellow: nt.brightYellow,
+        brightBlue: nt.brightBlue,
+        brightMagenta: nt.brightMagenta,
+        brightCyan: nt.brightCyan,
+        brightWhite: nt.brightWhite,
+      };
+    };
+    window.addEventListener("theme-changed", onThemeChanged);
+    cleanups.push(() => window.removeEventListener("theme-changed", onThemeChanged));
 
     (async () => {
       try {

@@ -1,34 +1,11 @@
 @import "tailwindcss";
 
-:root {
-  --color-accent-blue: #4b8ef5;
-  --color-accent-blue-hover: #5e9df7;
-  --color-accent-blue-muted: #4b8ef520;
-  --color-bg-elevated: #222230;
-  --color-bg-input: #2a2a36;
-  --color-bg-page: #111116;
-  --color-bg-surface: #1a1a22;
-  --color-border-primary: #2e2e3a;
-  --color-border-secondary: #3a3a48;
-  --color-project-bar-bg: #0e0e12;
-  --color-status-amber: #fbbf24;
-  --color-status-green: #34d399;
-  --color-status-red: #f87171;
-  --color-tab-active-bg: #1a1a22;
-  --color-tab-inactive-bg: #111116;
-  --color-text-muted: #4a4a58;
-  --color-text-primary: #e8e8ed;
-  --color-text-secondary: #9d9daa;
-  --color-text-tertiary: #6b6b78;
-  --color-divider: #3a3a4a;
-}
-
 /* Monaco scrollbar override — ensures Tailwind preflight doesn't interfere */
 .monaco-scrollable-element > .scrollbar > .slider {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: var(--color-scrollbar-track) !important;
 }
 .monaco-scrollable-element > .scrollbar > .slider:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
+  background: var(--color-scrollbar-hover) !important;
 }
 
 /* @pierre/diffs — font overrides inherit through shadow DOM */
@@ -41,9 +18,9 @@
 
 /* OverlayScrollbars custom theme */
 .os-theme-custom {
-  --os-handle-bg: rgba(255, 255, 255, 0.12);
-  --os-handle-bg-hover: rgba(255, 255, 255, 0.25);
-  --os-handle-bg-active: rgba(255, 255, 255, 0.35);
+  --os-handle-bg: var(--color-scrollbar-track);
+  --os-handle-bg-hover: var(--color-scrollbar-hover);
+  --os-handle-bg-active: var(--color-scrollbar-active);
   --os-size: 6px;
   --os-handle-border-radius: 0px;
   --os-padding-perpendicular: 0px;

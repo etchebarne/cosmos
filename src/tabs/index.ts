@@ -5,6 +5,7 @@ import { gitTab } from "./git";
 import { editorTab } from "./editor";
 import { changesTab } from "./changes";
 import { terminalTab } from "./terminal";
+import { settingsTab } from "./settings";
 
 // Register all built-in tabs
 registerTab(blankTab);
@@ -13,6 +14,7 @@ registerTab(gitTab);
 registerTab(editorTab);
 registerTab(changesTab);
 registerTab(terminalTab);
+registerTab(settingsTab);
 
 export { getTabDefinition, getAllTabDefinitions, getVisibleTabDefinitions } from "./registry";
 export { registerTab } from "./registry";
@@ -23,3 +25,4 @@ export { gitTab } from "./git";
 export { editorTab } from "./editor";
 export { changesTab } from "./changes";
 export { terminalTab } from "./terminal";
+export { settingsTab } from "./settings";

@@ -9,6 +9,7 @@ import { pathToFileUri, fileUriToPath } from "../../lib/lsp/uri";
 import { useLayoutStore } from "../../store/layout.store";
 import { useEditorStore } from "../../store/editor.store";
 import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
+import { getTheme } from "../../lib/themes";
 import type { TabContentProps } from "../types";
 
 // ── Cross-file navigation (Ctrl+Click go-to-definition) ──
@@ -82,33 +83,31 @@ function registerEditorOpener(monaco: Monaco) {
   });
 }
 
-let themeDefined = false;
 function defineCosmosTheme(monaco: Monaco) {
-  if (themeDefined) return;
-  themeDefined = true;
+  const t = getTheme();
   monaco.editor.defineTheme("cosmos", {
-    base: "vs-dark",
+    base: t.type === "dark" ? "vs-dark" : "vs",
     inherit: true,
     rules: [{ token: "tag", foreground: "569cd6" }],
     colors: {
-      "editor.background": "#111116",
-      "editor.foreground": "#e8e8ed",
-      "editor.lineHighlightBackground": "#1a1a2280",
-      "editor.selectionBackground": "#4b8ef540",
-      "editor.inactiveSelectionBackground": "#4b8ef520",
-      "editorLineNumber.foreground": "#4a4a58",
-      "editorLineNumber.activeForeground": "#9d9daa",
-      "editorCursor.foreground": "#4b8ef5",
-      "editorIndentGuide.background": "#2e2e3a",
-      "editorIndentGuide.activeBackground": "#3a3a48",
-      "editorWidget.background": "#1a1a22",
-      "editorWidget.border": "#2e2e3a",
-      "editorSuggestWidget.background": "#1a1a22",
-      "editorSuggestWidget.border": "#2e2e3a",
-      "editorSuggestWidget.selectedBackground": "#222230",
-      "scrollbarSlider.background": "rgba(255, 255, 255, 0.12)",
-      "scrollbarSlider.hoverBackground": "rgba(255, 255, 255, 0.25)",
-      "scrollbarSlider.activeBackground": "rgba(255, 255, 255, 0.35)",
+      "editor.background": t.editor.background,
+      "editor.foreground": t.editor.foreground,
+      "editor.lineHighlightBackground": t.editor.lineHighlight,
+      "editor.selectionBackground": t.editor.selection,
+      "editor.inactiveSelectionBackground": t.editor.inactiveSelection,
+      "editorLineNumber.foreground": t.editor.lineNumber,
+      "editorLineNumber.activeForeground": t.editor.lineNumberActive,
+      "editorCursor.foreground": t.editor.cursor,
+      "editorIndentGuide.background": t.editor.indentGuide,
+      "editorIndentGuide.activeBackground": t.editor.indentGuideActive,
+      "editorWidget.background": t.editor.widget,
+      "editorWidget.border": t.editor.widgetBorder,
+      "editorSuggestWidget.background": t.editor.suggestBackground,
+      "editorSuggestWidget.border": t.editor.suggestBorder,
+      "editorSuggestWidget.selectedBackground": t.editor.suggestSelected,
+      "scrollbarSlider.background": t.ui.scrollbar.track,
+      "scrollbarSlider.hoverBackground": t.ui.scrollbar.hover,
+      "scrollbarSlider.activeBackground": t.ui.scrollbar.active,
     },
   });
 }
@@ -177,6 +176,18 @@ export function EditorTab({ tab }: TabContentProps) {
   useEffect(() => {
     editorRef.current?.updateOptions({ fontSize: editorFontSize });
   }, [editorFontSize]);
+
+  // Re-apply Monaco theme when the app theme changes
+  useEffect(() => {
+    const handler = () => {
+      const monaco = monacoRef.current;
+      if (!monaco) return;
+      defineCosmosTheme(monaco);
+      monaco.editor.setTheme("cosmos");
+    };
+    window.addEventListener("theme-changed", handler);
+    return () => window.removeEventListener("theme-changed", handler);
+  }, []);
 
   // Cleanup on unmount: didClose + change listener + editor instance
   useEffect(() => {

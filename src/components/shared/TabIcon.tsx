@@ -16,6 +16,7 @@ const iconMap: Record<string, IconSvgElement> = {
   "git-branch": Icons.GitBranchIcon,
   "git-compare": Icons.GitCompareIcon,
   terminal: Icons.CommandLineIcon,
+  settings: Icons.Settings01Icon,
 };
 
 export function TabIcon({ name, size = 14, className }: TabIconProps) {

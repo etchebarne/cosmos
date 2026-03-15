@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon, Add01Icon } from "@hugeicons/core-free-icons";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getTheme } from "../../lib/themes";
 import { useWorkspaceStore } from "../../store/workspace.store";
 import { ContextMenu } from "../shared/ContextMenu";
 import { Tooltip } from "../shared/Tooltip";
@@ -60,7 +61,7 @@ export function ProjectBar() {
               className="font-mono w-8 h-8 flex items-center justify-center text-[13px] font-bold shrink-0 hover:opacity-85"
               style={{
                 backgroundColor: isActive ? w.color : `${w.color}40`,
-                color: isActive ? "#fff" : w.color,
+                color: isActive ? getTheme().terminal.brightWhite : w.color,
               }}
               onClick={() => switchWorkspace(i)}
               onContextMenu={(e) => handleContextMenu(e, i)}

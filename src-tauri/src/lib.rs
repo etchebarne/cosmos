@@ -1,5 +1,6 @@
 mod git;
 mod lsp;
+mod settings;
 mod tabs;
 mod terminal;
 
@@ -64,6 +65,7 @@ pub fn run() {
             terminal::terminal_write,
             terminal::terminal_resize,
             terminal::terminal_close,
+            settings::get_settings_schema,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
