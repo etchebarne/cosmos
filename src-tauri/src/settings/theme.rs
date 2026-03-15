@@ -20,6 +20,10 @@ pub fn section() -> SettingsSection {
                             value: "cosmos-light".into(),
                             label: "Cosmos Light".into(),
                         },
+                        DropdownOption {
+                            value: "cosmos-ember".into(),
+                            label: "Cosmos Ember".into(),
+                        },
                     ],
                 },
                 default_value: serde_json::json!("cosmos-dark"),

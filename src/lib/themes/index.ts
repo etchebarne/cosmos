@@ -1,12 +1,14 @@
 import type { Theme } from "./types";
 import { cosmosDark } from "./cosmos-dark";
 import { cosmosLight } from "./cosmos-light";
+import { cosmosEmber } from "./cosmos-ember";
 
 export type { Theme } from "./types";
 
 const themes: Record<string, Theme> = {
   "cosmos-dark": cosmosDark,
   "cosmos-light": cosmosLight,
+  "cosmos-ember": cosmosEmber,
 };
 
 let activeTheme: Theme = cosmosDark;
