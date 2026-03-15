@@ -29,7 +29,16 @@ export type PaneNode = PaneLeaf | PaneSplit;
 
 export type DropZone = "left" | "right" | "top" | "bottom" | "center";
 
-export interface DragState {
+export interface TabDragState {
+  type: "tab";
   tab: Tab;
   sourcePaneId: string;
 }
+
+export interface FileDragState {
+  type: "file";
+  filePath: string;
+  fileName: string;
+}
+
+export type DragState = TabDragState | FileDragState;

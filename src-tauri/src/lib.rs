@@ -19,6 +19,7 @@ pub fn run() {
         .manage(terminal::TerminalState::default())
         .invoke_handler(tauri::generate_handler![
             tabs::file_tree::read_dir,
+            tabs::file_tree::move_file,
             tabs::editor::read_file,
             tabs::editor::write_file,
             lsp::lsp_start,

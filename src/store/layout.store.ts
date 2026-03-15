@@ -20,7 +20,12 @@ interface LayoutStore {
   activePaneId: string | null;
 
   setWorkspace: (path: string | null) => void;
-  addTab: (paneId: string, type?: string, title?: string) => void;
+  addTab: (
+    paneId: string,
+    type?: string,
+    title?: string,
+    metadata?: Record<string, unknown>,
+  ) => void;
   closeTab: (paneId: string, tabId: string) => void;
   setActiveTab: (paneId: string, tabId: string) => void;
   reorderTab: (paneId: string, fromIndex: number, toIndex: number) => void;
@@ -34,6 +39,14 @@ interface LayoutStore {
     position: "before" | "after",
   ) => void;
   setPaneSizes: (splitId: string, sizes: number[]) => void;
+  insertSplit: (
+    targetPaneId: string,
+    direction: "horizontal" | "vertical",
+    position: "before" | "after",
+    type: string,
+    title?: string,
+    metadata?: Record<string, unknown>,
+  ) => void;
   openFile: (filePath: string, fileName: string, sourcePaneId: string) => void;
   openChanges: (
     filePath: string,
@@ -65,9 +78,9 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       return { layouts, layout, activeWorkspacePath: path };
     }),
 
-  addTab: (paneId, type = "blank", title) =>
+  addTab: (paneId, type = "blank", title, metadata) =>
     set((state) => {
-      const tab = createTab(type, title);
+      const tab = createTab(type, title, metadata);
       const layout = updateNode(state.layout, paneId, (leaf) => ({
         ...leaf,
         tabs: [...leaf.tabs, tab],
@@ -204,6 +217,25 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         return { ...node, children: node.children.map(update) };
       }
       return { layout: update(state.layout) };
+    }),
+
+  insertSplit: (targetPaneId, direction, position, type, title, metadata) =>
+    set((state) => {
+      const tab = createTab(type, title, metadata);
+      const newLeaf = createLeaf([tab]);
+      const layout =
+        updateNode(state.layout, targetPaneId, (leaf) => {
+          const children = position === "before" ? [newLeaf, leaf] : [leaf, newLeaf];
+          const split: PaneSplit = {
+            id: genId(),
+            type: "split",
+            direction,
+            children,
+            sizes: [50, 50],
+          };
+          return split;
+        }) ?? state.layout;
+      return { layout };
     }),
 
   openFile: (filePath, fileName, sourcePaneId) =>

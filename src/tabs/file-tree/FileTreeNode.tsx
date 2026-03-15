@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
@@ -17,6 +17,7 @@ import {
   Configuration01Icon,
 } from "@hugeicons/core-free-icons";
 import { useLayoutStore } from "../../store/layout.store";
+import { useDragStore } from "../../store/drag.store";
 import type { DirEntry } from "./FileTreeTab";
 
 interface FileTreeNodeProps {
@@ -29,6 +30,11 @@ interface FileTreeNodeProps {
 
 const INDENT_SIZE = 16;
 const LEFT_PAD = 8;
+
+function getParentDir(filePath: string): string {
+  const lastSep = Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\"));
+  return lastSep > 0 ? filePath.substring(0, lastSep) : filePath;
+}
 
 function getFileIcon(name: string, extension: string | null): IconSvgElement {
   // Special filenames
@@ -115,8 +121,11 @@ export function FileTreeNode({
   const [loaded, setLoaded] = useState(!!preloadedChildren);
   const [loading, setLoading] = useState(false);
   const openFile = useLayoutStore((s) => s.openFile);
+  const setDragState = useDragStore((s) => s.setDragState);
+  const dragOccurredRef = useRef(false);
 
   const handleClick = useCallback(async () => {
+    if (dragOccurredRef.current) return;
     if (entry.isDir) {
       if (!loaded) {
         setLoading(true);
@@ -140,6 +149,61 @@ export function FileTreeNode({
     }
   }, [entry, loaded, openFile, paneId]);
 
+  // Listen for file move events to surgically update children
+  useEffect(() => {
+    if (!entry.isDir) return;
+
+    const handler = (e: Event) => {
+      const { sourcePath, destDir } = (e as CustomEvent).detail;
+      const sourceDir = getParentDir(sourcePath);
+
+      // Remove from this directory if source was here
+      if (entry.path === sourceDir) {
+        setChildren((prev) => prev.filter((c) => c.path !== sourcePath));
+      }
+
+      // Reload this directory if destination is here, and expand it
+      if (entry.path === destDir) {
+        invoke<DirEntry[]>("read_dir", { path: entry.path }).then((result) => {
+          setChildren(result);
+          setLoaded(true);
+          setExpanded(true);
+        });
+      }
+    };
+
+    window.addEventListener("file-tree-move", handler);
+    return () => window.removeEventListener("file-tree-move", handler);
+  }, [entry.isDir, entry.path]);
+
+  const handleFileMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0 || entry.isDir) return;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      dragOccurredRef.current = false;
+
+      const onMouseMove = (ev: MouseEvent) => {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        if (!dragOccurredRef.current && Math.sqrt(dx * dx + dy * dy) > 5) {
+          dragOccurredRef.current = true;
+          setDragState({ type: "file", filePath: entry.path, fileName: entry.name });
+        }
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [entry, setDragState],
+  );
+
   const icon = entry.isDir
     ? expanded
       ? Folder02Icon
@@ -152,6 +216,8 @@ export function FileTreeNode({
         className="relative flex items-center w-full h-[28px] gap-1.5 text-left hover:bg-[var(--color-bg-elevated)] focus:bg-[var(--color-bg-elevated)] focus:outline-none transition-colors select-none cursor-pointer group"
         style={{ paddingLeft: LEFT_PAD + depth * INDENT_SIZE }}
         onClick={handleClick}
+        onMouseDown={handleFileMouseDown}
+        data-dir-path={entry.isDir ? entry.path : getParentDir(entry.path)}
       >
         {/* Indent guide lines */}
         {Array.from({ length: depth }, (_, i) => (

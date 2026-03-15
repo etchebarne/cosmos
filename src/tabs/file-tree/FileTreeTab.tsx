@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { FileTreeNode } from "./FileTreeNode";

@@ -12,6 +12,45 @@ import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco
 import { getTheme } from "../../lib/themes";
 import type { TabContentProps } from "../types";
 
+// ── Language detection from file extension (for early LSP start) ──
+
+const EXT_TO_LANGUAGE: Record<string, string> = {
+  ts: "typescript",
+  tsx: "typescriptreact",
+  js: "javascript",
+  jsx: "javascriptreact",
+  css: "css",
+  scss: "scss",
+  less: "less",
+  json: "json",
+  jsonc: "jsonc",
+  html: "html",
+  htm: "html",
+  py: "python",
+  rs: "rust",
+  go: "go",
+  c: "c",
+  h: "c",
+  cpp: "cpp",
+  cc: "cpp",
+  cxx: "cpp",
+  hpp: "cpp",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "toml",
+  sh: "shell",
+  bash: "shell",
+  sql: "sql",
+  xml: "xml",
+  svg: "xml",
+  md: "markdown",
+};
+
+function languageIdFromPath(filePath: string): string {
+  const ext = filePath.match(/\.([^./\\]+)$/)?.[1]?.toLowerCase();
+  return (ext && EXT_TO_LANGUAGE[ext]) ?? "plaintext";
+}
+
 // ── Cross-file navigation (Ctrl+Click go-to-definition) ──
 
 const editorInstances = new Map<string, editor.IStandaloneCodeEditor>();
@@ -295,6 +334,16 @@ export function EditorTab({ tab }: TabContentProps) {
     defineCosmosTheme(monaco);
     setupMonacoLanguages(monaco);
     registerEditorOpener(monaco);
+
+    // Eagerly start the LSP server while Monaco finishes mounting the editor.
+    // This overlaps server spawn + initialize with editor DOM setup, so
+    // providers are ready sooner. The onMount handler will await the same
+    // shared promise and send didOpen once it resolves.
+    if (workspace && filePath) {
+      const lang = languageIdFromPath(filePath);
+      lspLanguageRef.current = lang;
+      startServer(workspace.path, lang, monaco);
+    }
 
     // Disable Monaco's built-in TS/JS diagnostics unconditionally.
     // They run in-browser without tsconfig/node_modules so they always

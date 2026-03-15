@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -21,7 +21,15 @@ function InfinityCanvas({ tab }: TabContentProps) {
   const nodes = useInfinityStore((s) => s.getNodes(tab.id));
   const addNode = useInfinityStore((s) => s.addNode);
   const onNodesChangeFn = useInfinityStore((s) => s.onNodesChange);
-  const { screenToFlowPosition } = useReactFlow();
+  const setInstance = useInfinityStore((s) => s.setInstance);
+  const reactFlowInstance = useReactFlow();
+  const { screenToFlowPosition } = reactFlowInstance;
+
+  // Register instance so DragOverlay can convert screen coords for file drops
+  useEffect(() => {
+    setInstance(tab.id, reactFlowInstance);
+    return () => setInstance(tab.id, null);
+  }, [tab.id, reactFlowInstance, setInstance]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -52,7 +60,7 @@ function InfinityCanvas({ tab }: TabContentProps) {
   }));
 
   return (
-    <div className="h-full w-full relative font-ui">
+    <div className="h-full w-full relative font-ui" data-infinity-tab={tab.id}>
       <ReactFlow
         nodes={nodes}
         edges={[]}

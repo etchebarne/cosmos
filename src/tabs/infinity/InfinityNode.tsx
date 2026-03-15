@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { NodeResizer, type NodeProps } from "@xyflow/react";
 import type { InfinityNode as InfinityNodeType } from "../../store/infinity.store";
 import { useInfinityStore } from "../../store/infinity.store";
@@ -6,6 +7,7 @@ import { TabIcon } from "../../components/shared/TabIcon";
 
 export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
   const removeNode = useInfinityStore((s) => s.removeNode);
+  const contentRef = useRef<HTMLDivElement>(null);
   const definition = getTabDefinition(data.tabType);
   if (!definition) return null;
 
@@ -15,7 +17,33 @@ export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
     type: data.tabType,
     title: data.title,
     icon: data.icon,
+    ...(data.metadata && { metadata: data.metadata }),
   };
+
+  // Native wheel listeners (React synthetic stopPropagation doesn't block d3-zoom).
+  // Capture phase: intercept ctrl+wheel before children (e.g. xterm) consume it,
+  // then re-dispatch from the parent so it still bubbles up to ReactFlow for zoom.
+  // Bubble phase: stop normal wheel from reaching ReactFlow so inner ScrollAreas scroll.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const captureHandler = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.stopPropagation();
+        el.parentElement?.dispatchEvent(new WheelEvent(e.type, e));
+      }
+    };
+    const bubbleHandler = (e: WheelEvent) => {
+      if (!e.ctrlKey) e.stopPropagation();
+    };
+    el.addEventListener("wheel", captureHandler, { capture: true });
+    el.addEventListener("wheel", bubbleHandler, { passive: true });
+    return () => {
+      el.removeEventListener("wheel", captureHandler, { capture: true });
+      el.removeEventListener("wheel", bubbleHandler);
+    };
+  }, []);
 
   return (
     <>
@@ -63,13 +91,8 @@ export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
           </button>
         </div>
 
-        {/* Content — nodrag to prevent drag; ctrl+scroll passes through for zoom */}
-        <div
-          className="flex-1 overflow-hidden nodrag"
-          onWheel={(e) => {
-            if (!e.ctrlKey) e.stopPropagation();
-          }}
-        >
+        {/* Content — nodrag to prevent drag */}
+        <div ref={contentRef} className="flex-1 overflow-hidden nodrag">
           <Component tab={pseudoTab} paneId={`infinity-${id}`} />
         </div>
       </div>

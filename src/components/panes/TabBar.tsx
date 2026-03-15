@@ -34,7 +34,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
         const dy = ev.clientY - startY;
         if (!isDraggingRef.current && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
           isDraggingRef.current = true;
-          setDragState({ tab, sourcePaneId: paneId });
+          setDragState({ type: "tab", tab, sourcePaneId: paneId });
         }
       };
 

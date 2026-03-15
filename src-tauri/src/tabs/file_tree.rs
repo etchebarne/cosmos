@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::fs;
+use std::path::Path;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,4 +58,32 @@ pub fn read_dir(path: &str) -> Result<Vec<DirEntry>, String> {
     dirs.append(&mut files);
 
     Ok(dirs)
+}
+
+#[tauri::command]
+pub fn move_file(source: &str, dest_dir: &str) -> Result<String, String> {
+    let source_path = Path::new(source);
+    let dest_path = Path::new(dest_dir);
+
+    let file_name = source_path
+        .file_name()
+        .ok_or("Invalid source path")?;
+
+    // No-op if already in the target directory
+    if source_path.parent() == Some(dest_path) {
+        return Ok(source.to_string());
+    }
+
+    let new_path = dest_path.join(file_name);
+
+    if new_path.exists() {
+        return Err(format!(
+            "A file named '{}' already exists in the destination",
+            file_name.to_string_lossy()
+        ));
+    }
+
+    fs::rename(source_path, &new_path).map_err(|e| e.to_string())?;
+
+    Ok(new_path.to_string_lossy().to_string())
 }

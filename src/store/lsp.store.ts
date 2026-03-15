@@ -51,8 +51,8 @@ interface LspState {
 // Store monaco instance for restarting servers after install
 let monacoRef: Monaco | null = null;
 
-// Track in-flight startServer calls to prevent duplicates
-const pending = new Set<string>();
+// Track in-flight startServer calls so concurrent callers share the same promise
+const pending = new Map<string, Promise<LspClient | null>>();
 
 // Map Monaco language IDs to the server-level language group.
 // Must match backend's server_language_group() in detection.rs.
@@ -127,126 +127,130 @@ export const useLspStore = create<LspState>((set, get) => ({
       return null;
     }
 
-    // Prevent duplicate in-flight requests
+    // Share in-flight promise so concurrent callers await the same initialization
     const pendingKey = `${workspacePath}:${serverLang}`;
-    if (pending.has(pendingKey)) return null;
-    pending.add(pendingKey);
+    const inflight = pending.get(pendingKey);
+    if (inflight) return inflight;
 
-    try {
-      // Ask Rust to spawn the language server
-      const result = await invoke<{ server_id: string; server_name: string }>("lsp_start", {
-        workspacePath,
-        languageId,
-      });
-      const serverId = result.server_id;
-      const serverName = result.server_name;
-
-      // Create transport and client
-      const transport = new TauriLspTransport(serverId);
-      await transport.connect();
-      const client = new LspClient(transport);
-
-      // Initialize the LSP server
-      await client.initialize(workspacePath);
-
-      // Register Monaco providers for all languages this server handles
-      const monacoLangs = getMonacoLanguages(serverLang);
-      const providerDisposables = registerLspProviders(monaco, client, monacoLangs);
-
-      // Disable Monaco's built-in TS/JS diagnostics when LSP is handling it
-      if (serverLang === "typescript") {
-        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-          noSemanticValidation: true,
-          noSyntaxValidation: true,
+    const promise = (async (): Promise<LspClient | null> => {
+      try {
+        // Ask Rust to spawn the language server
+        const result = await invoke<{ server_id: string; server_name: string }>("lsp_start", {
+          workspacePath,
+          languageId,
         });
-        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-          noSemanticValidation: true,
-          noSyntaxValidation: true,
-        });
-      }
+        const serverId = result.server_id;
+        const serverName = result.server_name;
 
-      set((state) => ({
-        servers: {
-          ...state.servers,
-          [workspacePath]: {
-            ...state.servers[workspacePath],
-            [serverLang]: {
-              serverId,
-              languageId: serverLang,
-              client,
-              status: "running" as const,
-              serverName,
-              errorMessage: null,
-              providerDisposables,
+        // Create transport and client
+        const transport = new TauriLspTransport(serverId);
+        await transport.connect();
+        const client = new LspClient(transport);
+
+        // Initialize the LSP server
+        await client.initialize(workspacePath);
+
+        // Register Monaco providers for all languages this server handles
+        const monacoLangs = getMonacoLanguages(serverLang);
+        const providerDisposables = registerLspProviders(monaco, client, monacoLangs);
+
+        // Disable Monaco's built-in TS/JS diagnostics when LSP is handling it
+        if (serverLang === "typescript") {
+          monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+            noSemanticValidation: true,
+            noSyntaxValidation: true,
+          });
+          monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+            noSemanticValidation: true,
+            noSyntaxValidation: true,
+          });
+        }
+
+        set((state) => ({
+          servers: {
+            ...state.servers,
+            [workspacePath]: {
+              ...state.servers[workspacePath],
+              [serverLang]: {
+                serverId,
+                languageId: serverLang,
+                client,
+                status: "running" as const,
+                serverName,
+                errorMessage: null,
+                providerDisposables,
+              },
             },
           },
-        },
-      }));
+        }));
 
-      return client;
-    } catch (err) {
-      const errorStr = String(err);
+        return client;
+      } catch (err) {
+        const errorStr = String(err);
 
-      // No server configured for this language — silently ignore
-      if (errorStr.includes("No language server configured")) {
+        // No server configured for this language — silently ignore
+        if (errorStr.includes("No language server configured")) {
+          return null;
+        }
+
+        // Detect "not found" errors (binary not on PATH)
+        const isNotFound =
+          errorStr.includes("not found") ||
+          errorStr.includes("No such file") ||
+          errorStr.includes("program not found") ||
+          errorStr.includes("os error 2") ||
+          errorStr.includes("The system cannot find");
+
+        // Extract server name from backend error like "Failed to start <cmd>: ..."
+        // or fall back to the language group name
+        const nameMatch = errorStr.match(/Failed to start ([^:]+):/);
+        const displayName = nameMatch?.[1] ?? serverLang;
+
+        const status: ServerStatus = isNotFound ? "unavailable" : "error";
+        const errorMessage = isNotFound
+          ? `${displayName} is not installed`
+          : `${displayName} failed to start`;
+
+        console.error(`LSP ${status} for ${serverLang}:`, err);
+
+        set((state) => ({
+          servers: {
+            ...state.servers,
+            [workspacePath]: {
+              ...state.servers[workspacePath],
+              [serverLang]: {
+                serverId: "",
+                languageId: serverLang,
+                client: null as unknown as LspClient,
+                status,
+                serverName: displayName,
+                errorMessage,
+                providerDisposables: [],
+              },
+            },
+          },
+        }));
+
+        // Show toast notification for unavailable servers
+        if (isNotFound) {
+          const { installServer } = get();
+          useToastStore.getState().addToast({
+            message: `${displayName} is not installed`,
+            type: "warning",
+            action: {
+              label: "Install",
+              onClick: () => installServer(workspacePath, displayName),
+            },
+          });
+        }
+
         return null;
       }
+    })();
 
-      // Detect "not found" errors (binary not on PATH)
-      const isNotFound =
-        errorStr.includes("not found") ||
-        errorStr.includes("No such file") ||
-        errorStr.includes("program not found") ||
-        errorStr.includes("os error 2") ||
-        errorStr.includes("The system cannot find");
-
-      // Extract server name from backend error like "Failed to start <cmd>: ..."
-      // or fall back to the language group name
-      const nameMatch = errorStr.match(/Failed to start ([^:]+):/);
-      const displayName = nameMatch?.[1] ?? serverLang;
-
-      const status: ServerStatus = isNotFound ? "unavailable" : "error";
-      const errorMessage = isNotFound
-        ? `${displayName} is not installed`
-        : `${displayName} failed to start`;
-
-      console.error(`LSP ${status} for ${serverLang}:`, err);
-
-      set((state) => ({
-        servers: {
-          ...state.servers,
-          [workspacePath]: {
-            ...state.servers[workspacePath],
-            [serverLang]: {
-              serverId: "",
-              languageId: serverLang,
-              client: null as unknown as LspClient,
-              status,
-              serverName: displayName,
-              errorMessage,
-              providerDisposables: [],
-            },
-          },
-        },
-      }));
-
-      // Show toast notification for unavailable servers
-      if (isNotFound) {
-        const { installServer } = get();
-        useToastStore.getState().addToast({
-          message: `${displayName} is not installed`,
-          type: "warning",
-          action: {
-            label: "Install",
-            onClick: () => installServer(workspacePath, displayName),
-          },
-        });
-      }
-
-      return null;
-    } finally {
-      pending.delete(pendingKey);
-    }
+    pending.set(pendingKey, promise);
+    promise.finally(() => pending.delete(pendingKey));
+    return promise;
   },
 
   getClient: (workspacePath, languageId) => {
