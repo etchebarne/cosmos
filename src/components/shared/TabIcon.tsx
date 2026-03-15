@@ -17,6 +17,7 @@ const iconMap: Record<string, IconSvgElement> = {
   "git-compare": Icons.GitCompareIcon,
   terminal: Icons.CommandLineIcon,
   settings: Icons.Settings01Icon,
+  infinity: Icons.InfinitySquareIcon,
 };
 
 export function TabIcon({ name, size = 14, className }: TabIconProps) {
