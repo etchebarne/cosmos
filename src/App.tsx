@@ -9,6 +9,7 @@ import { ToastContainer } from "./components/shared/Toast";
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import { useLayoutStore } from "./store/layout.store";
 import { useWorkspaceStore } from "./store/workspace.store";
+import { useSettingsStore } from "./store/settings.store";
 import type { Workspace } from "./store/workspace.store";
 import type { PaneNode } from "./types";
 import { applyTheme } from "./lib/themes";
@@ -48,10 +49,12 @@ function App() {
   const activeIndex = useWorkspaceStore((s) => s.activeIndex);
   const ready = useWorkspaceStore((s) => s.ready);
   const init = useWorkspaceStore((s) => s.init);
+  const initSettings = useSettingsStore((s) => s.init);
 
   useEffect(() => {
     init();
-  }, [init]);
+    initSettings();
+  }, [init, initSettings]);
 
   // Sync active workspace path to layout store
   useLayoutEffect(() => {

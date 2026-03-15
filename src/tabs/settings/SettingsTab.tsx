@@ -6,7 +6,7 @@ import { ScrollArea } from "../../components/shared/ScrollArea";
 import { Setting } from "../../components/shared/Setting";
 import { SectionTitle } from "../../components/shared/SectionTitle";
 import { Dropdown } from "../../components/shared/Dropdown";
-import { applyTheme, getTheme } from "../../lib/themes";
+import { useSettingsStore } from "../../store/settings.store";
 import type { TabContentProps } from "../types";
 
 interface DropdownOption {
@@ -137,9 +137,8 @@ function AccordionSection({
 export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [schema, setSchema] = useState<SettingsSchema | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [values, setValues] = useState<Record<string, unknown>>({
-    "theme.colorTheme": getTheme().name,
-  });
+  const values = useSettingsStore((s) => s.values);
+  const setSetting = useSettingsStore((s) => s.set);
 
   useEffect(() => {
     invoke<SettingsSchema>("get_settings_schema").then((s) => {
@@ -159,13 +158,12 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     });
   }, []);
 
-  const handleChange = useCallback((key: string, value: unknown) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
-
-    if (key === "theme.colorTheme") {
-      applyTheme(String(value));
-    }
-  }, []);
+  const handleChange = useCallback(
+    (key: string, value: unknown) => {
+      setSetting(key, value);
+    },
+    [setSetting],
+  );
 
   if (!schema) {
     return (
