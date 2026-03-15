@@ -62,7 +62,7 @@ export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
           borderWidth: 1,
         }}
       />
-      <div className="flex flex-col h-full w-full bg-[var(--color-bg-base)] border border-[var(--color-border-primary)] shadow-lg">
+      <div className="flex flex-col h-full w-full bg-[var(--color-bg-page)] border border-[var(--color-border-primary)] shadow-lg">
         {/* Title bar — drag handle */}
         <div className="infinity-node-handle flex items-center gap-2 px-2 h-7 shrink-0 bg-[var(--color-bg-surface)] border-b border-[var(--color-border-secondary)] cursor-grab select-none">
           <TabIcon
