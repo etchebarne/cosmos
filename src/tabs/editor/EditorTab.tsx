@@ -162,6 +162,8 @@ export function EditorTab({ tab }: TabContentProps) {
   const contentRef = useRef<string | null>(null);
   const versionRef = useRef(0);
   const changeDisposableRef = useRef<{ dispose: () => void } | null>(null);
+  const [editorReady, setEditorReady] = useState(false);
+  const lspOpenedRef = useRef(false);
 
   const editorFontSize = useEditorStore((s) => s.editorFontSize);
   const zoomEditorIn = useEditorStore((s) => s.zoomEditorIn);
@@ -228,23 +230,32 @@ export function EditorTab({ tab }: TabContentProps) {
     return () => window.removeEventListener("theme-changed", handler);
   }, []);
 
-  // Start LSP if workspace becomes available after editor already mounted
+  // Start LSP when both editor and workspace are ready.
+  // Handles the case where workspace loads after the editor mounts (release builds)
+  // and the case where the editor mounts after workspace is already available.
   useEffect(() => {
-    if (!workspace || !fileUri || !monacoRef.current || !editorRef.current) return;
+    if (!editorReady || !workspace || !fileUri || !monacoRef.current || !editorRef.current) return;
+    if (lspOpenedRef.current) return;
 
     const lspLang = lspLanguageRef.current;
-    if (getClient(workspace.path, lspLang)) return; // already running
+    let cancelled = false;
 
     startServer(workspace.path, lspLang, monacoRef.current).then((client) => {
-      if (!client || !editorRef.current) return;
+      if (cancelled || !client || !editorRef.current) return;
+      lspOpenedRef.current = true;
       versionRef.current = 1;
       client.didOpen(fileUri, lspLang, versionRef.current, editorRef.current.getValue());
     });
-  }, [workspace, fileUri, startServer, getClient]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editorReady, workspace, fileUri, startServer]);
 
   // Cleanup on unmount: didClose + change listener + editor instance
   useEffect(() => {
     return () => {
+      lspOpenedRef.current = false;
       changeDisposableRef.current?.dispose();
       if (filePath) editorInstances.delete(filePath);
       if (workspace && fileUri) {
@@ -269,15 +280,9 @@ export function EditorTab({ tab }: TabContentProps) {
     if (model) resolveModelLanguage(monaco, model);
     lspLanguageRef.current = model?.getLanguageId() ?? "plaintext";
 
-    // Start LSP server and send didOpen
-    if (workspace && fileUri && content !== null) {
-      const lspLang = lspLanguageRef.current;
-      startServer(workspace.path, lspLang, monaco).then((client) => {
-        if (!client) return;
-        versionRef.current = 1;
-        client.didOpen(fileUri, lspLang, versionRef.current, instance.getValue());
-      });
-    }
+    // Signal that the editor is mounted — the LSP useEffect will handle
+    // starting the server and sending didOpen when all conditions are met.
+    setEditorReady(true);
 
     // Register editor instance for cross-file navigation
     if (filePath) {
