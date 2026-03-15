@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { TabIcon } from "../../components/shared/TabIcon";
 import { getTheme } from "../../lib/themes";
@@ -78,6 +79,7 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
     const MIN_FONT_SIZE = 8;
     const MAX_FONT_SIZE = 30;
 
+    const isWindows = navigator.userAgent.includes("Windows");
     const t = getTheme().terminal;
     const terminal = new Terminal({
       fontSize: DEFAULT_FONT_SIZE,
@@ -111,9 +113,29 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
 
-    // Intercept zoom shortcuts before they reach the PTY
+    // Intercept shortcuts before they reach the PTY
     terminal.attachCustomKeyEventHandler((e) => {
       if (e.type !== "keydown" || !e.ctrlKey) return true;
+      // Ctrl+C: copy selection if any, otherwise send SIGINT (like Windows Terminal)
+      if (!e.shiftKey && e.key === "c") {
+        if (terminal.hasSelection()) {
+          e.preventDefault();
+          navigator.clipboard.writeText(terminal.getSelection());
+          terminal.clearSelection();
+          return false;
+        }
+        return true;
+      }
+      // Ctrl+Shift+V or Ctrl+V: paste
+      if (e.key === "V" || e.key === "v") {
+        e.preventDefault();
+        readText()
+          .then((text) => {
+            if (text) invoke("terminal_write", { id: terminalId, data: text });
+          })
+          .catch(() => {});
+        return false;
+      }
       if (e.key === "=" || e.key === "+") {
         e.preventDefault();
         const next = Math.min(terminal.options.fontSize! + 1, MAX_FONT_SIZE);
@@ -138,10 +160,42 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
     });
 
     terminal.open(el);
-    fitAddon.fit();
 
     let disposed = false;
+    let spawned = false;
     const cleanups: (() => void)[] = [];
+
+    // Resize handling — registered immediately so no resize is missed
+    let resizeTimeout: ReturnType<typeof setTimeout>;
+    let prevCols = terminal.cols;
+
+    const observer = new ResizeObserver(() => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        fitAddon.fit();
+        if (spawned) {
+          const colsChanged = terminal.cols !== prevCols;
+          prevCols = terminal.cols;
+
+          invoke("terminal_resize", {
+            id: terminalId,
+            cols: terminal.cols,
+            rows: terminal.rows,
+          });
+
+          // On Windows, ConPTY reflow garbles the display after column changes.
+          // Send Ctrl+L to ask the shell to clear and redraw the prompt.
+          if (isWindows && colsChanged) {
+            invoke("terminal_write", { id: terminalId, data: "\x0c" });
+          }
+        }
+      }, 150);
+    });
+    observer.observe(el);
+    cleanups.push(() => {
+      clearTimeout(resizeTimeout);
+      observer.disconnect();
+    });
 
     // Update xterm colors when the app theme changes
     const onThemeChanged = () => {
@@ -173,55 +227,54 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
     window.addEventListener("theme-changed", onThemeChanged);
     cleanups.push(() => window.removeEventListener("theme-changed", onThemeChanged));
 
-    (async () => {
-      try {
-        await invoke("terminal_spawn", {
-          id: terminalId,
-          program: shell.program,
-          args: shell.args,
-          cwd,
-          cols: terminal.cols,
-          rows: terminal.rows,
-        });
-      } catch (e) {
-        terminal.write(`\x1b[31mFailed to start shell: ${e}\x1b[0m\r\n`);
-        return;
-      }
+    // Wait for layout to settle before fitting and spawning the shell.
+    // Two rAFs: first enters the next frame, second ensures layout is
+    // computed — this guarantees the container has its final dimensions.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(async () => {
+        if (disposed) return;
 
-      if (disposed) {
-        invoke("terminal_close", { id: terminalId });
-        return;
-      }
-
-      // Terminal output → xterm
-      const unlisten = await listen<string>(`terminal-data-${terminalId}`, (event) => {
-        terminal.write(event.payload);
-      });
-      cleanups.push(unlisten);
-
-      const unlistenExit = await listen(`terminal-exit-${terminalId}`, () => {
-        terminal.write("\r\n\x1b[90m[Process exited]\x1b[0m\r\n");
-      });
-      cleanups.push(unlistenExit);
-
-      // Keyboard input → PTY
-      const onData = terminal.onData((data) => {
-        invoke("terminal_write", { id: terminalId, data });
-      });
-      cleanups.push(() => onData.dispose());
-
-      // Resize handling
-      const observer = new ResizeObserver(() => {
         fitAddon.fit();
-        invoke("terminal_resize", {
-          id: terminalId,
-          cols: terminal.cols,
-          rows: terminal.rows,
+
+        try {
+          await invoke("terminal_spawn", {
+            id: terminalId,
+            program: shell.program,
+            args: shell.args,
+            cwd,
+            cols: terminal.cols,
+            rows: terminal.rows,
+          });
+        } catch (e) {
+          terminal.write(`\x1b[31mFailed to start shell: ${e}\x1b[0m\r\n`);
+          return;
+        }
+
+        if (disposed) {
+          invoke("terminal_close", { id: terminalId });
+          return;
+        }
+
+        spawned = true;
+
+        // Terminal output → xterm
+        const unlisten = await listen<string>(`terminal-data-${terminalId}`, (event) => {
+          terminal.write(event.payload);
         });
+        cleanups.push(unlisten);
+
+        const unlistenExit = await listen(`terminal-exit-${terminalId}`, () => {
+          terminal.write("\r\n\x1b[90m[Process exited]\x1b[0m\r\n");
+        });
+        cleanups.push(unlistenExit);
+
+        // Keyboard input → PTY
+        const onData = terminal.onData((data) => {
+          invoke("terminal_write", { id: terminalId, data });
+        });
+        cleanups.push(() => onData.dispose());
       });
-      observer.observe(el);
-      cleanups.push(() => observer.disconnect());
-    })();
+    });
 
     return () => {
       disposed = true;

@@ -33,4 +33,5 @@ zip = "2"
 flate2 = "1"
 tar = "0.4"
 portable-pty = "0.9"
+tauri-plugin-clipboard-manager = "2.3.2"
 
