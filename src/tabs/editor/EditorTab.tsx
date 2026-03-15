@@ -228,6 +228,20 @@ export function EditorTab({ tab }: TabContentProps) {
     return () => window.removeEventListener("theme-changed", handler);
   }, []);
 
+  // Start LSP if workspace becomes available after editor already mounted
+  useEffect(() => {
+    if (!workspace || !fileUri || !monacoRef.current || !editorRef.current) return;
+
+    const lspLang = lspLanguageRef.current;
+    if (getClient(workspace.path, lspLang)) return; // already running
+
+    startServer(workspace.path, lspLang, monacoRef.current).then((client) => {
+      if (!client || !editorRef.current) return;
+      versionRef.current = 1;
+      client.didOpen(fileUri, lspLang, versionRef.current, editorRef.current.getValue());
+    });
+  }, [workspace, fileUri, startServer, getClient]);
+
   // Cleanup on unmount: didClose + change listener + editor instance
   useEffect(() => {
     return () => {
