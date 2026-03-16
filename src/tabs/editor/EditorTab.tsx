@@ -182,6 +182,14 @@ export function EditorTab({ tab }: TabContentProps) {
 
   const fileUri = filePath ? pathToFileUri(filePath) : null;
 
+  // Refs to keep cleanup closure in sync with latest values
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
+  const fileUriRef = useRef(fileUri);
+  fileUriRef.current = fileUri;
+  const filePathRef = useRef(filePath);
+  filePathRef.current = filePath;
+
   const loadFile = useCallback(async () => {
     if (!filePath) return;
     setLoading(true);
@@ -257,31 +265,36 @@ export function EditorTab({ tab }: TabContentProps) {
     };
   }, [editorReady, workspace, fileUri, startServer]);
 
-  // Cleanup on unmount: flush pending changes, didClose, change listener, editor instance
+  // Cleanup on unmount: flush pending changes, didClose, change listener, editor instance.
+  // Uses refs to always access the latest workspace/fileUri/filePath values.
   useEffect(() => {
     return () => {
+      const ws = workspaceRef.current;
+      const uri = fileUriRef.current;
+      const fp = filePathRef.current;
+
       // Clear debounce timer and flush any pending changes before closing
       if (debounceTimerRef.current != null) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
-      if (pendingChangesRef.current.length > 0 && workspace && fileUri) {
-        const client = getClient(workspace.path, lspLanguageRef.current);
+      if (pendingChangesRef.current.length > 0 && ws && uri) {
+        const client = useLspStore.getState().getClient(ws.path, lspLanguageRef.current);
         if (client) {
-          client.didChange(fileUri, versionRef.current, pendingChangesRef.current);
+          client.didChange(uri, versionRef.current, pendingChangesRef.current);
           pendingChangesRef.current = [];
         }
       }
 
       lspOpenedRef.current = false;
       changeDisposableRef.current?.dispose();
-      if (filePath) editorInstances.delete(filePath);
-      if (workspace && fileUri) {
-        const client = getClient(workspace.path, lspLanguageRef.current);
-        client?.didClose(fileUri);
+      if (fp) editorInstances.delete(fp);
+      if (ws && uri) {
+        const client = useLspStore.getState().getClient(ws.path, lspLanguageRef.current);
+        client?.didClose(uri);
       }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleEditorDidMount(instance: editor.IStandaloneCodeEditor, monaco: Monaco) {
     editorRef.current = instance;

@@ -1,6 +1,20 @@
 /**
+ * Characters that must be percent-encoded in a file URI path segment.
+ * We encode everything RFC 3986 considers reserved or unsafe in a path,
+ * except `/` (path separator) and `:` (drive letter on Windows).
+ */
+function encodeFilePath(path: string): string {
+  return path.replace(/[^a-zA-Z0-9/_.\-~:]/g, (ch) => {
+    const code = ch.charCodeAt(0);
+    if (code <= 0x7f) return `%${code.toString(16).toUpperCase().padStart(2, "0")}`;
+    // Multi-byte UTF-8: encode each byte
+    return encodeURIComponent(ch);
+  });
+}
+
+/**
  * Convert an OS file path to an LSP-compatible file:// URI.
- * Handles Windows backslashes and drive letters.
+ * Handles Windows backslashes, drive letters, and percent-encoding.
  */
 export function pathToFileUri(path: string): string {
   // Normalize backslashes to forward slashes
@@ -11,6 +25,9 @@ export function pathToFileUri(path: string): string {
     normalized = normalized[0].toLowerCase() + normalized.slice(1);
   }
 
+  // Percent-encode special characters (spaces, #, ?, etc.)
+  normalized = encodeFilePath(normalized);
+
   // file:///c:/Users/... (three slashes for absolute paths)
   return `file:///${normalized}`;
 }
@@ -19,7 +36,13 @@ export function pathToFileUri(path: string): string {
  * Convert an LSP file:// URI back to an OS path.
  */
 export function fileUriToPath(uri: string): string {
-  let path = uri.replace("file:///", "");
+  // Handle both file:/// and file://host/ forms
+  let path = uri.replace(/^file:\/\/(?:\/([a-zA-Z]:))?/, "$1");
+  if (!path.startsWith("/") && !/^[a-zA-Z]:/.test(path)) {
+    // file://host/path → /path (strip host)
+    path = uri.replace(/^file:\/\/[^/]*/, "");
+  }
+
   path = decodeURIComponent(path);
 
   // On Windows, restore backslashes

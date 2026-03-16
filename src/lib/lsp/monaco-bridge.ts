@@ -15,6 +15,8 @@ import {
   type PublishDiagnosticsParams,
   type Diagnostic,
   type MarkupContent,
+  type TextEdit,
+  type CodeAction,
   CompletionItemKind as LspCompletionItemKind,
   DiagnosticSeverity,
   InsertTextFormat,
@@ -41,6 +43,13 @@ function toLspPosition(position: { lineNumber: number; column: number }) {
   return {
     line: position.lineNumber - 1,
     character: position.column - 1,
+  };
+}
+
+function toLspRange(range: IRange) {
+  return {
+    start: { line: range.startLineNumber - 1, character: range.startColumn - 1 },
+    end: { line: range.endLineNumber - 1, character: range.endColumn - 1 },
   };
 }
 
@@ -118,6 +127,15 @@ function markerFingerprint(m: {
   return `${m.severity}:${m.startLineNumber}:${m.startColumn}:${m.endLineNumber}:${m.endColumn}:${m.message}`;
 }
 
+// ── TextEdit → Monaco edit ──
+
+function lspTextEditsToMonaco(edits: TextEdit[]): { range: IRange; text: string }[] {
+  return edits.map((edit) => ({
+    range: toMonacoRange(edit.range),
+    text: edit.newText,
+  }));
+}
+
 // ── Provider Registration ──
 
 export function registerLspProviders(
@@ -128,8 +146,10 @@ export function registerLspProviders(
   const disposables: IDisposable[] = [];
 
   for (const languageId of languageIds) {
-    // Completion Provider
+    // Completion Provider (with resolve support)
     if (client.capabilities?.completionProvider) {
+      const supportsResolve = client.capabilities.completionProvider.resolveProvider;
+
       disposables.push(
         monaco.languages.registerCompletionItemProvider(languageId, {
           triggerCharacters: client.capabilities.completionProvider.triggerCharacters ?? [
@@ -158,7 +178,7 @@ export function registerLspProviders(
                 const insertText = item.insertText ?? item.label;
                 const isSnippet = item.insertTextFormat === InsertTextFormat.Snippet;
 
-                return {
+                const suggestion: languages.CompletionItem & { _lspItem?: LspCompletionItem } = {
                   label: item.labelDetails
                     ? {
                         label: item.label,
@@ -180,7 +200,14 @@ export function registerLspProviders(
                     item.textEdit && "range" in item.textEdit
                       ? toMonacoRange(item.textEdit.range)
                       : undefined,
-                } as languages.CompletionItem;
+                } as languages.CompletionItem & { _lspItem?: LspCompletionItem };
+
+                // Attach original LSP item for resolve
+                if (supportsResolve) {
+                  suggestion._lspItem = item;
+                }
+
+                return suggestion;
               });
 
               return {
@@ -192,6 +219,39 @@ export function registerLspProviders(
               return { suggestions: [] };
             }
           },
+          resolveCompletionItem: supportsResolve
+            ? async (item: languages.CompletionItem) => {
+                const lspItem = (
+                  item as languages.CompletionItem & { _lspItem?: LspCompletionItem }
+                )._lspItem;
+                if (!lspItem) return item;
+
+                try {
+                  const resolved = await client.completionResolve(lspItem);
+
+                  if (resolved.documentation) {
+                    item.documentation = toMarkdownString(
+                      resolved.documentation as string | MarkupContent,
+                    );
+                  }
+                  if (resolved.detail) {
+                    item.detail = resolved.detail;
+                  }
+                  if (resolved.additionalTextEdits) {
+                    item.additionalTextEdits = lspTextEditsToMonaco(
+                      resolved.additionalTextEdits,
+                    ).map((e) => ({
+                      range: e.range as IRange,
+                      text: e.text,
+                    }));
+                  }
+                } catch (e) {
+                  console.warn(`[LSP] completionItem/resolve failed:`, e);
+                }
+
+                return item;
+              }
+            : undefined,
         }),
       );
     }
@@ -334,13 +394,258 @@ export function registerLspProviders(
         }),
       );
     }
+
+    // Code Action Provider
+    if (client.capabilities?.codeActionProvider) {
+      disposables.push(
+        monaco.languages.registerCodeActionProvider(languageId, {
+          provideCodeActions: async (
+            model: monacoEditor.ITextModel,
+            range: monacoEditor.IIdentifiedSingleEditOperation["range"],
+            context: languages.CodeActionContext,
+          ) => {
+            const uri = model.uri.toString();
+            const lspRange = toLspRange(range as IRange);
+            const diagnostics = context.markers.map((m) => ({
+              range: toLspRange({
+                startLineNumber: m.startLineNumber,
+                startColumn: m.startColumn,
+                endLineNumber: m.endLineNumber,
+                endColumn: m.endColumn,
+              }),
+              message: m.message,
+              severity: m.severity,
+              code: m.code != null ? String(m.code) : undefined,
+            }));
+
+            try {
+              const result = await client.codeAction(uri, lspRange, diagnostics);
+              if (!result) return { actions: [], dispose: () => {} };
+
+              const actions: languages.CodeAction[] = result
+                .filter((item): item is CodeAction => "title" in item)
+                .map((action) => {
+                  const monacoAction: languages.CodeAction = {
+                    title: action.title,
+                    kind: action.kind,
+                    isPreferred: action.isPreferred,
+                    diagnostics: action.diagnostics?.map((d) => ({
+                      ...toMonacoRange(d.range),
+                      message: d.message,
+                      severity: toMonacoSeverity(monaco, d.severity),
+                    })),
+                  };
+
+                  if (action.edit) {
+                    const edits: languages.IWorkspaceTextEdit[] = [];
+
+                    if (action.edit.changes) {
+                      for (const [editUri, textEdits] of Object.entries(action.edit.changes)) {
+                        for (const te of textEdits) {
+                          edits.push({
+                            resource: monaco.Uri.parse(editUri),
+                            textEdit: {
+                              range: toMonacoRange(te.range),
+                              text: te.newText,
+                            },
+                            versionId: undefined,
+                          });
+                        }
+                      }
+                    }
+
+                    if (action.edit.documentChanges) {
+                      for (const change of action.edit.documentChanges) {
+                        if ("textDocument" in change && "edits" in change) {
+                          for (const te of change.edits as TextEdit[]) {
+                            edits.push({
+                              resource: monaco.Uri.parse(change.textDocument.uri),
+                              textEdit: {
+                                range: toMonacoRange(te.range),
+                                text: te.newText,
+                              },
+                              versionId: undefined,
+                            });
+                          }
+                        }
+                      }
+                    }
+
+                    if (edits.length > 0) {
+                      monacoAction.edit = { edits };
+                    }
+                  }
+
+                  return monacoAction;
+                });
+
+              return { actions, dispose: () => {} };
+            } catch (e) {
+              console.warn(`[LSP] CodeAction failed for ${languageId}:`, e);
+              return { actions: [], dispose: () => {} };
+            }
+          },
+        }),
+      );
+    }
+
+    // Document Formatting Provider
+    if (client.capabilities?.documentFormattingProvider) {
+      disposables.push(
+        monaco.languages.registerDocumentFormattingEditProvider(languageId, {
+          provideDocumentFormattingEdits: async (
+            model: monacoEditor.ITextModel,
+            options: languages.FormattingOptions,
+          ) => {
+            const uri = model.uri.toString();
+            try {
+              const edits = await client.formatting(uri, options.tabSize, options.insertSpaces);
+              if (!edits) return [];
+              return lspTextEditsToMonaco(edits);
+            } catch (e) {
+              console.warn(`[LSP] Formatting failed for ${languageId}:`, e);
+              return [];
+            }
+          },
+        }),
+      );
+    }
+
+    // Range Formatting Provider
+    if (client.capabilities?.documentRangeFormattingProvider) {
+      disposables.push(
+        monaco.languages.registerDocumentRangeFormattingEditProvider(languageId, {
+          provideDocumentRangeFormattingEdits: async (
+            model: monacoEditor.ITextModel,
+            range: monacoEditor.IIdentifiedSingleEditOperation["range"],
+            options: languages.FormattingOptions,
+          ) => {
+            const uri = model.uri.toString();
+            try {
+              const edits = await client.rangeFormatting(
+                uri,
+                toLspRange(range as IRange),
+                options.tabSize,
+                options.insertSpaces,
+              );
+              if (!edits) return [];
+              return lspTextEditsToMonaco(edits);
+            } catch (e) {
+              console.warn(`[LSP] Range formatting failed for ${languageId}:`, e);
+              return [];
+            }
+          },
+        }),
+      );
+    }
+
+    // Rename Provider
+    if (client.capabilities?.renameProvider) {
+      const supportsPrepare =
+        typeof client.capabilities.renameProvider === "object" &&
+        client.capabilities.renameProvider.prepareProvider;
+
+      disposables.push(
+        monaco.languages.registerRenameProvider(languageId, {
+          provideRenameEdits: async (
+            model: monacoEditor.ITextModel,
+            position: { lineNumber: number; column: number },
+            newName: string,
+          ) => {
+            const uri = model.uri.toString();
+            const lspPos = toLspPosition(position);
+            try {
+              const result = await client.rename(uri, lspPos.line, lspPos.character, newName);
+              if (!result) return { edits: [] };
+
+              const edits: languages.IWorkspaceTextEdit[] = [];
+
+              if (result.changes) {
+                for (const [editUri, textEdits] of Object.entries(result.changes)) {
+                  for (const te of textEdits) {
+                    edits.push({
+                      resource: monaco.Uri.parse(editUri),
+                      textEdit: {
+                        range: toMonacoRange(te.range),
+                        text: te.newText,
+                      },
+                      versionId: undefined,
+                    });
+                  }
+                }
+              }
+
+              if (result.documentChanges) {
+                for (const change of result.documentChanges) {
+                  if ("textDocument" in change && "edits" in change) {
+                    for (const te of change.edits as TextEdit[]) {
+                      edits.push({
+                        resource: monaco.Uri.parse(change.textDocument.uri),
+                        textEdit: {
+                          range: toMonacoRange(te.range),
+                          text: te.newText,
+                        },
+                        versionId: undefined,
+                      });
+                    }
+                  }
+                }
+              }
+
+              return { edits };
+            } catch (e) {
+              console.warn(`[LSP] Rename failed for ${languageId}:`, e);
+              return { edits: [] };
+            }
+          },
+          resolveRenameLocation: supportsPrepare
+            ? async (
+                model: monacoEditor.ITextModel,
+                position: { lineNumber: number; column: number },
+              ) => {
+                const uri = model.uri.toString();
+                const lspPos = toLspPosition(position);
+                try {
+                  const result = await client.prepareRename(uri, lspPos.line, lspPos.character);
+                  if (!result) {
+                    return {
+                      range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 },
+                      text: "",
+                      rejectReason: "This symbol cannot be renamed.",
+                    };
+                  }
+
+                  if ("placeholder" in result) {
+                    return {
+                      range: toMonacoRange(result.range),
+                      text: result.placeholder,
+                    };
+                  }
+
+                  // Range-only response: use the text under the range as placeholder
+                  const range = toMonacoRange(result);
+                  const text = model.getValueInRange(range);
+                  return { range, text };
+                } catch (e) {
+                  console.warn(`[LSP] PrepareRename failed for ${languageId}:`, e);
+                  return {
+                    range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 },
+                    text: "",
+                    rejectReason: "Rename preparation failed.",
+                  };
+                }
+              }
+            : undefined,
+        }),
+      );
+    }
   }
 
   // Diagnostics (via server notification, not a provider)
   client.onDiagnostics((params: PublishDiagnosticsParams) => {
-    const model = monaco.editor
-      .getModels()
-      .find((m: monacoEditor.ITextModel) => m.uri.toString() === params.uri);
+    // O(1) model lookup via URI parsing instead of scanning all models
+    const parsedUri = monaco.Uri.parse(params.uri);
+    const model = monaco.editor.getModel(parsedUri);
     if (!model) return;
 
     const markers = params.diagnostics.map((d: Diagnostic) => ({

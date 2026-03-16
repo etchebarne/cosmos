@@ -19,7 +19,21 @@ import {
   type TextDocumentPositionParams,
   type ReferenceParams,
   type SignatureHelpParams,
+  type CodeAction,
+  type CodeActionParams,
+  type Command,
+  type DocumentFormattingParams,
+  type DocumentRangeFormattingParams,
+  type RenameParams,
+  type PrepareRenameParams,
+  type TextEdit,
+  type WorkspaceEdit,
+  type DocumentSymbol,
+  type SymbolInformation,
+  type DocumentSymbolParams,
+  type Range,
   TextDocumentSyncKind,
+  type FileEvent,
 } from "vscode-languageserver-protocol";
 import { TauriLspTransport } from "./transport";
 import { pathToFileUri } from "./uri";
@@ -145,7 +159,10 @@ export class LspClient {
           definition: { dynamicRegistration: false },
           references: { dynamicRegistration: false },
           documentHighlight: { dynamicRegistration: false },
-          documentSymbol: { dynamicRegistration: false },
+          documentSymbol: {
+            dynamicRegistration: false,
+            hierarchicalDocumentSymbolSupport: true,
+          },
           codeAction: {
             dynamicRegistration: false,
             codeActionLiteralSupport: {
@@ -161,6 +178,9 @@ export class LspClient {
                 ],
               },
             },
+            resolveSupport: {
+              properties: ["edit"],
+            },
           },
           formatting: { dynamicRegistration: false },
           rangeFormatting: { dynamicRegistration: false },
@@ -172,6 +192,9 @@ export class LspClient {
         },
         workspace: {
           workspaceFolders: true,
+          didChangeWatchedFiles: {
+            dynamicRegistration: false,
+          },
         },
         window: {
           workDoneProgress: true,
@@ -188,6 +211,8 @@ export class LspClient {
 
     return result;
   }
+
+  // ── Document synchronization ──
 
   didOpen(uri: string, languageId: string, version: number, text: string): void {
     if (this.openDocuments.has(uri)) return;
@@ -238,6 +263,13 @@ export class LspClient {
     this.transport.sendNotification("textDocument/didSave", params);
   }
 
+  /** Clear open document tracking (call before reusing client after server restart). */
+  clearOpenDocuments(): void {
+    this.openDocuments.clear();
+  }
+
+  // ── Language features ──
+
   async completion(
     uri: string,
     line: number,
@@ -248,6 +280,10 @@ export class LspClient {
       position: { line, character },
     };
     return this.transport.sendRequest("textDocument/completion", params);
+  }
+
+  async completionResolve(item: CompletionItem): Promise<CompletionItem> {
+    return this.transport.sendRequest("completionItem/resolve", item);
   }
 
   async hover(uri: string, line: number, character: number): Promise<Hover | null> {
@@ -287,12 +323,94 @@ export class LspClient {
     return this.transport.sendRequest("textDocument/signatureHelp", params);
   }
 
+  async codeAction(
+    uri: string,
+    range: Range,
+    diagnostics: { range: Range; message: string; severity?: number; code?: number | string }[],
+  ): Promise<(CodeAction | Command)[] | null> {
+    const params: CodeActionParams = {
+      textDocument: { uri },
+      range,
+      context: { diagnostics: diagnostics as CodeActionParams["context"]["diagnostics"] },
+    };
+    return this.transport.sendRequest("textDocument/codeAction", params);
+  }
+
+  async formatting(
+    uri: string,
+    tabSize: number,
+    insertSpaces: boolean,
+  ): Promise<TextEdit[] | null> {
+    const params: DocumentFormattingParams = {
+      textDocument: { uri },
+      options: { tabSize, insertSpaces },
+    };
+    return this.transport.sendRequest("textDocument/formatting", params);
+  }
+
+  async rangeFormatting(
+    uri: string,
+    range: Range,
+    tabSize: number,
+    insertSpaces: boolean,
+  ): Promise<TextEdit[] | null> {
+    const params: DocumentRangeFormattingParams = {
+      textDocument: { uri },
+      range,
+      options: { tabSize, insertSpaces },
+    };
+    return this.transport.sendRequest("textDocument/rangeFormatting", params);
+  }
+
+  async prepareRename(
+    uri: string,
+    line: number,
+    character: number,
+  ): Promise<Range | { range: Range; placeholder: string } | null> {
+    const params: PrepareRenameParams = {
+      textDocument: { uri },
+      position: { line, character },
+    };
+    return this.transport.sendRequest("textDocument/prepareRename", params);
+  }
+
+  async rename(
+    uri: string,
+    line: number,
+    character: number,
+    newName: string,
+  ): Promise<WorkspaceEdit | null> {
+    const params: RenameParams = {
+      textDocument: { uri },
+      position: { line, character },
+      newName,
+    };
+    return this.transport.sendRequest("textDocument/rename", params);
+  }
+
+  async documentSymbol(uri: string): Promise<DocumentSymbol[] | SymbolInformation[] | null> {
+    const params: DocumentSymbolParams = {
+      textDocument: { uri },
+    };
+    return this.transport.sendRequest("textDocument/documentSymbol", params);
+  }
+
+  // ── Workspace notifications ──
+
+  didChangeWatchedFiles(changes: FileEvent[]): void {
+    this.transport.sendNotification("workspace/didChangeWatchedFiles", { changes });
+  }
+
+  // ── Diagnostics ──
+
   onDiagnostics(handler: (params: PublishDiagnosticsParams) => void): void {
     this.transport.onNotification(
       "textDocument/publishDiagnostics",
       handler as (params: unknown) => void,
     );
   }
+
+  // ── Lifecycle ──
 
   async shutdown(): Promise<void> {
     await this.transport.sendRequest("shutdown", null);
@@ -301,6 +419,7 @@ export class LspClient {
   }
 
   dispose(): void {
+    this.openDocuments.clear();
     this.transport.dispose();
   }
 }

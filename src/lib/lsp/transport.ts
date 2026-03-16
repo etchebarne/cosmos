@@ -27,6 +27,7 @@ interface PendingRequest {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
   timer: ReturnType<typeof setTimeout>;
+  method: string;
 }
 
 interface StatusPayload {
@@ -36,6 +37,13 @@ interface StatusPayload {
 
 /** Default request timeout in milliseconds. */
 const REQUEST_TIMEOUT_MS = 30_000;
+
+/**
+ * Handle returned by sendRequest that allows cancellation.
+ */
+export interface CancellablePromise<T> extends Promise<T> {
+  cancel: () => void;
+}
 
 /**
  * Tauri-based JSON-RPC transport for LSP.
@@ -68,14 +76,20 @@ export class TauriLspTransport {
     });
   }
 
-  async sendRequest<R>(method: string, params?: unknown, timeoutMs?: number): Promise<R> {
-    if (this.disposed) throw new Error("Transport disposed");
+  sendRequest<R>(method: string, params?: unknown, timeoutMs?: number): CancellablePromise<R> {
+    if (this.disposed) {
+      const p = Promise.reject(new Error("Transport disposed")) as CancellablePromise<R>;
+      p.cancel = () => {};
+      return p;
+    }
 
     const id = ++this.requestId;
     const request: JsonRpcRequest = { jsonrpc: "2.0", id, method, params };
     const timeout = timeoutMs ?? REQUEST_TIMEOUT_MS;
 
-    return new Promise<R>((resolve, reject) => {
+    let cancelFn = () => {};
+
+    const promise = new Promise<R>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pendingRequests.delete(id);
         reject(new Error(`LSP request '${method}' timed out after ${timeout}ms`));
@@ -85,7 +99,18 @@ export class TauriLspTransport {
         resolve: resolve as (value: unknown) => void,
         reject,
         timer,
+        method,
       });
+
+      cancelFn = () => {
+        if (this.pendingRequests.has(id)) {
+          clearTimeout(timer);
+          this.pendingRequests.delete(id);
+          reject(new Error(`LSP request '${method}' cancelled`));
+          // Send $/cancelRequest notification to server
+          this.sendNotification("$/cancelRequest", { id });
+        }
+      };
 
       invoke("lsp_send", {
         serverId: this.serverId,
@@ -95,7 +120,10 @@ export class TauriLspTransport {
         this.pendingRequests.delete(id);
         reject(err);
       });
-    });
+    }) as CancellablePromise<R>;
+
+    promise.cancel = cancelFn;
+    return promise;
   }
 
   sendNotification(method: string, params?: unknown): void {
@@ -105,8 +133,8 @@ export class TauriLspTransport {
     invoke("lsp_send", {
       serverId: this.serverId,
       message: JSON.stringify(notification),
-    }).catch(() => {
-      // Notification delivery is best-effort
+    }).catch((err) => {
+      console.warn(`[LSP] Notification '${method}' delivery failed:`, err);
     });
   }
 
@@ -177,7 +205,14 @@ export class TauriLspTransport {
         clearTimeout(pending.timer);
         this.pendingRequests.delete(response.id);
         if (response.error) {
-          pending.reject(new Error(`LSP error ${response.error.code}: ${response.error.message}`));
+          // RequestCancelled (-32800) is expected after $/cancelRequest — don't log it
+          if (response.error.code !== -32800) {
+            pending.reject(
+              new Error(`LSP error ${response.error.code}: ${response.error.message}`),
+            );
+          } else {
+            pending.reject(new Error(`LSP request '${pending.method}' cancelled by server`));
+          }
         } else {
           pending.resolve(response.result);
         }

@@ -53,12 +53,22 @@ fn make_server_id(workspace_path: &str, language_id: &str) -> String {
     format!("{language_id}:{safe_path}")
 }
 
-fn spawn_server(command: &str, args: &[String], working_dir: &str) -> std::io::Result<Child> {
+/// Extract the workspace path suffix from a server ID.
+/// Server IDs are formatted as "language:path".
+fn server_id_workspace(server_id: &str) -> Option<&str> {
+    server_id.split_once(':').map(|(_, path)| path)
+}
+
+fn spawn_server(
+    command: &str,
+    args: &[String],
+    working_dir: &str,
+) -> std::io::Result<(Child, Option<tokio::process::ChildStderr>)> {
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
 
-        if command.ends_with(".cmd") || command.ends_with(".bat") {
+        let mut child = if command.ends_with(".cmd") || command.ends_with(".bat") {
             tokio::process::Command::new("cmd")
                 .arg("/C")
                 .arg(command)
@@ -66,29 +76,33 @@ fn spawn_server(command: &str, args: &[String], working_dir: &str) -> std::io::R
                 .current_dir(working_dir)
                 .stdin(std::process::Stdio::piped())
                 .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::null())
+                .stderr(std::process::Stdio::piped())
                 .creation_flags(CREATE_NO_WINDOW)
-                .spawn()
+                .spawn()?
         } else {
             tokio::process::Command::new(command)
                 .args(args)
                 .current_dir(working_dir)
                 .stdin(std::process::Stdio::piped())
                 .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::null())
+                .stderr(std::process::Stdio::piped())
                 .creation_flags(CREATE_NO_WINDOW)
-                .spawn()
-        }
+                .spawn()?
+        };
+        let stderr = child.stderr.take();
+        Ok((child, stderr))
     }
     #[cfg(not(target_os = "windows"))]
     {
-        tokio::process::Command::new(command)
+        let mut child = tokio::process::Command::new(command)
             .args(args)
             .current_dir(working_dir)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null())
-            .spawn()
+            .stderr(std::process::Stdio::piped())
+            .spawn()?;
+        let stderr = child.stderr.take();
+        Ok((child, stderr))
     }
 }
 
@@ -142,16 +156,40 @@ pub async fn lsp_start(
     // Resolve command: check local installations first, then PATH
     let resolved_command = resolve_command(&app, &config.command);
 
-    // Spawn the language server process
-    let mut child = spawn_server(&resolved_command, &config.args, &workspace_path)
+    // Spawn the language server process (now captures stderr)
+    let (mut child, stderr) = spawn_server(&resolved_command, &config.args, &workspace_path)
         .map_err(|e| format!("Failed to start {}: {e}", config.command))?;
 
     let stdin = child.stdin.take().ok_or("Failed to take stdin")?;
     let stdout = child.stdout.take().ok_or("Failed to take stdout")?;
 
+    // Spawn background task to log stderr output
+    if let Some(stderr) = stderr {
+        let server_name = config.server_name.clone();
+        tokio::spawn(async move {
+            use tokio::io::AsyncBufReadExt;
+            let mut reader = BufReader::new(stderr);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                match reader.read_line(&mut line).await {
+                    Ok(0) => break, // EOF
+                    Ok(_) => {
+                        let trimmed = line.trim();
+                        if !trimmed.is_empty() {
+                            eprintln!("[LSP stderr][{server_name}] {trimmed}");
+                        }
+                    }
+                    Err(_) => break,
+                }
+            }
+        });
+    }
+
     // Spawn background task to read stdout and emit messages to frontend
     let app_clone = app.clone();
     let sid = server_id.clone();
+    let servers_ref = state.servers.clone();
     tokio::spawn(async move {
         let mut reader = BufReader::new(stdout);
         loop {
@@ -161,6 +199,9 @@ pub async fn lsp_start(
                     let _ = app_clone.emit(&event, &msg);
                 }
                 Err(e) => {
+                    // Remove dead server from the HashMap so a new one can be spawned
+                    servers_ref.lock().await.remove(&sid);
+
                     let event = format!("lsp-status:{}", sid);
                     let _ = app_clone.emit(
                         &event,
@@ -245,12 +286,15 @@ pub async fn lsp_stop_workspace(
     state: State<'_, LspState>,
     workspace_path: String,
 ) -> Result<(), String> {
+    let safe_path = workspace_path.replace('\\', "/");
+
     let removed: Vec<Arc<Mutex<LspServer>>> = {
         let mut servers = state.servers.lock().await;
-        let safe_path = workspace_path.replace('\\', "/");
+        // Use exact match on the workspace path portion of the server ID
+        // to avoid accidentally matching overlapping paths.
         let keys_to_remove: Vec<String> = servers
             .keys()
-            .filter(|k| k.ends_with(&format!(":{safe_path}")))
+            .filter(|k| server_id_workspace(k) == Some(&safe_path))
             .cloned()
             .collect();
         keys_to_remove
@@ -271,7 +315,10 @@ pub async fn lsp_check_availability(
     app: AppHandle,
     workspace_path: String,
 ) -> Result<Vec<ServerAvailability>, String> {
-    Ok(check_availability(&app, &workspace_path))
+    // Run blocking filesystem checks off the async runtime
+    tokio::task::spawn_blocking(move || check_availability(&app, &workspace_path))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 // ── Language group command ──
@@ -288,7 +335,10 @@ pub async fn lsp_scan_projects(
     app: AppHandle,
     workspace_path: String,
 ) -> Result<Vec<DetectedProject>, String> {
-    Ok(scan_workspace_projects(&app, &workspace_path))
+    // Run blocking filesystem walk off the async runtime
+    tokio::task::spawn_blocking(move || scan_workspace_projects(&app, &workspace_path))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 // ── Project root resolution ──
@@ -299,7 +349,10 @@ pub async fn lsp_resolve_root(
     language_id: String,
     workspace_path: String,
 ) -> Result<String, String> {
-    Ok(find_project_root(&file_path, &language_id, &workspace_path))
+    // Run blocking filesystem walk off the async runtime
+    tokio::task::spawn_blocking(move || find_project_root(&file_path, &language_id, &workspace_path))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 // ── Registry commands ──

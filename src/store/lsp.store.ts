@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
 import { invoke } from "@tauri-apps/api/core";
 import type { Monaco } from "@monaco-editor/react";
 import type { IDisposable } from "monaco-editor";
@@ -24,7 +25,7 @@ export interface ServerAvailability {
 export interface LspServerInfo {
   serverId: string;
   languageId: string;
-  client: LspClient;
+  client: LspClient | null;
   status: ServerStatus;
   serverName: string;
   errorMessage: string | null;
@@ -96,6 +97,11 @@ function getMonacoLanguages(serverLanguage: string): string[] {
 
 const SHUTDOWN_TIMEOUT_MS = 5_000;
 
+/** Maximum restart attempts before giving up. */
+const MAX_RESTART_ATTEMPTS = 2;
+/** Delay between restart attempts in milliseconds. */
+const RESTART_DELAY_MS = 5_000;
+
 // Track active progress tokens across all servers.
 // Key: "workspacePath\0serverLang\0token"
 const progressTokens = new Map<string, IndexProgress>();
@@ -104,459 +110,472 @@ function progressKey(workspacePath: string, serverLang: string, token: string | 
   return `${workspacePath}\0${serverLang}\0${token}`;
 }
 
-export const useLspStore = create<LspState>((set, get) => {
-  // ── Shared helpers (use set/get from closure) ──
+// Track restart attempts per server to implement backoff
+const restartAttempts = new Map<string, number>();
 
-  /** Recompute the indexProgress store slice for a workspace from the token map. */
-  function syncProgressState(workspacePath: string) {
-    const prefix = workspacePath + "\0";
-    const entries: IndexProgress[] = [];
-    for (const [key, progress] of progressTokens) {
-      if (key.startsWith(prefix)) {
-        entries.push(progress);
-      }
-    }
-    set((state) => ({
-      indexProgress: { ...state.indexProgress, [workspacePath]: entries },
-    }));
-  }
+export const useLspStore = create<LspState>()(
+  immer((set, get) => {
+    // ── Shared helpers (use set/get from closure) ──
 
-  /** Update the store status when a server unexpectedly stops. */
-  function handleServerStopped(workspacePath: string, serverLang: string, error?: string | null) {
-    const info = get().servers[workspacePath]?.[serverLang];
-    if (info && info.status === "running") {
-      set((state) => ({
-        servers: {
-          ...state.servers,
-          [workspacePath]: {
-            ...state.servers[workspacePath],
-            [serverLang]: {
-              ...state.servers[workspacePath][serverLang],
-              status: "stopped" as const,
-              errorMessage: error ?? null,
-            },
-          },
-        },
-      }));
-    }
-  }
-
-  /** Register Monaco providers for a running server that doesn't have them yet. */
-  function ensureProviders(
-    workspacePath: string,
-    serverLang: string,
-    info: LspServerInfo,
-    monaco: Monaco,
-  ) {
-    if (info.providerDisposables.length > 0) return;
-
-    const monacoLangs = getMonacoLanguages(serverLang);
-    const providerDisposables = registerLspProviders(monaco, info.client, monacoLangs);
-
-    if (serverLang === "typescript") {
-      monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-        noSemanticValidation: true,
-        noSyntaxValidation: true,
-      });
-      monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-        noSemanticValidation: true,
-        noSyntaxValidation: true,
-      });
-    }
-
-    set((state) => ({
-      servers: {
-        ...state.servers,
-        [workspacePath]: {
-          ...state.servers[workspacePath],
-          [serverLang]: {
-            ...state.servers[workspacePath][serverLang],
-            providerDisposables,
-          },
-        },
-      },
-    }));
-  }
-
-  /**
-   * Core server initialization: spawn, connect transport, LSP initialize.
-   * `projectRoot` is the resolved project root used for cwd and rootUri.
-   * `workspacePath` is the user's workspace used as the store key.
-   * Does NOT register Monaco providers — that's handled separately.
-   * Returns the client on success, throws on failure.
-   */
-  async function initializeServer(
-    workspacePath: string,
-    projectRoot: string,
-    languageId: string,
-  ): Promise<LspClient | null> {
-    await ensureLanguageGroups();
-    const serverLang = resolveServerLanguage(languageId);
-
-    // Already running?
-    const existing = get().servers[workspacePath]?.[serverLang];
-    if (existing && (existing.status === "running" || existing.status === "starting")) {
-      return existing.status === "running" ? existing.client : null;
-    }
-    if (existing?.status === "unavailable" || existing?.status === "installing") {
-      return null;
-    }
-
-    // Deduplicate concurrent calls
-    const pendingKey = `${workspacePath}:${serverLang}`;
-    const inflight = pending.get(pendingKey);
-    if (inflight) return inflight;
-
-    const promise = (async (): Promise<LspClient | null> => {
-      // Ask Rust to spawn the language server with the resolved project root
-      const result = await invoke<{
-        server_id: string;
-        server_name: string;
-        server_language: string;
-      }>("lsp_start", {
-        workspacePath: projectRoot,
-        languageId,
-      });
-
-      // Create transport and client
-      const transport = new TauriLspTransport(result.server_id);
-      await transport.connect();
-      const client = new LspClient(transport);
-
-      transport.onServerStopped((error) => handleServerStopped(workspacePath, serverLang, error));
-
-      // Initialize the LSP server with the project root as rootUri
-      await client.initialize(projectRoot);
-
-      // Track work-done progress (indexing, loading, etc.)
-      client.onProgress((token, value) => {
-        const key = progressKey(workspacePath, serverLang, token);
-        if (value.kind === "begin") {
-          progressTokens.set(key, {
-            serverName: result.server_name,
-            title: value.title,
-            message: value.message,
-            percentage: value.percentage,
-          });
-        } else if (value.kind === "report") {
-          const existing = progressTokens.get(key);
-          if (existing) {
-            progressTokens.set(key, {
-              ...existing,
-              message: value.message ?? existing.message,
-              percentage: value.percentage ?? existing.percentage,
-            });
-          }
-        } else if (value.kind === "end") {
-          progressTokens.delete(key);
+    /** Recompute the indexProgress store slice for a workspace from the token map. */
+    function syncProgressState(workspacePath: string) {
+      const prefix = workspacePath + "\0";
+      const entries: IndexProgress[] = [];
+      for (const [key, progress] of progressTokens) {
+        if (key.startsWith(prefix)) {
+          entries.push(progress);
         }
-        syncProgressState(workspacePath);
+      }
+      set((state) => {
+        state.indexProgress[workspacePath] = entries;
       });
+    }
 
-      // Store under the user's workspace path (for organization/cleanup)
-      set((state) => ({
-        servers: {
-          ...state.servers,
-          [workspacePath]: {
-            ...state.servers[workspacePath],
-            [serverLang]: {
-              serverId: result.server_id,
-              languageId: serverLang,
-              client,
-              status: "running" as const,
-              serverName: result.server_name,
-              errorMessage: null,
-              providerDisposables: [],
-            },
-          },
-        },
-      }));
-
-      return client;
-    })();
-
-    pending.set(pendingKey, promise);
-    promise.finally(() => pending.delete(pendingKey));
-    return promise;
-  }
-
-  return {
-    servers: {},
-    availability: {},
-    indexProgress: {},
-
-    checkAvailability: async (workspacePath) => {
-      try {
-        const result = await invoke<ServerAvailability[]>("lsp_check_availability", {
-          workspacePath,
+    /** Update the store status when a server unexpectedly stops. */
+    function handleServerStopped(workspacePath: string, serverLang: string, error?: string | null) {
+      const info = get().servers[workspacePath]?.[serverLang];
+      if (info && info.status === "running") {
+        set((state) => {
+          const server = state.servers[workspacePath]?.[serverLang];
+          if (server) {
+            server.status = "stopped";
+            server.errorMessage = error ?? null;
+          }
         });
-        set((state) => ({
-          availability: {
-            ...state.availability,
-            [workspacePath]: result,
-          },
-        }));
-      } catch (err) {
-        console.error("Failed to check LSP availability:", err);
+
+        // Attempt automatic restart with backoff
+        const key = `${workspacePath}:${serverLang}`;
+        const attempts = restartAttempts.get(key) ?? 0;
+
+        if (attempts < MAX_RESTART_ATTEMPTS && monacoRef) {
+          restartAttempts.set(key, attempts + 1);
+          const monaco = monacoRef;
+
+          console.warn(
+            `[LSP] Server ${serverLang} stopped unexpectedly. ` +
+              `Restart attempt ${attempts + 1}/${MAX_RESTART_ATTEMPTS} in ${RESTART_DELAY_MS}ms...`,
+          );
+
+          setTimeout(() => {
+            // Clear old server entry so startServer doesn't see it as "stopped"
+            set((state) => {
+              const ws = state.servers[workspacePath];
+              if (ws) delete ws[serverLang];
+            });
+
+            get()
+              .startServer(workspacePath, serverLang, null, monaco)
+              .then((client) => {
+                if (client) {
+                  // Reset attempts on successful restart
+                  restartAttempts.delete(key);
+                  console.info(`[LSP] Server ${serverLang} restarted successfully.`);
+                }
+              })
+              .catch((err) => {
+                console.error(`[LSP] Restart failed for ${serverLang}:`, err);
+              });
+          }, RESTART_DELAY_MS);
+        } else if (attempts >= MAX_RESTART_ATTEMPTS) {
+          console.error(
+            `[LSP] Server ${serverLang} stopped. Max restart attempts (${MAX_RESTART_ATTEMPTS}) reached.`,
+          );
+          restartAttempts.delete(key);
+        }
       }
-    },
+    }
 
-    warmupWorkspace: async (workspacePath) => {
-      await ensureLanguageGroups();
+    /** Register Monaco providers for a running server that doesn't have them yet. */
+    function ensureProviders(
+      workspacePath: string,
+      serverLang: string,
+      info: LspServerInfo,
+      monaco: Monaco,
+    ) {
+      if (info.providerDisposables.length > 0 || !info.client) return;
 
-      // Deep-scan the workspace tree for project markers (Cargo.toml, package.json, etc.)
-      // at any depth, with each project resolved to its correct root directory.
-      let projects: { language_id: string; project_root: string; available: boolean }[];
-      try {
-        projects = await invoke<typeof projects>("lsp_scan_projects", { workspacePath });
-      } catch {
-        return;
+      const monacoLangs = getMonacoLanguages(serverLang);
+      const providerDisposables = registerLspProviders(monaco, info.client, monacoLangs);
+
+      if (serverLang === "typescript") {
+        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+          noSemanticValidation: true,
+          noSyntaxValidation: true,
+        });
+        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+          noSemanticValidation: true,
+          noSyntaxValidation: true,
+        });
       }
 
-      // Start each available server concurrently in the background.
-      // Each server gets the resolved project root as its cwd and rootUri.
-      for (const project of projects) {
-        if (!project.available) continue;
+      set((state) => {
+        const server = state.servers[workspacePath]?.[serverLang];
+        if (server) {
+          server.providerDisposables = providerDisposables;
+        }
+      });
+    }
 
-        const serverLang = resolveServerLanguage(project.language_id);
-        const existing = get().servers[workspacePath]?.[serverLang];
-        if (existing) continue;
-
-        initializeServer(workspacePath, project.project_root, project.language_id).catch(() => {});
-      }
-    },
-
-    startServer: async (workspacePath, languageId, filePath, monaco) => {
-      monacoRef = monaco;
+    /**
+     * Core server initialization: spawn, connect transport, LSP initialize.
+     * `projectRoot` is the resolved project root used for cwd and rootUri.
+     * `workspacePath` is the user's workspace used as the store key.
+     * Does NOT register Monaco providers — that's handled separately.
+     * Returns the client on success, throws on failure.
+     */
+    async function initializeServer(
+      workspacePath: string,
+      projectRoot: string,
+      languageId: string,
+    ): Promise<LspClient | null> {
       await ensureLanguageGroups();
       const serverLang = resolveServerLanguage(languageId);
 
-      // If server is already running (e.g. from warmup), ensure providers are registered
+      // Already running?
       const existing = get().servers[workspacePath]?.[serverLang];
-      if (existing && existing.status === "running") {
-        ensureProviders(workspacePath, serverLang, existing, monaco);
-        return existing.client;
+      if (existing && (existing.status === "running" || existing.status === "starting")) {
+        return existing.status === "running" ? existing.client : null;
       }
-
-      // Don't retry if we know it's unavailable or installing
       if (existing?.status === "unavailable" || existing?.status === "installing") {
         return null;
       }
 
-      // Resolve the actual project root: walk up from the file to find the
-      // nearest project marker (Cargo.toml, package.json, etc.)
-      let projectRoot = workspacePath;
-      if (filePath) {
+      // Deduplicate concurrent calls
+      const pendingKey = `${workspacePath}:${serverLang}`;
+      const inflight = pending.get(pendingKey);
+      if (inflight) return inflight;
+
+      const promise = (async (): Promise<LspClient | null> => {
+        // Ask Rust to spawn the language server with the resolved project root
+        const result = await invoke<{
+          server_id: string;
+          server_name: string;
+          server_language: string;
+        }>("lsp_start", {
+          workspacePath: projectRoot,
+          languageId,
+        });
+
+        // Create transport and client
+        const transport = new TauriLspTransport(result.server_id);
+        await transport.connect();
+        const client = new LspClient(transport);
+
+        transport.onServerStopped((error) => handleServerStopped(workspacePath, serverLang, error));
+
+        // Initialize the LSP server with the project root as rootUri
+        await client.initialize(projectRoot);
+
+        // Track work-done progress (indexing, loading, etc.)
+        client.onProgress((token, value) => {
+          const key = progressKey(workspacePath, serverLang, token);
+          if (value.kind === "begin") {
+            progressTokens.set(key, {
+              serverName: result.server_name,
+              title: value.title,
+              message: value.message,
+              percentage: value.percentage,
+            });
+          } else if (value.kind === "report") {
+            const existing = progressTokens.get(key);
+            if (existing) {
+              progressTokens.set(key, {
+                ...existing,
+                message: value.message ?? existing.message,
+                percentage: value.percentage ?? existing.percentage,
+              });
+            }
+          } else if (value.kind === "end") {
+            progressTokens.delete(key);
+          }
+          syncProgressState(workspacePath);
+        });
+
+        // Store under the user's workspace path (for organization/cleanup)
+        set((state) => {
+          if (!state.servers[workspacePath]) {
+            state.servers[workspacePath] = {};
+          }
+          state.servers[workspacePath][serverLang] = {
+            serverId: result.server_id,
+            languageId: serverLang,
+            client,
+            status: "running",
+            serverName: result.server_name,
+            errorMessage: null,
+            providerDisposables: [],
+          };
+        });
+
+        return client;
+      })();
+
+      pending.set(pendingKey, promise);
+      promise.finally(() => pending.delete(pendingKey));
+      return promise;
+    }
+
+    return {
+      servers: {},
+      availability: {},
+      indexProgress: {},
+
+      checkAvailability: async (workspacePath) => {
         try {
-          projectRoot = await invoke<string>("lsp_resolve_root", {
-            filePath,
-            languageId,
+          const result = await invoke<ServerAvailability[]>("lsp_check_availability", {
             workspacePath,
           });
+          set((state) => {
+            state.availability[workspacePath] = result;
+          });
+        } catch (err) {
+          console.error("Failed to check LSP availability:", err);
+        }
+      },
+
+      warmupWorkspace: async (workspacePath) => {
+        await ensureLanguageGroups();
+
+        // Deep-scan the workspace tree for project markers (Cargo.toml, package.json, etc.)
+        // at any depth, with each project resolved to its correct root directory.
+        let projects: { language_id: string; project_root: string; available: boolean }[];
+        try {
+          projects = await invoke<typeof projects>("lsp_scan_projects", { workspacePath });
         } catch {
-          // Fall back to workspace root
+          return;
         }
-      }
 
-      try {
-        // May share an in-flight promise from warmupWorkspace or another startServer call
-        const pendingKey = `${workspacePath}:${serverLang}`;
-        const inflight = pending.get(pendingKey);
+        // Start each available server concurrently in the background.
+        // Each server gets the resolved project root as its cwd and rootUri.
+        for (const project of projects) {
+          if (!project.available) continue;
 
-        const client = inflight
-          ? await inflight
-          : await initializeServer(workspacePath, projectRoot, languageId);
-        if (client) {
-          const info = get().servers[workspacePath]?.[serverLang];
-          if (info) ensureProviders(workspacePath, serverLang, info, monaco);
+          const serverLang = resolveServerLanguage(project.language_id);
+          const existing = get().servers[workspacePath]?.[serverLang];
+          if (existing) continue;
+
+          initializeServer(workspacePath, project.project_root, project.language_id).catch(
+            (err) => {
+              console.warn(`[LSP] Warmup failed for ${project.language_id}:`, err);
+            },
+          );
         }
-        return client;
-      } catch (err) {
-        const errorStr = String(err);
+      },
 
-        // No server configured for this language — silently ignore
-        if (errorStr.includes("No language server configured")) {
+      startServer: async (workspacePath, languageId, filePath, monaco) => {
+        monacoRef = monaco;
+        await ensureLanguageGroups();
+        const serverLang = resolveServerLanguage(languageId);
+
+        // If server is already running (e.g. from warmup), ensure providers are registered
+        const existing = get().servers[workspacePath]?.[serverLang];
+        if (existing && existing.status === "running") {
+          ensureProviders(workspacePath, serverLang, existing, monaco);
+          return existing.client;
+        }
+
+        // Don't retry if we know it's unavailable or installing
+        if (existing?.status === "unavailable" || existing?.status === "installing") {
           return null;
         }
 
-        // Detect "not found" errors (binary not on PATH)
-        const isNotFound =
-          errorStr.includes("not found") ||
-          errorStr.includes("No such file") ||
-          errorStr.includes("program not found") ||
-          errorStr.includes("os error 2") ||
-          errorStr.includes("The system cannot find");
+        // Resolve the actual project root: walk up from the file to find the
+        // nearest project marker (Cargo.toml, package.json, etc.)
+        let projectRoot = workspacePath;
+        if (filePath) {
+          try {
+            projectRoot = await invoke<string>("lsp_resolve_root", {
+              filePath,
+              languageId,
+              workspacePath,
+            });
+          } catch {
+            // Fall back to workspace root
+          }
+        }
 
-        const nameMatch = errorStr.match(/Failed to start ([^:]+):/);
-        const displayName = nameMatch?.[1] ?? serverLang;
+        try {
+          // May share an in-flight promise from warmupWorkspace or another startServer call
+          const pendingKey = `${workspacePath}:${serverLang}`;
+          const inflight = pending.get(pendingKey);
 
-        const status: ServerStatus = isNotFound ? "unavailable" : "error";
-        const errorMessage = isNotFound
-          ? `${displayName} is not installed`
-          : `${displayName} failed to start`;
+          const client = inflight
+            ? await inflight
+            : await initializeServer(workspacePath, projectRoot, languageId);
+          if (client) {
+            const info = get().servers[workspacePath]?.[serverLang];
+            if (info) ensureProviders(workspacePath, serverLang, info, monaco);
+          }
+          return client;
+        } catch (err) {
+          const errorStr = String(err);
 
-        console.error(`LSP ${status} for ${serverLang}:`, err);
+          // No server configured for this language — silently ignore
+          if (errorStr.includes("No language server configured")) {
+            return null;
+          }
 
-        set((state) => ({
-          servers: {
-            ...state.servers,
-            [workspacePath]: {
-              ...state.servers[workspacePath],
-              [serverLang]: {
-                serverId: "",
-                languageId: serverLang,
-                client: null as unknown as LspClient,
-                status,
-                serverName: displayName,
-                errorMessage,
-                providerDisposables: [],
+          // Detect "not found" errors (binary not on PATH)
+          const isNotFound =
+            errorStr.includes("not found") ||
+            errorStr.includes("No such file") ||
+            errorStr.includes("program not found") ||
+            errorStr.includes("os error 2") ||
+            errorStr.includes("The system cannot find");
+
+          const nameMatch = errorStr.match(/Failed to start ([^:]+):/);
+          const displayName = nameMatch?.[1] ?? serverLang;
+
+          const status: ServerStatus = isNotFound ? "unavailable" : "error";
+          const errorMessage = isNotFound
+            ? `${displayName} is not installed`
+            : `${displayName} failed to start`;
+
+          console.error(`LSP ${status} for ${serverLang}:`, err);
+
+          set((state) => {
+            if (!state.servers[workspacePath]) {
+              state.servers[workspacePath] = {};
+            }
+            state.servers[workspacePath][serverLang] = {
+              serverId: "",
+              languageId: serverLang,
+              client: null,
+              status,
+              serverName: displayName,
+              errorMessage,
+              providerDisposables: [],
+            };
+          });
+
+          if (isNotFound) {
+            const { installServer } = get();
+            useToastStore.getState().addToast({
+              message: `${displayName} is not installed`,
+              type: "warning",
+              action: {
+                label: "Install",
+                onClick: () => installServer(workspacePath, displayName),
               },
-            },
-          },
-        }));
+            });
+          }
 
-        if (isNotFound) {
-          const { installServer } = get();
-          useToastStore.getState().addToast({
-            message: `${displayName} is not installed`,
-            type: "warning",
-            action: {
-              label: "Install",
-              onClick: () => installServer(workspacePath, displayName),
-            },
+          return null;
+        }
+      },
+
+      getClient: (workspacePath, languageId) => {
+        const serverLang = resolveServerLanguage(languageId);
+        const info = get().servers[workspacePath]?.[serverLang];
+        return info?.status === "running" ? info.client : null;
+      },
+
+      installServer: async (workspacePath, serverName) => {
+        const workspace = get().servers[workspacePath];
+        const langEntry = workspace
+          ? Object.entries(workspace).find(([, info]) => info.serverName === serverName)
+          : null;
+        const serverLang = langEntry?.[0];
+
+        if (serverLang) {
+          set((state) => {
+            const server = state.servers[workspacePath]?.[serverLang];
+            if (server) {
+              server.status = "installing";
+              server.errorMessage = null;
+            }
           });
         }
 
-        return null;
-      }
-    },
+        try {
+          await invoke("lsp_install_server", { name: serverName });
 
-    getClient: (workspacePath, languageId) => {
-      const serverLang = resolveServerLanguage(languageId);
-      const info = get().servers[workspacePath]?.[serverLang];
-      return info?.status === "running" ? info.client : null;
-    },
+          useToastStore.getState().addToast({
+            message: `${serverName} installed successfully`,
+            type: "success",
+          });
 
-    installServer: async (workspacePath, serverName) => {
-      const workspace = get().servers[workspacePath];
-      const langEntry = workspace
-        ? Object.entries(workspace).find(([, info]) => info.serverName === serverName)
-        : null;
-      const serverLang = langEntry?.[0];
+          if (serverLang) {
+            set((state) => {
+              const server = state.servers[workspacePath]?.[serverLang];
+              if (server) {
+                server.status = "stopped";
+                server.errorMessage = null;
+              }
+            });
+          }
 
-      if (serverLang) {
-        set((state) => ({
-          servers: {
-            ...state.servers,
-            [workspacePath]: {
-              ...state.servers[workspacePath],
-              [serverLang]: {
-                ...state.servers[workspacePath][serverLang],
-                status: "installing" as const,
-                errorMessage: null,
-              },
-            },
-          },
-        }));
-      }
+          if (monacoRef && serverLang) {
+            await get().startServer(workspacePath, serverLang, null, monacoRef);
+          }
+        } catch (err) {
+          const errorMessage = `Failed to install ${serverName}: ${err}`;
+          console.error(errorMessage);
 
-      try {
-        await invoke("lsp_install_server", { name: serverName });
+          useToastStore.getState().addToast({
+            message: errorMessage,
+            type: "error",
+            duration: 12000,
+          });
 
-        useToastStore.getState().addToast({
-          message: `${serverName} installed successfully`,
-          type: "success",
-        });
-
-        if (serverLang) {
-          set((state) => ({
-            servers: {
-              ...state.servers,
-              [workspacePath]: {
-                ...state.servers[workspacePath],
-                [serverLang]: {
-                  ...state.servers[workspacePath][serverLang],
-                  status: "stopped" as const,
-                  errorMessage: null,
-                },
-              },
-            },
-          }));
-        }
-
-        if (monacoRef && serverLang) {
-          await get().startServer(workspacePath, serverLang, null, monacoRef);
-        }
-      } catch (err) {
-        const errorMessage = `Failed to install ${serverName}: ${err}`;
-        console.error(errorMessage);
-
-        useToastStore.getState().addToast({
-          message: errorMessage,
-          type: "error",
-          duration: 12000,
-        });
-
-        if (serverLang) {
-          set((state) => ({
-            servers: {
-              ...state.servers,
-              [workspacePath]: {
-                ...state.servers[workspacePath],
-                [serverLang]: {
-                  ...state.servers[workspacePath][serverLang],
-                  status: "unavailable" as const,
-                  errorMessage,
-                },
-              },
-            },
-          }));
-        }
-      }
-    },
-
-    stopWorkspace: async (workspacePath) => {
-      const workspace = get().servers[workspacePath];
-      if (!workspace) return;
-
-      for (const info of Object.values(workspace)) {
-        for (const d of info.providerDisposables) {
-          d.dispose();
-        }
-        if (info.client && info.status === "running") {
-          try {
-            await Promise.race([
-              info.client.shutdown(),
-              new Promise<void>((_, reject) =>
-                setTimeout(() => reject(new Error("Shutdown timed out")), SHUTDOWN_TIMEOUT_MS),
-              ),
-            ]);
-          } catch {
-            info.client.dispose();
+          if (serverLang) {
+            set((state) => {
+              const server = state.servers[workspacePath]?.[serverLang];
+              if (server) {
+                server.status = "unavailable";
+                server.errorMessage = errorMessage;
+              }
+            });
           }
         }
-        // Stop the specific server on the backend by ID (handles resolved roots correctly)
-        if (info.serverId) {
-          await invoke("lsp_stop", { serverId: info.serverId }).catch(() => {});
+      },
+
+      stopWorkspace: async (workspacePath) => {
+        const workspace = get().servers[workspacePath];
+        if (!workspace) return;
+
+        // Shutdown all servers in parallel
+        const shutdownPromises = Object.values(workspace).map(async (info) => {
+          for (const d of info.providerDisposables) {
+            d.dispose();
+          }
+          if (info.client && info.status === "running") {
+            try {
+              await Promise.race([
+                info.client.shutdown(),
+                new Promise<void>((_, reject) =>
+                  setTimeout(() => reject(new Error("Shutdown timed out")), SHUTDOWN_TIMEOUT_MS),
+                ),
+              ]);
+            } catch {
+              info.client.dispose();
+            }
+          }
+          // Stop the specific server on the backend by ID (handles resolved roots correctly)
+          if (info.serverId) {
+            await invoke("lsp_stop", { serverId: info.serverId }).catch(() => {});
+          }
+        });
+
+        await Promise.allSettled(shutdownPromises);
+
+        // Clean up progress tokens for this workspace
+        const prefix = workspacePath + "\0";
+        for (const key of progressTokens.keys()) {
+          if (key.startsWith(prefix)) progressTokens.delete(key);
         }
-      }
 
-      // Clean up progress tokens for this workspace
-      const prefix = workspacePath + "\0";
-      for (const key of progressTokens.keys()) {
-        if (key.startsWith(prefix)) progressTokens.delete(key);
-      }
+        // Clean up restart attempt tracking
+        for (const key of restartAttempts.keys()) {
+          if (key.startsWith(workspacePath + ":")) restartAttempts.delete(key);
+        }
 
-      set((state) => {
-        const { [workspacePath]: _, ...restServers } = state.servers;
-        const { [workspacePath]: __, ...restAvailability } = state.availability;
-        const { [workspacePath]: ___, ...restProgress } = state.indexProgress;
-        return {
-          servers: restServers,
-          availability: restAvailability,
-          indexProgress: restProgress,
-        };
-      });
-    },
-  };
-});
+        set((state) => {
+          delete state.servers[workspacePath];
+          delete state.availability[workspacePath];
+          delete state.indexProgress[workspacePath];
+        });
+      },
+    };
+  }),
+);
