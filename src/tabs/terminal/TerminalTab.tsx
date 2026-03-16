@@ -79,7 +79,6 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
     const MIN_FONT_SIZE = 8;
     const MAX_FONT_SIZE = 30;
 
-    const isWindows = navigator.userAgent.includes("Windows");
     const t = getTheme().terminal;
     const terminal = new Terminal({
       fontSize: DEFAULT_FONT_SIZE,
@@ -167,27 +166,16 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
 
     // Resize handling — registered immediately so no resize is missed
     let resizeTimeout: ReturnType<typeof setTimeout>;
-    let prevCols = terminal.cols;
-
     const observer = new ResizeObserver(() => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
         fitAddon.fit();
         if (spawned) {
-          const colsChanged = terminal.cols !== prevCols;
-          prevCols = terminal.cols;
-
           invoke("terminal_resize", {
             id: terminalId,
             cols: terminal.cols,
             rows: terminal.rows,
           });
-
-          // On Windows, ConPTY reflow garbles the display after column changes.
-          // Send Ctrl+L to ask the shell to clear and redraw the prompt.
-          if (isWindows && colsChanged) {
-            invoke("terminal_write", { id: terminalId, data: "\x0c" });
-          }
         }
       }, 150);
     });

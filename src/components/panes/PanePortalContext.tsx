@@ -19,6 +19,7 @@ class PaneContainerRegistry {
     if (!el) {
       el = document.createElement("div");
       el.style.height = "100%";
+      el.style.position = "relative";
       this.containers.set(paneId, el);
     }
     return el;
@@ -129,7 +130,14 @@ export function PanePortalProvider({
           .sort((a, b) => a.id.localeCompare(b.id))
           .map((tab) =>
             createPortal(
-              <div key={tab.id} className={tab.id === activeTabId ? "h-full" : "hidden"}>
+              <div
+                key={tab.id}
+                className={
+                  tab.id === activeTabId
+                    ? "h-full"
+                    : "invisible absolute inset-0 overflow-hidden pointer-events-none"
+                }
+              >
                 <TabContent tab={tab} paneId={leaf.id} />
               </div>,
               container,
