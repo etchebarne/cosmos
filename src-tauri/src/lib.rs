@@ -28,6 +28,7 @@ pub fn run() {
             lsp::lsp_stop,
             lsp::lsp_stop_workspace,
             lsp::lsp_check_availability,
+            lsp::lsp_language_groups,
             lsp::lsp_registry_list,
             lsp::lsp_registry_search,
             lsp::lsp_installed_list,

@@ -54,41 +54,49 @@ let monacoRef: Monaco | null = null;
 // Track in-flight startServer calls so concurrent callers share the same promise
 const pending = new Map<string, Promise<LspClient | null>>();
 
-// Map Monaco language IDs to the server-level language group.
-// Must match backend's server_language_group() in detection.rs.
-export function resolveServerLanguage(languageId: string): string {
-  switch (languageId) {
-    case "javascript":
-    case "typescriptreact":
-    case "javascriptreact":
-      return "typescript";
-    case "cpp":
-      return "c";
-    case "scss":
-    case "less":
-      return "css";
-    case "jsonc":
-      return "json";
-    default:
-      return languageId;
+// ── Language group resolution (single source of truth: backend) ──
+
+// Cached mapping fetched from the backend's detection::language_groups().
+// Populated lazily on first startServer call.
+let languageGroupMap: Record<string, string> | null = null;
+
+async function ensureLanguageGroups(): Promise<void> {
+  if (languageGroupMap) return;
+  try {
+    languageGroupMap = await invoke<Record<string, string>>("lsp_language_groups");
+  } catch {
+    // If the command isn't available (e.g. older backend), fall back to empty
+    languageGroupMap = {};
   }
 }
 
-// Get all Monaco language IDs that a server handles
-function getMonacoLanguages(serverLanguage: string): string[] {
-  switch (serverLanguage) {
-    case "typescript":
-      return ["typescript", "javascript", "typescriptreact", "javascriptreact"];
-    case "c":
-      return ["c", "cpp"];
-    case "css":
-      return ["css", "scss", "less"];
-    case "json":
-      return ["json", "jsonc"];
-    default:
-      return [serverLanguage];
-  }
+/**
+ * Map a Monaco language ID to the server-level language group.
+ * Uses the backend's mapping as the single source of truth.
+ * Falls back to identity if the mapping hasn't been fetched yet.
+ */
+export function resolveServerLanguage(languageId: string): string {
+  return languageGroupMap?.[languageId] ?? languageId;
 }
+
+/**
+ * Get all Monaco language IDs that a server handles.
+ * Derived from the backend's language group mapping (reverse lookup).
+ */
+function getMonacoLanguages(serverLanguage: string): string[] {
+  const languages = [serverLanguage];
+  if (languageGroupMap) {
+    for (const [lang, group] of Object.entries(languageGroupMap)) {
+      if (group === serverLanguage && !languages.includes(lang)) {
+        languages.push(lang);
+      }
+    }
+  }
+  return languages;
+}
+
+/** Timeout for graceful LSP shutdown before force-disposing. */
+const SHUTDOWN_TIMEOUT_MS = 5_000;
 
 export const useLspStore = create<LspState>((set, get) => ({
   servers: {},
@@ -114,6 +122,9 @@ export const useLspStore = create<LspState>((set, get) => ({
     // Store monaco ref for later use (install → restart)
     monacoRef = monaco;
 
+    // Ensure the language group mapping is loaded from the backend
+    await ensureLanguageGroups();
+
     const serverLang = resolveServerLanguage(languageId);
 
     // Already running or starting?
@@ -135,7 +146,11 @@ export const useLspStore = create<LspState>((set, get) => ({
     const promise = (async (): Promise<LspClient | null> => {
       try {
         // Ask Rust to spawn the language server
-        const result = await invoke<{ server_id: string; server_name: string }>("lsp_start", {
+        const result = await invoke<{
+          server_id: string;
+          server_name: string;
+          server_language: string;
+        }>("lsp_start", {
           workspacePath,
           languageId,
         });
@@ -146,6 +161,26 @@ export const useLspStore = create<LspState>((set, get) => ({
         const transport = new TauriLspTransport(serverId);
         await transport.connect();
         const client = new LspClient(transport);
+
+        // Listen for unexpected server stops to update store status
+        transport.onServerStopped((error) => {
+          const info = get().servers[workspacePath]?.[serverLang];
+          if (info && info.status === "running") {
+            set((state) => ({
+              servers: {
+                ...state.servers,
+                [workspacePath]: {
+                  ...state.servers[workspacePath],
+                  [serverLang]: {
+                    ...state.servers[workspacePath][serverLang],
+                    status: "stopped" as const,
+                    errorMessage: error ?? null,
+                  },
+                },
+              },
+            }));
+          }
+        });
 
         // Initialize the LSP server
         await client.initialize(workspacePath);
@@ -350,10 +385,15 @@ export const useLspStore = create<LspState>((set, get) => ({
       for (const d of info.providerDisposables) {
         d.dispose();
       }
-      // Shutdown client
+      // Graceful shutdown with timeout to prevent hanging on unresponsive servers
       if (info.client && info.status === "running") {
         try {
-          await info.client.shutdown();
+          await Promise.race([
+            info.client.shutdown(),
+            new Promise<void>((_, reject) =>
+              setTimeout(() => reject(new Error("Shutdown timed out")), SHUTDOWN_TIMEOUT_MS),
+            ),
+          ]);
         } catch {
           info.client.dispose();
         }

@@ -26,7 +26,16 @@ type JsonRpcMessage = JsonRpcRequest | JsonRpcNotification | JsonRpcResponse;
 interface PendingRequest {
   resolve: (value: unknown) => void;
   reject: (reason: unknown) => void;
+  timer: ReturnType<typeof setTimeout>;
 }
+
+interface StatusPayload {
+  status: string;
+  error?: string | null;
+}
+
+/** Default request timeout in milliseconds. */
+const REQUEST_TIMEOUT_MS = 30_000;
 
 /**
  * Tauri-based JSON-RPC transport for LSP.
@@ -37,6 +46,7 @@ export class TauriLspTransport {
   private requestId = 0;
   private pendingRequests = new Map<number, PendingRequest>();
   private notificationHandlers = new Map<string, ((params: unknown) => void)[]>();
+  private stoppedCallbacks: ((error?: string | null) => void)[] = [];
   private unlistenMessage: UnlistenFn | null = null;
   private unlistenStatus: UnlistenFn | null = null;
   private disposed = false;
@@ -50,29 +60,37 @@ export class TauriLspTransport {
       this.handleMessage(event.payload);
     });
 
-    this.unlistenStatus = await listen<string>(`lsp-status:${this.serverId}`, (event) => {
-      if (event.payload === "stopped") {
-        this.handleServerStopped();
+    this.unlistenStatus = await listen<StatusPayload>(`lsp-status:${this.serverId}`, (event) => {
+      if (event.payload.status === "stopped") {
+        this.handleServerStopped(event.payload.error);
       }
     });
   }
 
-  async sendRequest<R>(method: string, params?: unknown): Promise<R> {
+  async sendRequest<R>(method: string, params?: unknown, timeoutMs?: number): Promise<R> {
     if (this.disposed) throw new Error("Transport disposed");
 
     const id = ++this.requestId;
     const request: JsonRpcRequest = { jsonrpc: "2.0", id, method, params };
+    const timeout = timeoutMs ?? REQUEST_TIMEOUT_MS;
 
     return new Promise<R>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(new Error(`LSP request '${method}' timed out after ${timeout}ms`));
+      }, timeout);
+
       this.pendingRequests.set(id, {
         resolve: resolve as (value: unknown) => void,
         reject,
+        timer,
       });
 
       invoke("lsp_send", {
         serverId: this.serverId,
         message: JSON.stringify(request),
       }).catch((err) => {
+        clearTimeout(timer);
         this.pendingRequests.delete(id);
         reject(err);
       });
@@ -97,16 +115,23 @@ export class TauriLspTransport {
     this.notificationHandlers.set(method, handlers);
   }
 
+  /** Register a callback invoked when the server stops (crash, EOF, or write failure). */
+  onServerStopped(callback: (error?: string | null) => void): void {
+    this.stoppedCallbacks.push(callback);
+  }
+
   dispose(): void {
     this.disposed = true;
     this.unlistenMessage?.();
     this.unlistenStatus?.();
 
     for (const [, pending] of this.pendingRequests) {
+      clearTimeout(pending.timer);
       pending.reject(new Error("Transport disposed"));
     }
     this.pendingRequests.clear();
     this.notificationHandlers.clear();
+    this.stoppedCallbacks = [];
   }
 
   private handleMessage(raw: string): void {
@@ -122,6 +147,7 @@ export class TauriLspTransport {
       const response = msg as JsonRpcResponse;
       const pending = this.pendingRequests.get(response.id);
       if (pending) {
+        clearTimeout(pending.timer);
         this.pendingRequests.delete(response.id);
         if (response.error) {
           pending.reject(new Error(`LSP error ${response.error.code}: ${response.error.message}`));
@@ -144,10 +170,15 @@ export class TauriLspTransport {
     }
   }
 
-  private handleServerStopped(): void {
+  private handleServerStopped(error?: string | null): void {
     for (const [, pending] of this.pendingRequests) {
+      clearTimeout(pending.timer);
       pending.reject(new Error("Language server stopped"));
     }
     this.pendingRequests.clear();
+
+    for (const cb of this.stoppedCallbacks) {
+      cb(error);
+    }
   }
 }

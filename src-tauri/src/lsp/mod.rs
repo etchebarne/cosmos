@@ -5,7 +5,7 @@ pub mod registry;
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::io::BufReader;
 use tokio::process::{Child, ChildStdin};
 use tokio::sync::Mutex;
@@ -28,8 +28,11 @@ struct LspServer {
     language_id: String,
 }
 
+/// Per-server locking: the outer Mutex guards the HashMap itself (held briefly
+/// for lookups/inserts/removes), while each server has its own Arc<Mutex> so
+/// that a slow stdin write on one server never blocks operations on others.
 pub struct LspState {
-    servers: Arc<Mutex<HashMap<String, LspServer>>>,
+    servers: Arc<Mutex<HashMap<String, Arc<Mutex<LspServer>>>>>,
 }
 
 impl Default for LspState {
@@ -89,12 +92,21 @@ fn spawn_server(command: &str, args: &[String], working_dir: &str) -> std::io::R
     }
 }
 
+// ── Status event payload ──
+
+#[derive(serde::Serialize, Clone)]
+struct StatusPayload {
+    status: String,
+    error: Option<String>,
+}
+
 // ── LSP lifecycle commands ──
 
 #[derive(serde::Serialize)]
 pub struct LspStartResult {
     pub server_id: String,
     pub server_name: String,
+    pub server_language: String,
 }
 
 #[tauri::command]
@@ -118,6 +130,7 @@ pub async fn lsp_start(
             return Ok(LspStartResult {
                 server_id,
                 server_name,
+                server_language: group.to_string(),
             });
         }
     }
@@ -147,47 +160,81 @@ pub async fn lsp_start(
                     let event = format!("lsp-message:{}", sid);
                     let _ = app_clone.emit(&event, &msg);
                 }
-                Err(_) => {
+                Err(e) => {
                     let event = format!("lsp-status:{}", sid);
-                    let _ = app_clone.emit(&event, "stopped");
+                    let _ = app_clone.emit(
+                        &event,
+                        &StatusPayload {
+                            status: "stopped".into(),
+                            error: if e == "EOF" { None } else { Some(e) },
+                        },
+                    );
                     break;
                 }
             }
         }
     });
 
-    let server = LspServer {
+    let server = Arc::new(Mutex::new(LspServer {
         child,
         stdin,
         language_id: group.to_string(),
-    };
+    }));
 
     state.servers.lock().await.insert(server_id.clone(), server);
 
     Ok(LspStartResult {
         server_id,
         server_name: config.server_name,
+        server_language: group.to_string(),
     })
 }
 
 #[tauri::command]
 pub async fn lsp_send(
+    app: AppHandle,
     state: State<'_, LspState>,
     server_id: String,
     message: String,
 ) -> Result<(), String> {
-    let mut servers = state.servers.lock().await;
-    let server = servers
-        .get_mut(&server_id)
-        .ok_or_else(|| format!("Server {server_id} not found"))?;
+    // Clone the Arc so we can drop the map lock before writing
+    let server_arc = {
+        let servers = state.servers.lock().await;
+        servers
+            .get(&server_id)
+            .cloned()
+            .ok_or_else(|| format!("Server {server_id} not found"))?
+    };
 
-    framing::write_message(&mut server.stdin, &message).await
+    let result = {
+        let mut server = server_arc.lock().await;
+        framing::write_message(&mut server.stdin, &message).await
+    };
+
+    // If write failed, the server is likely dead — clean up and notify frontend
+    if let Err(ref e) = result {
+        state.servers.lock().await.remove(&server_id);
+        let event = format!("lsp-status:{}", server_id);
+        let _ = app.emit(
+            &event,
+            &StatusPayload {
+                status: "stopped".into(),
+                error: Some(e.clone()),
+            },
+        );
+    }
+
+    result
 }
 
 #[tauri::command]
 pub async fn lsp_stop(state: State<'_, LspState>, server_id: String) -> Result<(), String> {
-    let mut servers = state.servers.lock().await;
-    if let Some(mut server) = servers.remove(&server_id) {
+    let server_arc = {
+        let mut servers = state.servers.lock().await;
+        servers.remove(&server_id)
+    };
+    if let Some(arc) = server_arc {
+        let mut server = arc.lock().await;
         let _ = server.child.kill().await;
     }
     Ok(())
@@ -198,18 +245,23 @@ pub async fn lsp_stop_workspace(
     state: State<'_, LspState>,
     workspace_path: String,
 ) -> Result<(), String> {
-    let mut servers = state.servers.lock().await;
-    let safe_path = workspace_path.replace('\\', "/");
-    let keys_to_remove: Vec<String> = servers
-        .keys()
-        .filter(|k| k.ends_with(&format!(":{safe_path}")))
-        .cloned()
-        .collect();
+    let removed: Vec<Arc<Mutex<LspServer>>> = {
+        let mut servers = state.servers.lock().await;
+        let safe_path = workspace_path.replace('\\', "/");
+        let keys_to_remove: Vec<String> = servers
+            .keys()
+            .filter(|k| k.ends_with(&format!(":{safe_path}")))
+            .cloned()
+            .collect();
+        keys_to_remove
+            .into_iter()
+            .filter_map(|key| servers.remove(&key))
+            .collect()
+    };
 
-    for key in keys_to_remove {
-        if let Some(mut server) = servers.remove(&key) {
-            let _ = server.child.kill().await;
-        }
+    for arc in removed {
+        let mut server = arc.lock().await;
+        let _ = server.child.kill().await;
     }
     Ok(())
 }
@@ -222,16 +274,36 @@ pub async fn lsp_check_availability(
     Ok(check_availability(&app, &workspace_path))
 }
 
-// ── Registry commands ──
+// ── Language group command ──
 
 #[tauri::command]
-pub async fn lsp_registry_list() -> Result<Vec<RegistryEntry>, String> {
-    Ok(registry::load_registry())
+pub async fn lsp_language_groups() -> Result<HashMap<String, String>, String> {
+    Ok(detection::language_groups())
+}
+
+// ── Registry commands ──
+
+/// Load the full registry: embedded + user custom entries from config dir.
+fn load_full_registry(app: &AppHandle) -> Vec<RegistryEntry> {
+    let base = registry::load_registry();
+    match app.path().app_config_dir() {
+        Ok(config_dir) => {
+            let custom_path = config_dir.join("custom-registry.json");
+            let custom = registry::load_custom_entries(&custom_path);
+            registry::merge_registries(base, custom)
+        }
+        Err(_) => base,
+    }
 }
 
 #[tauri::command]
-pub async fn lsp_registry_search(query: String) -> Result<Vec<RegistryEntry>, String> {
-    Ok(registry::search(&query))
+pub async fn lsp_registry_list(app: AppHandle) -> Result<Vec<RegistryEntry>, String> {
+    Ok(load_full_registry(&app))
+}
+
+#[tauri::command]
+pub async fn lsp_registry_search(app: AppHandle, query: String) -> Result<Vec<RegistryEntry>, String> {
+    Ok(registry::search_in(load_full_registry(&app), &query))
 }
 
 // ── Server management commands ──
@@ -243,8 +315,12 @@ pub async fn lsp_installed_list(app: AppHandle) -> Result<Vec<InstalledServer>, 
 
 #[tauri::command]
 pub async fn lsp_install_server(app: AppHandle, name: String) -> Result<InstalledServer, String> {
-    let entry = registry::find_by_name(&name)
-        .or_else(|| registry::find_by_bin(&name))
+    let entries = load_full_registry(&app);
+    let entry = entries
+        .iter()
+        .find(|e| e.name == name)
+        .or_else(|| entries.iter().find(|e| e.bin.as_deref() == Some(name.as_str())))
+        .cloned()
         .ok_or_else(|| format!("Server '{name}' not found in registry"))?;
 
     installer::install_server(&app, &entry).await

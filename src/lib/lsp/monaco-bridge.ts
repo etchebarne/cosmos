@@ -105,6 +105,19 @@ function toMarkdownString(
   return { value: `\`\`\`${content.language}\n${content.value}\n\`\`\`` };
 }
 
+// ── Diagnostic deduplication ──
+
+function markerFingerprint(m: {
+  severity: number;
+  message: string;
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;
+  endColumn: number;
+}): string {
+  return `${m.severity}:${m.startLineNumber}:${m.startColumn}:${m.endLineNumber}:${m.endColumn}:${m.message}`;
+}
+
 // ── Provider Registration ──
 
 export function registerLspProviders(
@@ -174,7 +187,8 @@ export function registerLspProviders(
                 suggestions,
                 incomplete: !Array.isArray(result) && (result as CompletionList).isIncomplete,
               };
-            } catch {
+            } catch (e) {
+              console.warn(`[LSP] Completion failed for ${languageId}:`, e);
               return { suggestions: [] };
             }
           },
@@ -204,7 +218,8 @@ export function registerLspProviders(
                 contents,
                 range: result.range ? toMonacoRange(result.range) : undefined,
               };
-            } catch {
+            } catch (e) {
+              console.warn(`[LSP] Hover failed for ${languageId}:`, e);
               return null;
             }
           },
@@ -241,7 +256,8 @@ export function registerLspProviders(
                   range: toMonacoRange(location.range),
                 };
               });
-            } catch {
+            } catch (e) {
+              console.warn(`[LSP] Definition failed for ${languageId}:`, e);
               return null;
             }
           },
@@ -267,7 +283,8 @@ export function registerLspProviders(
                 uri: monaco.Uri.parse(loc.uri) as Uri,
                 range: toMonacoRange(loc.range),
               }));
-            } catch {
+            } catch (e) {
+              console.warn(`[LSP] References failed for ${languageId}:`, e);
               return null;
             }
           },
@@ -309,7 +326,8 @@ export function registerLspProviders(
                 },
                 dispose: () => {},
               };
-            } catch {
+            } catch (e) {
+              console.warn(`[LSP] SignatureHelp failed for ${languageId}:`, e);
               return null;
             }
           },
@@ -333,6 +351,14 @@ export function registerLspProviders(
       code: d.code != null ? String(d.code) : undefined,
       tags: d.tags?.map((t) => (t === 1 ? 1 : 2)),
     }));
+
+    // Skip update if markers haven't changed (avoids visual flicker with chatty servers)
+    const existing = monaco.editor.getModelMarkers({ resource: model.uri, owner: "lsp" });
+    if (existing.length === markers.length) {
+      const newKey = markers.map(markerFingerprint).join("\n");
+      const existingKey = existing.map(markerFingerprint).join("\n");
+      if (newKey === existingKey) return;
+    }
 
     monaco.editor.setModelMarkers(model, "lsp", markers as monacoEditor.IMarkerData[]);
   });

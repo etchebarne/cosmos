@@ -1,11 +1,10 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use serde::Serialize;
 use tauri::AppHandle;
 
 use super::installer;
-use super::registry;
 
 pub struct ServerConfig {
     pub language_id: String,
@@ -359,6 +358,19 @@ pub fn server_language_group(language_id: &str) -> &str {
         "jsonc" => "json",
         other => other,
     }
+}
+
+/// Return the language → group mapping for all non-identity entries.
+/// Used by the frontend as the single source of truth for language grouping.
+pub fn language_groups() -> HashMap<String, String> {
+    let mut groups = HashMap::new();
+    for (lang, _) in LANGUAGE_DEFAULTS {
+        let group = server_language_group(lang);
+        if group != *lang {
+            groups.insert(lang.to_string(), group.to_string());
+        }
+    }
+    groups
 }
 
 /// Check if a server binary is available — either installed locally or on PATH.

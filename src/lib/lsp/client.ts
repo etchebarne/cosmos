@@ -135,12 +135,12 @@ export class LspClient {
         ? this.capabilities.textDocumentSync.change
         : this.capabilities?.textDocumentSync;
 
-    let actualChanges = changes;
-    if (syncKind === TextDocumentSyncKind.Full && changes.length > 0) {
-      // For full sync, send just the last full-text change
-      // (the caller should send full text when server requires it)
-      actualChanges = changes;
-    }
+    // For full-sync servers, only the last change matters (it contains the
+    // complete document text). Sending intermediate states is wasteful.
+    const actualChanges =
+      syncKind === TextDocumentSyncKind.Full && changes.length > 1
+        ? [changes[changes.length - 1]]
+        : changes;
 
     const params: DidChangeTextDocumentParams = {
       textDocument: { uri, version },

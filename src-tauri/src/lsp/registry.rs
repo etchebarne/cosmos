@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::Path;
 
 const REGISTRY_JSON: &str = include_str!("registry.json");
 
@@ -33,22 +34,10 @@ pub fn load_registry() -> Vec<RegistryEntry> {
     serde_json::from_str(REGISTRY_JSON).expect("Failed to parse embedded registry")
 }
 
-/// Find a specific registry entry by name.
-pub fn find_by_name(name: &str) -> Option<RegistryEntry> {
-    load_registry().into_iter().find(|e| e.name == name)
-}
-
-/// Find a registry entry by its binary/command name.
-pub fn find_by_bin(bin_name: &str) -> Option<RegistryEntry> {
-    load_registry()
-        .into_iter()
-        .find(|e| e.bin.as_deref() == Some(bin_name))
-}
-
-/// Search registry entries by query (matches name, language, or description).
-pub fn search(query: &str) -> Vec<RegistryEntry> {
+/// Search a list of registry entries by query (matches name, language, or description).
+pub fn search_in(entries: Vec<RegistryEntry>, query: &str) -> Vec<RegistryEntry> {
     let q = query.to_lowercase();
-    load_registry()
+    entries
         .into_iter()
         .filter(|e| {
             e.name.to_lowercase().contains(&q)
@@ -58,6 +47,26 @@ pub fn search(query: &str) -> Vec<RegistryEntry> {
                 || e.description.to_lowercase().contains(&q)
         })
         .collect()
+}
+
+/// Load custom registry entries from a JSON file, if it exists.
+pub fn load_custom_entries(path: &Path) -> Vec<RegistryEntry> {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|content| serde_json::from_str(&content).ok())
+        .unwrap_or_default()
+}
+
+/// Merge custom entries into a base registry. Custom entries with matching names override.
+pub fn merge_registries(mut base: Vec<RegistryEntry>, custom: Vec<RegistryEntry>) -> Vec<RegistryEntry> {
+    for entry in custom {
+        if let Some(existing) = base.iter_mut().find(|e| e.name == entry.name) {
+            *existing = entry;
+        } else {
+            base.push(entry);
+        }
+    }
+    base
 }
 
 /// Return platform target candidates for the current system, in priority order.

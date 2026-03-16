@@ -1,6 +1,10 @@
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{ChildStdin, ChildStdout};
 
+/// Maximum allowed LSP message size (64 MB). Prevents OOM from a misbehaving
+/// server sending an enormous Content-Length value.
+const MAX_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
+
 /// Read one LSP message from a Content-Length framed stream.
 pub async fn read_message(reader: &mut BufReader<ChildStdout>) -> Result<String, String> {
     let mut content_length: Option<usize> = None;
@@ -33,6 +37,11 @@ pub async fn read_message(reader: &mut BufReader<ChildStdout>) -> Result<String,
     }
 
     let length = content_length.ok_or("Missing Content-Length header")?;
+    if length > MAX_MESSAGE_SIZE {
+        return Err(format!(
+            "Message size {length} bytes exceeds maximum of {MAX_MESSAGE_SIZE} bytes"
+        ));
+    }
     let mut body = vec![0u8; length];
     reader
         .read_exact(&mut body)

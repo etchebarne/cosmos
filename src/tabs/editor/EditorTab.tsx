@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Editor, { type Monaco } from "@monaco-editor/react";
 import type { editor, Uri, IRange, IPosition } from "monaco-editor";
-import { TextDocumentSyncKind } from "vscode-languageserver-protocol";
+import {
+  TextDocumentSyncKind,
+  type TextDocumentContentChangeEvent,
+} from "vscode-languageserver-protocol";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { useLspStore } from "../../store/lsp.store";
 import { pathToFileUri, fileUriToPath } from "../../lib/lsp/uri";
@@ -162,6 +165,8 @@ export function EditorTab({ tab }: TabContentProps) {
   const contentRef = useRef<string | null>(null);
   const versionRef = useRef(0);
   const changeDisposableRef = useRef<{ dispose: () => void } | null>(null);
+  const pendingChangesRef = useRef<TextDocumentContentChangeEvent[]>([]);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [editorReady, setEditorReady] = useState(false);
   const lspOpenedRef = useRef(false);
 
@@ -252,9 +257,22 @@ export function EditorTab({ tab }: TabContentProps) {
     };
   }, [editorReady, workspace, fileUri, startServer]);
 
-  // Cleanup on unmount: didClose + change listener + editor instance
+  // Cleanup on unmount: flush pending changes, didClose, change listener, editor instance
   useEffect(() => {
     return () => {
+      // Clear debounce timer and flush any pending changes before closing
+      if (debounceTimerRef.current != null) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      if (pendingChangesRef.current.length > 0 && workspace && fileUri) {
+        const client = getClient(workspace.path, lspLanguageRef.current);
+        if (client) {
+          client.didChange(fileUri, versionRef.current, pendingChangesRef.current);
+          pendingChangesRef.current = [];
+        }
+      }
+
       lspOpenedRef.current = false;
       changeDisposableRef.current?.dispose();
       if (filePath) editorInstances.delete(filePath);
@@ -306,13 +324,16 @@ export function EditorTab({ tab }: TabContentProps) {
     // eslint-disable-next-line no-bitwise
     instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit0, () => resetEditorZoom());
 
-    // Listen for content changes to send didChange notifications
+    // Listen for content changes and debounce LSP didChange notifications.
+    // Sending on every keystroke floods the server; batching with a short
+    // delay reduces load while keeping diagnostics responsive.
+    const DIDCHANGE_DEBOUNCE_MS = 200;
+
     changeDisposableRef.current = instance.onDidChangeModelContent((e) => {
-      // Update local state
+      // Update local state immediately (not debounced)
       contentRef.current = instance.getValue();
       if (!dirty) setDirty(true);
 
-      // Send incremental changes to LSP
       if (!workspace || !fileUri) return;
       const client = getClient(workspace.path, lspLanguageRef.current);
       if (!client) return;
@@ -325,10 +346,12 @@ export function EditorTab({ tab }: TabContentProps) {
           ? client.capabilities.textDocumentSync.change
           : client.capabilities?.textDocumentSync;
 
+      // Accumulate changes for the debounced send
       if (syncKind === TextDocumentSyncKind.Full) {
-        client.didChange(fileUri, versionRef.current, [{ text: instance.getValue() }]);
+        // For full sync, only the latest snapshot matters
+        pendingChangesRef.current = [{ text: instance.getValue() }];
       } else {
-        // Incremental: send only the changes
+        // For incremental sync, accumulate all changes in order
         const changes = e.changes.map((change) => ({
           range: {
             start: {
@@ -343,8 +366,21 @@ export function EditorTab({ tab }: TabContentProps) {
           rangeLength: change.rangeLength,
           text: change.text,
         }));
-        client.didChange(fileUri, versionRef.current, changes);
+        pendingChangesRef.current.push(...changes);
       }
+
+      // Debounce the actual send
+      if (debounceTimerRef.current != null) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        debounceTimerRef.current = null;
+        if (pendingChangesRef.current.length === 0) return;
+        const currentClient = getClient(workspace.path, lspLanguageRef.current);
+        if (!currentClient) return;
+        currentClient.didChange(fileUri, versionRef.current, pendingChangesRef.current);
+        pendingChangesRef.current = [];
+      }, DIDCHANGE_DEBOUNCE_MS);
     });
   }
 
