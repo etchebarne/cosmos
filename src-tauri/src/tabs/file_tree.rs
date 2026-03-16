@@ -1,6 +1,8 @@
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
+use tauri::AppHandle;
+use tauri_plugin_opener::OpenerExt;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -86,4 +88,117 @@ pub fn move_file(source: &str, dest_dir: &str) -> Result<String, String> {
     fs::rename(source_path, &new_path).map_err(|e| e.to_string())?;
 
     Ok(new_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn create_file(path: &str) -> Result<(), String> {
+    let p = Path::new(path);
+    if p.exists() {
+        return Err(format!(
+            "'{}' already exists",
+            p.file_name().unwrap_or_default().to_string_lossy()
+        ));
+    }
+    fs::File::create(p).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn create_dir(path: &str) -> Result<(), String> {
+    let p = Path::new(path);
+    if p.exists() {
+        return Err(format!(
+            "'{}' already exists",
+            p.file_name().unwrap_or_default().to_string_lossy()
+        ));
+    }
+    fs::create_dir(p).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn rename_entry(path: &str, new_name: &str) -> Result<String, String> {
+    let p = Path::new(path);
+    let parent = p.parent().ok_or("No parent directory")?;
+    let new_path = parent.join(new_name);
+    if new_path.exists() {
+        return Err(format!("'{}' already exists", new_name));
+    }
+    fs::rename(p, &new_path).map_err(|e| e.to_string())?;
+    Ok(new_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn copy_entry(source: &str, dest_dir: &str) -> Result<String, String> {
+    let src = Path::new(source);
+    let dest = Path::new(dest_dir);
+    let file_name = src.file_name().ok_or("Invalid source path")?.to_string_lossy().to_string();
+
+    // Generate a unique name if the target already exists (e.g. "foo - Copy.txt", "foo - Copy 2.txt")
+    let new_path = if dest.join(&file_name).exists() {
+        let stem = src.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+        let ext = src.extension().map(|e| format!(".{}", e.to_string_lossy()));
+        let is_dir = src.is_dir();
+        let ext_suffix = if is_dir { String::new() } else { ext.unwrap_or_default() };
+
+        let candidate = dest.join(format!("{} - Copy{}", stem, ext_suffix));
+        if !candidate.exists() {
+            candidate
+        } else {
+            let mut n = 2u32;
+            loop {
+                let candidate = dest.join(format!("{} - Copy {}{}", stem, n, ext_suffix));
+                if !candidate.exists() {
+                    break candidate;
+                }
+                n += 1;
+            }
+        }
+    } else {
+        dest.join(&file_name)
+    };
+
+    if src.is_dir() {
+        copy_dir_recursive(src, &new_path)?;
+    } else {
+        fs::copy(src, &new_path).map_err(|e| e.to_string())?;
+    }
+
+    Ok(new_path.to_string_lossy().to_string())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
+    fs::create_dir_all(dst).map_err(|e| e.to_string())?;
+    for entry in fs::read_dir(src).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let dest_entry = dst.join(entry.file_name());
+        if entry.file_type().map_err(|e| e.to_string())?.is_dir() {
+            copy_dir_recursive(&entry.path(), &dest_entry)?;
+        } else {
+            fs::copy(entry.path(), &dest_entry).map_err(|e| e.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn trash_entry(path: &str) -> Result<(), String> {
+    trash::delete(path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_entry(path: &str) -> Result<(), String> {
+    let p = Path::new(path);
+    if p.is_dir() {
+        fs::remove_dir_all(p).map_err(|e| e.to_string())
+    } else {
+        fs::remove_file(p).map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+pub fn reveal_in_explorer(app: AppHandle, path: &str) -> Result<(), String> {
+    app.opener()
+        .reveal_item_in_dir(Path::new(path))
+        .map_err(|e| e.to_string())
 }

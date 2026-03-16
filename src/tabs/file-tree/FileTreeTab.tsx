@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
-import { FileTreeNode } from "./FileTreeNode";
+import { FileTreeNode, useFileTreeSelection } from "./FileTreeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import type { TabContentProps } from "../types";
 
@@ -39,6 +39,27 @@ export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
     loadRoot();
   }, [loadRoot]);
 
+  // Clear selection when clicking outside the file tree
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-file-tree]")) {
+        useFileTreeSelection.getState().clear();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Start filesystem watcher for the workspace
+  useEffect(() => {
+    if (!activeWorkspace) return;
+    invoke("watch_workspace", { path: activeWorkspace.path });
+    return () => {
+      invoke("unwatch_workspace");
+    };
+  }, [activeWorkspace]);
+
   if (!activeWorkspace) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -72,7 +93,7 @@ export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
 
   return (
     <ScrollArea className="h-full font-ui">
-      <div className="pt-1 pb-4">
+      <div className="pt-1 pb-4 min-h-full" data-file-tree>
         <FileTreeNode
           entry={rootEntry}
           depth={0}

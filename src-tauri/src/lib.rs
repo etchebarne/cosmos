@@ -21,6 +21,13 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             tabs::file_tree::read_dir,
             tabs::file_tree::move_file,
+            tabs::file_tree::create_file,
+            tabs::file_tree::create_dir,
+            tabs::file_tree::rename_entry,
+            tabs::file_tree::copy_entry,
+            tabs::file_tree::trash_entry,
+            tabs::file_tree::delete_entry,
+            tabs::file_tree::reveal_in_explorer,
             tabs::editor::read_file,
             tabs::editor::write_file,
             lsp::lsp_start,

@@ -527,8 +527,20 @@ pub fn watch_workspace(app: AppHandle, path: String) -> Result<(), String> {
     let mut debouncer = new_debouncer(
         Duration::from_millis(500),
         move |result: Result<Vec<notify_debouncer_mini::DebouncedEvent>, notify::Error>| {
-            if let Ok(_events) = result {
+            if let Ok(events) = result {
                 let _ = app_handle.emit("git-changed", ());
+
+                // Collect unique parent directories for file tree updates
+                let mut dirs: Vec<String> = events
+                    .iter()
+                    .filter_map(|e| {
+                        e.path.parent().map(|p| p.to_string_lossy().to_string())
+                    })
+                    .collect();
+                dirs.sort();
+                dirs.dedup();
+
+                let _ = app_handle.emit("file-tree-changed", dirs);
             }
         },
     )

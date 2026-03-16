@@ -217,81 +217,114 @@ export function DragOverlay() {
             }
           }
         } else if (dragged.type === "file") {
-          // ── File drag ──
-          const { filePath, fileName } = dragged;
+          // ── File drag (single or multi) ──
+          const { files } = dragged;
 
-          // Find existing instances before opening (so we can close them after)
-          let existingTab: { paneId: string; tabId: string } | null = null;
-          let existingNode: { canvasId: string; nodeId: string } | null = null;
-
-          if (target.type !== "directory") {
-            const leaves = findAllLeaves(useLayoutStore.getState().layout);
-            for (const leaf of leaves) {
-              const tab = leaf.tabs.find(
-                (t) => t.type === "editor" && (t.metadata?.filePath as string) === filePath,
-              );
-              if (tab) {
-                existingTab = { paneId: leaf.id, tabId: tab.id };
-                break;
-              }
-            }
-
-            for (const [canvasId, nodes] of Object.entries(useInfinityStore.getState().canvases)) {
-              const node = nodes.find(
-                (n) =>
-                  n.data.tabType === "editor" && (n.data.metadata?.filePath as string) === filePath,
-              );
-              if (node) {
-                existingNode = { canvasId, nodeId: node.id };
-                break;
-              }
-            }
-          }
-
-          // Open at new location first
           if (target.type === "directory" && target.dirPath) {
-            // Drop on directory → move file
-            invoke("move_file", { source: filePath, destDir: target.dirPath })
-              .then(() => {
-                window.dispatchEvent(
-                  new CustomEvent("file-tree-move", {
-                    detail: { sourcePath: filePath, destDir: target.dirPath, fileName },
-                  }),
-                );
-              })
-              .catch((err: unknown) => console.error("Failed to move file:", err));
-          } else if (target.type === "infinity" && target.infinityTabId) {
-            // Drop on infinity canvas → add editor node
-            const instance = useInfinityStore.getState().instances[target.infinityTabId];
-            if (instance) {
-              const pos = instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-              useInfinityStore
-                .getState()
-                .addNode(target.infinityTabId, "editor", pos, fileName, { filePath });
+            // Move all files to directory
+            for (const { filePath, fileName } of files) {
+              invoke("move_file", { source: filePath, destDir: target.dirPath })
+                .then(() => {
+                  window.dispatchEvent(
+                    new CustomEvent("file-tree-move", {
+                      detail: { sourcePath: filePath, destDir: target.dirPath, fileName },
+                    }),
+                  );
+                })
+                .catch((err: unknown) => console.error("Failed to move file:", err));
             }
-          } else if (target.type === "tab-bar" && target.paneId) {
-            // Drop on tab bar → open as editor tab
-            useLayoutStore.getState().addTab(target.paneId, "editor", fileName, { filePath });
-          } else if (target.type === "pane-zone" && target.zone && target.paneId) {
-            if (target.zone === "center") {
-              useLayoutStore.getState().addTab(target.paneId, "editor", fileName, { filePath });
-            } else {
-              const direction: "horizontal" | "vertical" =
-                target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
-              const position: "before" | "after" =
-                target.zone === "left" || target.zone === "top" ? "before" : "after";
-              useLayoutStore
-                .getState()
-                .insertSplit(target.paneId, direction, position, "editor", fileName, { filePath });
-            }
-          }
+          } else {
+            // Only open files (not directories) as editor tabs
+            const openableFiles = files.filter((f) => !f.isDir);
 
-          // Close old instances after opening the new one
-          if (existingTab) {
-            useLayoutStore.getState().closeTab(existingTab.paneId, existingTab.tabId);
-          }
-          if (existingNode) {
-            useInfinityStore.getState().removeNode(existingNode.canvasId, existingNode.nodeId);
+            if (openableFiles.length > 0) {
+              // Find existing instances for dedup
+              const existingInstances: Array<{
+                tab?: { paneId: string; tabId: string };
+                node?: { canvasId: string; nodeId: string };
+              }> = [];
+
+              const leaves = findAllLeaves(useLayoutStore.getState().layout);
+              const canvases = Object.entries(useInfinityStore.getState().canvases);
+
+              for (const { filePath } of openableFiles) {
+                let existingTab: { paneId: string; tabId: string } | undefined;
+                let existingNode: { canvasId: string; nodeId: string } | undefined;
+
+                for (const leaf of leaves) {
+                  const tab = leaf.tabs.find(
+                    (t) => t.type === "editor" && (t.metadata?.filePath as string) === filePath,
+                  );
+                  if (tab) {
+                    existingTab = { paneId: leaf.id, tabId: tab.id };
+                    break;
+                  }
+                }
+
+                for (const [canvasId, nodes] of canvases) {
+                  const node = nodes.find(
+                    (n) =>
+                      n.data.tabType === "editor" &&
+                      (n.data.metadata?.filePath as string) === filePath,
+                  );
+                  if (node) {
+                    existingNode = { canvasId, nodeId: node.id };
+                    break;
+                  }
+                }
+
+                existingInstances.push({ tab: existingTab, node: existingNode });
+              }
+
+              // Open at new location
+              if (target.type === "infinity" && target.infinityTabId) {
+                const instance = useInfinityStore.getState().instances[target.infinityTabId];
+                if (instance) {
+                  const basePos = instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+                  openableFiles.forEach(({ filePath, fileName }, i) => {
+                    const pos = { x: basePos.x + i * 30, y: basePos.y + i * 30 };
+                    useInfinityStore
+                      .getState()
+                      .addNode(target.infinityTabId!, "editor", pos, fileName, { filePath });
+                  });
+                }
+              } else if (target.type === "tab-bar" && target.paneId) {
+                for (const { filePath, fileName } of openableFiles) {
+                  useLayoutStore
+                    .getState()
+                    .addTab(target.paneId!, "editor", fileName, { filePath });
+                }
+              } else if (target.type === "pane-zone" && target.zone && target.paneId) {
+                if (target.zone === "center" || openableFiles.length > 1) {
+                  for (const { filePath, fileName } of openableFiles) {
+                    useLayoutStore
+                      .getState()
+                      .addTab(target.paneId!, "editor", fileName, { filePath });
+                  }
+                } else {
+                  const { filePath, fileName } = openableFiles[0];
+                  const direction: "horizontal" | "vertical" =
+                    target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
+                  const position: "before" | "after" =
+                    target.zone === "left" || target.zone === "top" ? "before" : "after";
+                  useLayoutStore
+                    .getState()
+                    .insertSplit(target.paneId!, direction, position, "editor", fileName, {
+                      filePath,
+                    });
+                }
+              }
+
+              // Close old instances
+              for (const { tab, node } of existingInstances) {
+                if (tab) {
+                  useLayoutStore.getState().closeTab(tab.paneId, tab.tabId);
+                }
+                if (node) {
+                  useInfinityStore.getState().removeNode(node.canvasId, node.nodeId);
+                }
+              }
+            }
           }
         } else if (dragged.type === "changes") {
           // ── Changes drag ──
@@ -381,7 +414,14 @@ export function DragOverlay() {
 
   if (!dragState) return null;
 
-  const ghostLabel = dragState.type === "tab" ? dragState.tab.title : dragState.fileName;
+  const ghostLabel =
+    dragState.type === "tab"
+      ? dragState.tab.title
+      : dragState.type === "file"
+        ? dragState.files.length > 1
+          ? `${dragState.files.length} items`
+          : dragState.files[0].fileName
+        : dragState.fileName;
 
   return createPortal(
     <div className="fixed inset-0 z-50" style={{ cursor: "grabbing" }}>

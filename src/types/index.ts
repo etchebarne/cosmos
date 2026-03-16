@@ -37,8 +37,7 @@ export interface TabDragState {
 
 export interface FileDragState {
   type: "file";
-  filePath: string;
-  fileName: string;
+  files: Array<{ filePath: string; fileName: string; isDir?: boolean }>;
 }
 
 export interface ChangesDragState {
