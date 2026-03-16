@@ -61,7 +61,7 @@ export const useInfinityStore = create<InfinityStore>((set, get) => ({
           ...(metadata && { metadata }),
         },
         dragHandle: ".infinity-node-handle",
-        style: { width: 400, height: 300 },
+        style: def.defaultSize ?? { width: 400, height: 300 },
       };
 
       const nodes = state.canvases[tabId] ?? EMPTY_NODES;

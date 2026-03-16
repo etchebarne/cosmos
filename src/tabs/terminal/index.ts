@@ -6,4 +6,5 @@ export const terminalTab: TabDefinition = {
   title: "Terminal",
   icon: "terminal",
   component: TerminalTab,
+  defaultSize: { width: 640, height: 360 },
 };

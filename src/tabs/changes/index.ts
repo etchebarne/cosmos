@@ -7,4 +7,5 @@ export const changesTab: TabDefinition = {
   icon: "git-compare",
   component: ChangesTab,
   hidden: true,
+  defaultSize: { width: 640, height: 360 },
 };

@@ -7,4 +7,5 @@ export const editorTab: TabDefinition = {
   icon: "code",
   component: EditorTab,
   hidden: true,
+  defaultSize: { width: 640, height: 360 },
 };

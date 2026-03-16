@@ -12,4 +12,6 @@ export interface TabDefinition {
   icon: string;
   component: ComponentType<TabContentProps>;
   hidden?: boolean;
+  /** Default size when spawned on the infinity canvas */
+  defaultSize?: { width: number; height: number };
 }

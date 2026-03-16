@@ -6,4 +6,5 @@ export const gitTab: TabDefinition = {
   title: "Git",
   icon: "git-branch",
   component: GitTab,
+  defaultSize: { width: 400, height: 500 },
 };
