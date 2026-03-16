@@ -135,7 +135,7 @@ export function PanePortalProvider({
                 className={
                   tab.id === activeTabId
                     ? "h-full"
-                    : "invisible absolute inset-0 overflow-hidden pointer-events-none"
+                    : "opacity-0 absolute inset-0 overflow-hidden pointer-events-none"
                 }
               >
                 <TabContent tab={tab} paneId={leaf.id} />
