@@ -10,6 +10,7 @@ import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import { useLayoutStore } from "./store/layout.store";
 import { useWorkspaceStore } from "./store/workspace.store";
 import { useSettingsStore } from "./store/settings.store";
+import { useLspStore } from "./store/lsp.store";
 import type { Workspace } from "./store/workspace.store";
 import type { PaneNode } from "./types";
 import { applyTheme } from "./lib/themes";
@@ -62,6 +63,16 @@ function App() {
     const path = activeIndex !== null ? (workspaces[activeIndex]?.path ?? null) : null;
     setWorkspace(path);
   }, [ready, activeIndex, workspaces, setWorkspace]);
+
+  // Eagerly start LSP servers when a workspace becomes active so they can
+  // index the project in the background before any file is opened.
+  useEffect(() => {
+    if (!ready || activeIndex === null) return;
+    const activePath = workspaces[activeIndex]?.path;
+    if (activePath) {
+      useLspStore.getState().warmupWorkspace(activePath);
+    }
+  }, [ready, activeIndex, workspaces]);
 
   // Merge active layout into layouts map for rendering
   const allLayouts = useMemo(() => {

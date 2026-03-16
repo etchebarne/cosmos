@@ -3,7 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitBranchIcon } from "@hugeicons/core-free-icons";
 import { useWorkspaceStore } from "../../store/workspace.store";
-import { useLspStore, resolveServerLanguage, type ServerStatus } from "../../store/lsp.store";
+import {
+  useLspStore,
+  resolveServerLanguage,
+  type ServerStatus,
+  type IndexProgress,
+} from "../../store/lsp.store";
 import { useLayoutStore } from "../../store/layout.store";
 import { findLeaf } from "../../lib/pane-tree";
 import { Dialog } from "../shared/Dialog";
@@ -72,6 +77,25 @@ function filePathToServerLang(filePath: string): string | null {
   const langId = EXT_TO_LANG[ext];
   if (!langId) return null;
   return resolveServerLanguage(langId);
+}
+
+function IndexingIndicator({ items }: { items: IndexProgress[] }) {
+  if (items.length === 0) return null;
+
+  // Show the first active progress item
+  const item = items[0];
+  const label = item.message ?? item.title;
+  const pct = item.percentage != null ? ` ${item.percentage}%` : "";
+
+  return (
+    <div className="flex items-center gap-1.5 text-white/70">
+      <div className="w-1.5 h-1.5 bg-sky-400 animate-pulse" />
+      <span className="max-w-[200px] truncate">
+        {label}
+        {pct}
+      </span>
+    </div>
+  );
 }
 
 function LspStatusIndicators({ workspacePath }: { workspacePath: string }) {
@@ -176,6 +200,7 @@ export function StatusBar() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeIndex = useWorkspaceStore((s) => s.activeIndex);
   const activePath = activeIndex !== null ? (workspaces[activeIndex]?.path ?? null) : null;
+  const progress = useLspStore((s) => (activePath ? s.indexProgress[activePath] : undefined));
 
   const [branch, setBranch] = useState<string | null>(null);
 
@@ -207,12 +232,15 @@ export function StatusBar() {
     };
   }, [activePath]);
 
+  const activeProgress = progress?.length ? progress : null;
+
   return (
     <div className="flex items-center gap-3 h-6 min-h-6 px-3 bg-[var(--color-accent-blue)] text-white text-[11px]">
       <div className="flex items-center gap-1">
         <HugeiconsIcon icon={GitBranchIcon} size={12} />
         <span>{branch ?? "Not a git repo"}</span>
       </div>
+      {activeProgress && <IndexingIndicator items={activeProgress} />}
       <div className="flex-1" />
       <div className="flex items-center gap-3">
         {activePath && <LspStatusIndicators workspacePath={activePath} />}

@@ -14,8 +14,8 @@ use tokio::sync::Mutex;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 use detection::{
-    check_availability, resolve_command, resolve_server_for_language, server_language_group,
-    ServerAvailability,
+    check_availability, find_project_root, resolve_command, resolve_server_for_language,
+    scan_workspace_projects, server_language_group, DetectedProject, ServerAvailability,
 };
 use installer::InstalledServer;
 use registry::RegistryEntry;
@@ -279,6 +279,27 @@ pub async fn lsp_check_availability(
 #[tauri::command]
 pub async fn lsp_language_groups() -> Result<HashMap<String, String>, String> {
     Ok(detection::language_groups())
+}
+
+// ── Workspace scanning ──
+
+#[tauri::command]
+pub async fn lsp_scan_projects(
+    app: AppHandle,
+    workspace_path: String,
+) -> Result<Vec<DetectedProject>, String> {
+    Ok(scan_workspace_projects(&app, &workspace_path))
+}
+
+// ── Project root resolution ──
+
+#[tauri::command]
+pub async fn lsp_resolve_root(
+    file_path: String,
+    language_id: String,
+    workspace_path: String,
+) -> Result<String, String> {
+    Ok(find_project_root(&file_path, &language_id, &workspace_path))
 }
 
 // ── Registry commands ──

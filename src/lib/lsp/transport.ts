@@ -46,6 +46,7 @@ export class TauriLspTransport {
   private requestId = 0;
   private pendingRequests = new Map<number, PendingRequest>();
   private notificationHandlers = new Map<string, ((params: unknown) => void)[]>();
+  private requestHandlers = new Map<string, (params: unknown) => unknown>();
   private stoppedCallbacks: ((error?: string | null) => void)[] = [];
   private unlistenMessage: UnlistenFn | null = null;
   private unlistenStatus: UnlistenFn | null = null;
@@ -115,6 +116,11 @@ export class TauriLspTransport {
     this.notificationHandlers.set(method, handlers);
   }
 
+  /** Register a handler for server-initiated requests (server sends id + method, expects a response). */
+  onRequest(method: string, handler: (params: unknown) => unknown): void {
+    this.requestHandlers.set(method, handler);
+  }
+
   /** Register a callback invoked when the server stops (crash, EOF, or write failure). */
   onServerStopped(callback: (error?: string | null) => void): void {
     this.stoppedCallbacks.push(callback);
@@ -131,7 +137,28 @@ export class TauriLspTransport {
     }
     this.pendingRequests.clear();
     this.notificationHandlers.clear();
+    this.requestHandlers.clear();
     this.stoppedCallbacks = [];
+  }
+
+  /** Send a successful JSON-RPC response to a server-initiated request. */
+  private respondToRequest(id: number, result: unknown): void {
+    if (this.disposed) return;
+    const response: JsonRpcResponse = { jsonrpc: "2.0", id, result };
+    invoke("lsp_send", {
+      serverId: this.serverId,
+      message: JSON.stringify(response),
+    }).catch(() => {});
+  }
+
+  /** Send a JSON-RPC error response to a server-initiated request. */
+  private respondToRequestWithError(id: number, code: number, message: string): void {
+    if (this.disposed) return;
+    const response: JsonRpcResponse = { jsonrpc: "2.0", id, error: { code, message } };
+    invoke("lsp_send", {
+      serverId: this.serverId,
+      message: JSON.stringify(response),
+    }).catch(() => {});
   }
 
   private handleMessage(raw: string): void {
@@ -142,7 +169,7 @@ export class TauriLspTransport {
       return;
     }
 
-    // Response to a request we sent
+    // Response to a request we sent (has id, no method)
     if ("id" in msg && msg.id != null && !("method" in msg)) {
       const response = msg as JsonRpcResponse;
       const pending = this.pendingRequests.get(response.id);
@@ -158,7 +185,25 @@ export class TauriLspTransport {
       return;
     }
 
-    // Server-initiated notification (no id) or server request (has id + method)
+    // Server-initiated request (has both id and method) — must always respond
+    // per JSON-RPC spec. Use handler result for known methods, proper error
+    // for unknown ones so the server doesn't block waiting.
+    if ("method" in msg && "id" in msg && msg.id != null) {
+      const request = msg as JsonRpcRequest;
+      const handler = this.requestHandlers.get(request.method);
+      if (handler) {
+        this.respondToRequest(request.id, handler(request.params));
+      } else {
+        this.respondToRequestWithError(
+          request.id,
+          -32601,
+          `Method not supported: ${request.method}`,
+        );
+      }
+      return;
+    }
+
+    // Server notification (has method, no id)
     if ("method" in msg) {
       const notification = msg as JsonRpcNotification;
       const handlers = this.notificationHandlers.get(notification.method);

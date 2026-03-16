@@ -1,15 +1,38 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::sync::LazyLock;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
 use super::installer;
 
+// ── Server config loaded from servers.json ──
+
+#[derive(Deserialize)]
+struct ServerEntry {
+    languages: Vec<String>,
+    server: String,
+    bin: String,
+    #[serde(default)]
+    args: Vec<String>,
+    #[serde(default)]
+    markers: Vec<String>,
+}
+
+const SERVERS_JSON: &str = include_str!("servers.json");
+
+/// Parsed server configs, loaded once at startup.
+static SERVERS: LazyLock<Vec<ServerEntry>> = LazyLock::new(|| {
+    serde_json::from_str(SERVERS_JSON).expect("Failed to parse servers.json")
+});
+
+// ── Public types ──
+
 pub struct ServerConfig {
     pub language_id: String,
-    pub server_name: String, // registry/display name
-    pub command: String,     // binary name to execute
+    pub server_name: String,
+    pub command: String,
     pub args: Vec<String>,
 }
 
@@ -20,343 +43,43 @@ pub struct ServerAvailability {
     pub available: bool,
 }
 
-// ── Language → Server mapping ──
-// This is the single source of truth for which server handles which language
-// and how to launch it. The registry handles installation metadata separately.
-
-struct LaunchConfig {
-    server_name: &'static str, // registry name (for install lookups)
-    bin: &'static str,         // binary/command name
-    args: &'static [&'static str],
+#[derive(Serialize, Clone)]
+pub struct DetectedProject {
+    pub language_id: String,
+    pub server_name: String,
+    pub project_root: String,
+    pub available: bool,
 }
 
-/// Maps Monaco language IDs to their preferred LSP server and launch args.
-const LANGUAGE_DEFAULTS: &[(&str, LaunchConfig)] = &[
-    // ── Systems ──
-    (
-        "rust",
-        LaunchConfig {
-            server_name: "rust-analyzer",
-            bin: "rust-analyzer",
-            args: &[],
-        },
-    ),
-    (
-        "c",
-        LaunchConfig {
-            server_name: "clangd",
-            bin: "clangd",
-            args: &[],
-        },
-    ),
-    (
-        "cpp",
-        LaunchConfig {
-            server_name: "clangd",
-            bin: "clangd",
-            args: &[],
-        },
-    ),
-    (
-        "go",
-        LaunchConfig {
-            server_name: "gopls",
-            bin: "gopls",
-            args: &[],
-        },
-    ),
-    (
-        "zig",
-        LaunchConfig {
-            server_name: "zls",
-            bin: "zls",
-            args: &[],
-        },
-    ),
-    // ── Web ──
-    (
-        "typescript",
-        LaunchConfig {
-            server_name: "typescript-language-server",
-            bin: "typescript-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "javascript",
-        LaunchConfig {
-            server_name: "typescript-language-server",
-            bin: "typescript-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "typescriptreact",
-        LaunchConfig {
-            server_name: "typescript-language-server",
-            bin: "typescript-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "javascriptreact",
-        LaunchConfig {
-            server_name: "typescript-language-server",
-            bin: "typescript-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "css",
-        LaunchConfig {
-            server_name: "css-lsp",
-            bin: "vscode-css-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "scss",
-        LaunchConfig {
-            server_name: "css-lsp",
-            bin: "vscode-css-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "less",
-        LaunchConfig {
-            server_name: "css-lsp",
-            bin: "vscode-css-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "html",
-        LaunchConfig {
-            server_name: "html-lsp",
-            bin: "vscode-html-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "json",
-        LaunchConfig {
-            server_name: "json-lsp",
-            bin: "vscode-json-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "jsonc",
-        LaunchConfig {
-            server_name: "json-lsp",
-            bin: "vscode-json-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "svelte",
-        LaunchConfig {
-            server_name: "svelte-language-server",
-            bin: "svelteserver",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "vue",
-        LaunchConfig {
-            server_name: "vue-language-server",
-            bin: "vue-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "astro",
-        LaunchConfig {
-            server_name: "astro-language-server",
-            bin: "astro-ls",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "tailwindcss",
-        LaunchConfig {
-            server_name: "tailwindcss-language-server",
-            bin: "tailwindcss-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    // ── Scripting ──
-    (
-        "python",
-        LaunchConfig {
-            server_name: "python-lsp-server",
-            bin: "pylsp",
-            args: &[],
-        },
-    ),
-    (
-        "lua",
-        LaunchConfig {
-            server_name: "lua-language-server",
-            bin: "lua-language-server",
-            args: &[],
-        },
-    ),
-    (
-        "ruby",
-        LaunchConfig {
-            server_name: "solargraph",
-            bin: "solargraph",
-            args: &["stdio"],
-        },
-    ),
-    (
-        "php",
-        LaunchConfig {
-            server_name: "intelephense",
-            bin: "intelephense",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "shellscript",
-        LaunchConfig {
-            server_name: "bash-language-server",
-            bin: "bash-language-server",
-            args: &["start"],
-        },
-    ),
-    // ── Config / Data ──
-    (
-        "yaml",
-        LaunchConfig {
-            server_name: "yaml-language-server",
-            bin: "yaml-language-server",
-            args: &["--stdio"],
-        },
-    ),
-    (
-        "toml",
-        LaunchConfig {
-            server_name: "taplo",
-            bin: "taplo",
-            args: &["lsp", "stdio"],
-        },
-    ),
-    (
-        "markdown",
-        LaunchConfig {
-            server_name: "marksman",
-            bin: "marksman",
-            args: &["server"],
-        },
-    ),
-    (
-        "dockerfile",
-        LaunchConfig {
-            server_name: "dockerfile-language-server-nodejs",
-            bin: "docker-langserver",
-            args: &["--stdio"],
-        },
-    ),
-    // ── JVM ──
-    (
-        "java",
-        LaunchConfig {
-            server_name: "jdtls",
-            bin: "jdtls",
-            args: &[],
-        },
-    ),
-    (
-        "kotlin",
-        LaunchConfig {
-            server_name: "kotlin-language-server",
-            bin: "kotlin-language-server",
-            args: &[],
-        },
-    ),
-    // ── .NET ──
-    (
-        "csharp",
-        LaunchConfig {
-            server_name: "omnisharp",
-            bin: "omnisharp",
-            args: &[],
-        },
-    ),
-    // ── Other ──
-    (
-        "elixir",
-        LaunchConfig {
-            server_name: "elixir-ls",
-            bin: "elixir-ls",
-            args: &[],
-        },
-    ),
-    (
-        "haskell",
-        LaunchConfig {
-            server_name: "haskell-language-server",
-            bin: "haskell-language-server-wrapper",
-            args: &["--lsp"],
-        },
-    ),
-    (
-        "dart",
-        LaunchConfig {
-            server_name: "dart-language-server",
-            bin: "dart",
-            args: &["language-server", "--protocol=lsp"],
-        },
-    ),
-    (
-        "terraform",
-        LaunchConfig {
-            server_name: "terraform-ls",
-            bin: "terraform-ls",
-            args: &["serve"],
-        },
-    ),
-];
+// ── Lookups (all derived from servers.json) ──
 
-// ── Public API ──
+/// Find the server entry that handles a given Monaco language ID.
+fn find_entry(language_id: &str) -> Option<&'static ServerEntry> {
+    SERVERS.iter().find(|e| e.languages.iter().any(|l| l == language_id))
+}
 
 /// Resolve the server config for a given Monaco language ID.
-/// Returns None if no server is configured for this language.
 pub fn resolve_server_for_language(language_id: &str) -> Option<ServerConfig> {
-    let config = LANGUAGE_DEFAULTS
-        .iter()
-        .find(|(lang, _)| *lang == language_id)?;
-    let launch = &config.1;
-
+    let entry = find_entry(language_id)?;
     Some(ServerConfig {
-        language_id: server_language_group(language_id).to_string(),
-        server_name: launch.server_name.to_string(),
-        command: launch.bin.to_string(),
-        args: launch.args.iter().map(|s| s.to_string()).collect(),
+        language_id: entry.languages[0].clone(),
+        server_name: entry.server.clone(),
+        command: entry.bin.clone(),
+        args: entry.args.clone(),
     })
 }
 
 /// Get the server name for a given language (for display purposes).
 pub fn server_name_for_language(language_id: &str) -> Option<&'static str> {
-    LANGUAGE_DEFAULTS
-        .iter()
-        .find(|(lang, _)| *lang == language_id)
-        .map(|(_, config)| config.server_name)
+    find_entry(language_id).map(|e| e.server.as_str())
 }
 
-/// Group multiple Monaco language IDs that share the same server.
-/// e.g., typescript/javascript/typescriptreact/javascriptreact → "typescript"
-/// This is used as the store key to avoid starting duplicate servers.
+/// Map a language to its server group (the first language in the entry).
+/// Languages that share a server share a group, e.g. javascript → typescript.
 pub fn server_language_group(language_id: &str) -> &str {
-    match language_id {
-        "javascript" | "typescriptreact" | "javascriptreact" => "typescript",
-        "cpp" => "c",
-        "scss" | "less" => "css",
-        "jsonc" => "json",
-        other => other,
+    match find_entry(language_id) {
+        Some(entry) => &entry.languages[0],
+        None => language_id,
     }
 }
 
@@ -364,22 +87,21 @@ pub fn server_language_group(language_id: &str) -> &str {
 /// Used by the frontend as the single source of truth for language grouping.
 pub fn language_groups() -> HashMap<String, String> {
     let mut groups = HashMap::new();
-    for (lang, _) in LANGUAGE_DEFAULTS {
-        let group = server_language_group(lang);
-        if group != *lang {
-            groups.insert(lang.to_string(), group.to_string());
+    for entry in SERVERS.iter() {
+        let group = &entry.languages[0];
+        for lang in &entry.languages[1..] {
+            groups.insert(lang.clone(), group.clone());
         }
     }
     groups
 }
 
-/// Check if a server binary is available — either installed locally or on PATH.
+// ── Binary availability ──
+
 pub fn is_server_available(app: &AppHandle, command: &str) -> bool {
     installer::find_installed_binary(app, command).is_some() || which::which(command).is_ok()
 }
 
-/// Resolve the full command path for a server.
-/// Checks local installations first, then falls back to the bare command name for PATH lookup.
 pub fn resolve_command(app: &AppHandle, command: &str) -> String {
     if let Some(local_path) = installer::find_installed_binary(app, command) {
         local_path.to_string_lossy().to_string()
@@ -388,12 +110,13 @@ pub fn resolve_command(app: &AppHandle, command: &str) -> String {
     }
 }
 
-/// Check which language servers are available for a workspace (based on project files).
+// ── Root-level availability check ──
+
 pub fn check_availability(app: &AppHandle, workspace_path: &str) -> Vec<ServerAvailability> {
     detect_workspace_languages(workspace_path)
         .into_iter()
         .filter_map(|lang| {
-            let config = resolve_server_for_language(lang)?;
+            let config = resolve_server_for_language(&lang)?;
             Some(ServerAvailability {
                 available: is_server_available(app, &config.command),
                 server_name: config.server_name,
@@ -403,31 +126,131 @@ pub fn check_availability(app: &AppHandle, workspace_path: &str) -> Vec<ServerAv
         .collect()
 }
 
-/// Detect which languages a workspace likely uses based on project marker files.
-fn detect_workspace_languages(workspace_path: &str) -> Vec<&'static str> {
+// ── Deep workspace scanning ──
+
+const MAX_SCAN_DEPTH: usize = 5;
+const SKIP_DIRS: &[&str] = &[
+    "node_modules", ".git", "target", "dist", "build", "vendor", ".next",
+    "__pycache__", ".venv", "venv", ".tox", "out", ".output", ".nuxt",
+    ".svelte-kit", "coverage", ".cache", "tmp", ".tmp",
+];
+
+/// Scan the workspace tree for project marker files and return all detected
+/// projects with their resolved roots.
+pub fn scan_workspace_projects(app: &AppHandle, workspace_path: &str) -> Vec<DetectedProject> {
+    // Build (markers, group) pairs, deduplicated by group
+    let mut marker_groups: Vec<(&[String], &str)> = Vec::new();
+    let mut seen_groups = HashSet::new();
+    for entry in SERVERS.iter() {
+        if entry.markers.is_empty() {
+            continue;
+        }
+        let group = entry.languages[0].as_str();
+        if seen_groups.insert(group) {
+            marker_groups.push((&entry.markers, group));
+        }
+    }
+
+    // Walk the tree, keeping only the shallowest root per language group
+    let mut found: HashMap<String, String> = HashMap::new();
+    let mut stack: Vec<(std::path::PathBuf, usize)> =
+        vec![(Path::new(workspace_path).to_path_buf(), 0)];
+
+    while let Some((dir, depth)) = stack.pop() {
+        for (markers, group) in &marker_groups {
+            if markers.iter().any(|m| dir.join(m).exists()) {
+                let group = group.to_string();
+                let dir_str = dir.to_string_lossy().to_string();
+                found
+                    .entry(group)
+                    .and_modify(|existing| {
+                        if dir_str.len() < existing.len() {
+                            *existing = dir_str.clone();
+                        }
+                    })
+                    .or_insert(dir_str);
+            }
+        }
+
+        if depth >= MAX_SCAN_DEPTH {
+            continue;
+        }
+
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if SKIP_DIRS.contains(&name_str.as_ref()) || name_str.starts_with('.') {
+                continue;
+            }
+            stack.push((path, depth + 1));
+        }
+    }
+
+    found
+        .into_iter()
+        .filter_map(|(group, project_root)| {
+            let config = resolve_server_for_language(&group)?;
+            Some(DetectedProject {
+                available: is_server_available(app, &config.command),
+                server_name: config.server_name,
+                language_id: group,
+                project_root,
+            })
+        })
+        .collect()
+}
+
+// ── Project root resolution (walk-up from file) ──
+
+/// Find the nearest project root for a language by walking up from `file_path`.
+/// Stops at `workspace_root` (won't go above it). Falls back to `workspace_root`.
+pub fn find_project_root(file_path: &str, language_id: &str, workspace_root: &str) -> String {
+    let markers = match find_entry(language_id) {
+        Some(entry) if !entry.markers.is_empty() => &entry.markers,
+        _ => return workspace_root.to_string(),
+    };
+
+    let root = Path::new(workspace_root);
+    let mut dir = Path::new(file_path).parent().unwrap_or(root);
+
+    loop {
+        if markers.iter().any(|m| dir.join(m).exists()) {
+            return dir.to_string_lossy().to_string();
+        }
+        if dir == root {
+            break;
+        }
+        match dir.parent() {
+            Some(parent) if parent != dir => dir = parent,
+            _ => break,
+        }
+    }
+
+    workspace_root.to_string()
+}
+
+// ── Root-level language detection (used by check_availability) ──
+
+fn detect_workspace_languages(workspace_path: &str) -> Vec<String> {
     let root = Path::new(workspace_path);
     let mut languages = Vec::new();
     let mut seen = HashSet::new();
 
-    let markers: &[(&[&str], &str)] = &[
-        (&["Cargo.toml"], "rust"),
-        (
-            &["package.json", "tsconfig.json", "jsconfig.json"],
-            "typescript",
-        ),
-        (
-            &["pyproject.toml", "setup.py", "requirements.txt"],
-            "python",
-        ),
-        (&["go.mod"], "go"),
-        (&["CMakeLists.txt", ".clangd", "compile_commands.json"], "c"),
-        (&["Gemfile"], "ruby"),
-        (&["composer.json"], "php"),
-    ];
-
-    for (files, lang) in markers {
-        if files.iter().any(|f| root.join(f).exists()) && seen.insert(*lang) {
-            languages.push(*lang);
+    for entry in SERVERS.iter() {
+        if entry.markers.is_empty() {
+            continue;
+        }
+        let group = &entry.languages[0];
+        if entry.markers.iter().any(|m| root.join(m).exists()) && seen.insert(group) {
+            languages.push(group.clone());
         }
     }
 

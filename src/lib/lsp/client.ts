@@ -24,6 +24,38 @@ import {
 import { TauriLspTransport } from "./transport";
 import { pathToFileUri } from "./uri";
 
+// ── Work Done Progress types (LSP 3.15+) ──
+
+export interface WorkDoneProgressBegin {
+  kind: "begin";
+  title: string;
+  cancellable?: boolean;
+  message?: string;
+  percentage?: number;
+}
+
+export interface WorkDoneProgressReport {
+  kind: "report";
+  cancellable?: boolean;
+  message?: string;
+  percentage?: number;
+}
+
+export interface WorkDoneProgressEnd {
+  kind: "end";
+  message?: string;
+}
+
+export type WorkDoneProgressValue =
+  | WorkDoneProgressBegin
+  | WorkDoneProgressReport
+  | WorkDoneProgressEnd;
+
+interface ProgressParams {
+  token: string | number;
+  value: WorkDoneProgressValue;
+}
+
 export class LspClient {
   private transport: TauriLspTransport;
   capabilities: ServerCapabilities | null = null;
@@ -31,6 +63,42 @@ export class LspClient {
 
   constructor(transport: TauriLspTransport) {
     this.transport = transport;
+
+    // Handle server request to create a progress token — just acknowledge it
+    this.transport.onRequest("window/workDoneProgress/create", () => null);
+
+    // Handle dynamic capability registration — acknowledge without tracking
+    this.transport.onRequest("client/registerCapability", () => null);
+    this.transport.onRequest("client/unregisterCapability", () => null);
+
+    // Handle workspace/configuration — return empty config for each requested item
+    this.transport.onRequest("workspace/configuration", (params) => {
+      const p = params as { items?: unknown[] } | null;
+      return (p?.items ?? []).map(() => ({}));
+    });
+
+    // Handle workspace/workspaceFolders — return null (single-root workspace)
+    this.transport.onRequest("workspace/workspaceFolders", () => null);
+
+    // Handle window/showMessageRequest — return null (dismiss the dialog)
+    this.transport.onRequest("window/showMessageRequest", () => null);
+
+    // Handle workspace/codeLens/refresh, workspace/semanticTokens/refresh, etc.
+    // These ask the client to re-request certain data; acknowledge with null.
+    this.transport.onRequest("workspace/codeLens/refresh", () => null);
+    this.transport.onRequest("workspace/semanticTokens/refresh", () => null);
+    this.transport.onRequest("workspace/inlayHint/refresh", () => null);
+    this.transport.onRequest("workspace/diagnostics/refresh", () => null);
+  }
+
+  /** Subscribe to work-done progress updates (indexing, loading, etc.). */
+  onProgress(handler: (token: string | number, value: WorkDoneProgressValue) => void): void {
+    this.transport.onNotification("$/progress", (params: unknown) => {
+      const p = params as ProgressParams;
+      if (p?.token != null && p?.value?.kind) {
+        handler(p.token, p.value);
+      }
+    });
   }
 
   async initialize(workspacePath: string): Promise<InitializeResult> {
@@ -104,6 +172,9 @@ export class LspClient {
         },
         workspace: {
           workspaceFolders: true,
+        },
+        window: {
+          workDoneProgress: true,
         },
       },
       workspaceFolders: [{ uri: rootUri, name: workspacePath.split(/[\\/]/).pop() ?? "" }],

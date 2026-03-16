@@ -245,7 +245,7 @@ export function EditorTab({ tab }: TabContentProps) {
     const lspLang = lspLanguageRef.current;
     let cancelled = false;
 
-    startServer(workspace.path, lspLang, monacoRef.current).then((client) => {
+    startServer(workspace.path, lspLang, filePath ?? null, monacoRef.current).then((client) => {
       if (cancelled || !client || !editorRef.current) return;
       lspOpenedRef.current = true;
       versionRef.current = 1;
@@ -397,7 +397,7 @@ export function EditorTab({ tab }: TabContentProps) {
     if (workspace && filePath) {
       const lang = languageIdFromPath(filePath);
       lspLanguageRef.current = lang;
-      startServer(workspace.path, lang, monaco);
+      startServer(workspace.path, lang, filePath, monaco);
     }
 
     // Disable Monaco's built-in TS/JS diagnostics unconditionally.
