@@ -27,6 +27,10 @@ interface LayoutStore {
     metadata?: Record<string, unknown>,
   ) => void;
   closeTab: (paneId: string, tabId: string) => void;
+  closeOtherTabs: (paneId: string, tabId: string) => void;
+  closeTabsToLeft: (paneId: string, tabId: string) => void;
+  closeTabsToRight: (paneId: string, tabId: string) => void;
+  closeAllTabs: (paneId: string) => void;
   setActiveTab: (paneId: string, tabId: string) => void;
   reorderTab: (paneId: string, fromIndex: number, toIndex: number) => void;
   moveTabToPane: (fromPaneId: string, tabId: string, toPaneId: string, index?: number) => void;
@@ -120,6 +124,43 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
             : leaf.activeTabId;
         return { ...leaf, tabs, activeTabId };
       });
+      return { layout: layout ?? createLeaf() };
+    }),
+
+  closeOtherTabs: (paneId, tabId) =>
+    set((state) => {
+      const layout = updateNode(state.layout, paneId, (leaf) => {
+        const tabs = leaf.tabs.filter((t) => t.id === tabId);
+        return { ...leaf, tabs, activeTabId: tabId };
+      });
+      return { layout: layout ?? createLeaf() };
+    }),
+
+  closeTabsToLeft: (paneId, tabId) =>
+    set((state) => {
+      const layout = updateNode(state.layout, paneId, (leaf) => {
+        const idx = leaf.tabs.findIndex((t) => t.id === tabId);
+        const tabs = leaf.tabs.slice(idx);
+        const activeTabId = tabs.some((t) => t.id === leaf.activeTabId) ? leaf.activeTabId : tabId;
+        return { ...leaf, tabs, activeTabId };
+      });
+      return { layout: layout ?? createLeaf() };
+    }),
+
+  closeTabsToRight: (paneId, tabId) =>
+    set((state) => {
+      const layout = updateNode(state.layout, paneId, (leaf) => {
+        const idx = leaf.tabs.findIndex((t) => t.id === tabId);
+        const tabs = leaf.tabs.slice(0, idx + 1);
+        const activeTabId = tabs.some((t) => t.id === leaf.activeTabId) ? leaf.activeTabId : tabId;
+        return { ...leaf, tabs, activeTabId };
+      });
+      return { layout: layout ?? createLeaf() };
+    }),
+
+  closeAllTabs: (paneId) =>
+    set((state) => {
+      const layout = updateNode(state.layout, paneId, () => null);
       return { layout: layout ?? createLeaf() };
     }),
 

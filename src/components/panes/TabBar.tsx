@@ -1,9 +1,11 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useLayoutStore } from "../../store/layout.store";
 import { useDragStore } from "../../store/drag.store";
 import { TabIcon } from "../shared/TabIcon";
+import { ContextMenu } from "../shared/ContextMenu";
+import type { ContextMenuItem } from "../shared/ContextMenu";
 import type { Tab } from "../../types";
 
 interface TabBarProps {
@@ -17,9 +19,14 @@ const DRAG_THRESHOLD = 5;
 export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const closeTab = useLayoutStore((s) => s.closeTab);
+  const closeOtherTabs = useLayoutStore((s) => s.closeOtherTabs);
+  const closeTabsToLeft = useLayoutStore((s) => s.closeTabsToLeft);
+  const closeTabsToRight = useLayoutStore((s) => s.closeTabsToRight);
+  const closeAllTabs = useLayoutStore((s) => s.closeAllTabs);
   const addTab = useLayoutStore((s) => s.addTab);
   const setDragState = useDragStore((s) => s.setDragState);
   const isDraggingRef = useRef(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: Tab } | null>(null);
 
   const handleTabMouseDown = useCallback(
     (e: React.MouseEvent, tab: Tab) => {
@@ -88,6 +95,16 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
                 : "bg-[var(--color-tab-inactive-bg)] border-b border-[var(--color-border-primary)] hover:bg-[var(--color-bg-surface)]"
             }`}
             onMouseDown={(e) => handleTabMouseDown(e, tab)}
+            onAuxClick={(e) => {
+              if (e.button === 1) {
+                e.preventDefault();
+                closeTab(paneId, tab.id);
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu({ x: e.clientX, y: e.clientY, tab });
+            }}
           >
             <TabIcon
               name={tab.icon}
@@ -118,6 +135,40 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
       >
         <HugeiconsIcon icon={Add01Icon} size={14} />
       </button>
+
+      {contextMenu &&
+        (() => {
+          const tabIdx = tabs.findIndex((t) => t.id === contextMenu.tab.id);
+          const items: ContextMenuItem[] = [
+            { label: "Close", onClick: () => closeTab(paneId, contextMenu.tab.id) },
+            {
+              label: "Close Others",
+              onClick: () => closeOtherTabs(paneId, contextMenu.tab.id),
+              disabled: tabs.length <= 1,
+            },
+            { separator: true },
+            {
+              label: "Close to the Left",
+              onClick: () => closeTabsToLeft(paneId, contextMenu.tab.id),
+              disabled: tabIdx === 0,
+            },
+            {
+              label: "Close to the Right",
+              onClick: () => closeTabsToRight(paneId, contextMenu.tab.id),
+              disabled: tabIdx === tabs.length - 1,
+            },
+            { separator: true },
+            { label: "Close All", onClick: () => closeAllTabs(paneId), destructive: true },
+          ];
+          return (
+            <ContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              items={items}
+              onClose={() => setContextMenu(null)}
+            />
+          );
+        })()}
     </div>
   );
 }
