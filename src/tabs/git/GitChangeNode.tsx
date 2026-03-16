@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowRight01Icon,
@@ -8,10 +8,12 @@ import {
 } from "@hugeicons/core-free-icons";
 import { getNodeFiles } from "../../lib/git-tree";
 import type { TreeNode } from "../../lib/git-tree";
+import { useDragStore } from "../../store/drag.store";
 
 interface GitChangeNodeProps {
   node: TreeNode;
   depth: number;
+  isUntracked: boolean;
   onToggleStage: (node: TreeNode) => void;
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
   onFileClick: (node: TreeNode) => void;
@@ -72,12 +74,49 @@ function Checkbox({
 export function GitChangeNode({
   node,
   depth,
+  isUntracked,
   onToggleStage,
   onContextMenu,
   onFileClick,
 }: GitChangeNodeProps) {
   const [expanded, setExpanded] = useState(true);
   const checkState = getCheckState(node);
+  const setDragState = useDragStore((s) => s.setDragState);
+  const dragOccurredRef = useRef(false);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0 || node.isDir || !node.change) return;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      dragOccurredRef.current = false;
+
+      const onMouseMove = (ev: MouseEvent) => {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        if (!dragOccurredRef.current && Math.sqrt(dx * dx + dy * dy) > 5) {
+          dragOccurredRef.current = true;
+          setDragState({
+            type: "changes",
+            filePath: node.change!.path,
+            fileName: node.name,
+            staged: node.change!.staged,
+            isUntracked,
+          });
+        }
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [node, isUntracked, setDragState],
+  );
 
   const icon = node.isDir ? (expanded ? Folder02Icon : Folder01Icon) : File01Icon;
 
@@ -87,9 +126,11 @@ export function GitChangeNode({
         className="relative flex items-center w-full h-[28px] gap-1.5 text-left hover:bg-[var(--color-bg-elevated)] focus-within:bg-[var(--color-bg-elevated)] transition-colors select-none cursor-pointer group"
         style={{ paddingLeft: LEFT_PAD + depth * INDENT_SIZE }}
         onClick={() => {
+          if (dragOccurredRef.current) return;
           if (node.isDir) setExpanded((prev) => !prev);
           else onFileClick(node);
         }}
+        onMouseDown={handleMouseDown}
         onContextMenu={(e) => onContextMenu(e, node)}
       >
         {/* Indent guide lines */}
@@ -154,6 +195,7 @@ export function GitChangeNode({
               key={child.path}
               node={child}
               depth={depth + 1}
+              isUntracked={isUntracked}
               onToggleStage={onToggleStage}
               onContextMenu={onContextMenu}
               onFileClick={onFileClick}

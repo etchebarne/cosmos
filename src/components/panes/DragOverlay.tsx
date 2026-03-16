@@ -18,7 +18,12 @@ interface DropTarget {
   rect: DOMRect;
 }
 
-function computeDropTarget(x: number, y: number, isFileDrag: boolean): DropTarget | null {
+function computeDropTarget(
+  x: number,
+  y: number,
+  isFileDrag: boolean,
+  allowDirectory?: boolean,
+): DropTarget | null {
   const elements = document.elementsFromPoint(x, y);
 
   // Check tab bar first (higher priority)
@@ -50,17 +55,18 @@ function computeDropTarget(x: number, y: number, isFileDrag: boolean): DropTarge
   }
 
   if (isFileDrag) {
-    // Check directory targets in file tree (file drag only)
-    for (const el of elements) {
-      const dirPath = (el as HTMLElement).dataset?.dirPath;
-      if (dirPath) {
-        return {
-          type: "directory",
-          dirPath,
-          rect: (el as HTMLElement).getBoundingClientRect(),
-        };
+    // Check directory targets in file tree (file drag only, not changes drag)
+    if (allowDirectory)
+      for (const el of elements) {
+        const dirPath = (el as HTMLElement).dataset?.dirPath;
+        if (dirPath) {
+          return {
+            type: "directory",
+            dirPath,
+            rect: (el as HTMLElement).getBoundingClientRect(),
+          };
+        }
       }
-    }
 
     // Check infinity canvas (file drag only)
     for (const el of elements) {
@@ -155,11 +161,12 @@ export function DragOverlay() {
       return;
     }
 
-    const isFileDrag = dragState.type === "file";
+    const isFileDrag = dragState.type === "file" || dragState.type === "changes";
+    const allowDirectory = dragState.type === "file";
 
     const onMouseMove = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
-      setDropTarget(computeDropTarget(e.clientX, e.clientY, isFileDrag));
+      setDropTarget(computeDropTarget(e.clientX, e.clientY, isFileDrag, allowDirectory));
     };
 
     const onMouseUp = (e: MouseEvent) => {
@@ -285,6 +292,76 @@ export function DragOverlay() {
           }
           if (existingNode) {
             useInfinityStore.getState().removeNode(existingNode.canvasId, existingNode.nodeId);
+          }
+        } else if (dragged.type === "changes") {
+          // ── Changes drag ──
+          const { filePath, fileName, staged, isUntracked } = dragged;
+          const changesMetadata = { filePath, staged, isUntracked };
+
+          // Find existing changes tab for this file
+          let existingChangesTab: { paneId: string; tabId: string } | null = null;
+          const leaves = findAllLeaves(useLayoutStore.getState().layout);
+          for (const leaf of leaves) {
+            const tab = leaf.tabs.find(
+              (t) => t.type === "changes" && (t.metadata?.filePath as string) === filePath,
+            );
+            if (tab) {
+              existingChangesTab = { paneId: leaf.id, tabId: tab.id };
+              break;
+            }
+          }
+
+          let existingChangesNode: { canvasId: string; nodeId: string } | null = null;
+          for (const [canvasId, nodes] of Object.entries(useInfinityStore.getState().canvases)) {
+            const node = nodes.find(
+              (n) =>
+                n.data.tabType === "changes" && (n.data.metadata?.filePath as string) === filePath,
+            );
+            if (node) {
+              existingChangesNode = { canvasId, nodeId: node.id };
+              break;
+            }
+          }
+
+          if (target.type === "infinity" && target.infinityTabId) {
+            const instance = useInfinityStore.getState().instances[target.infinityTabId];
+            if (instance) {
+              const pos = instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+              useInfinityStore
+                .getState()
+                .addNode(target.infinityTabId, "changes", pos, fileName, changesMetadata);
+            }
+          } else if (target.type === "tab-bar" && target.paneId) {
+            useLayoutStore.getState().addTab(target.paneId, "changes", fileName, changesMetadata);
+          } else if (target.type === "pane-zone" && target.zone && target.paneId) {
+            if (target.zone === "center") {
+              useLayoutStore.getState().addTab(target.paneId, "changes", fileName, changesMetadata);
+            } else {
+              const direction: "horizontal" | "vertical" =
+                target.zone === "left" || target.zone === "right" ? "horizontal" : "vertical";
+              const position: "before" | "after" =
+                target.zone === "left" || target.zone === "top" ? "before" : "after";
+              useLayoutStore
+                .getState()
+                .insertSplit(
+                  target.paneId,
+                  direction,
+                  position,
+                  "changes",
+                  fileName,
+                  changesMetadata,
+                );
+            }
+          }
+
+          // Close old instances
+          if (existingChangesTab) {
+            useLayoutStore.getState().closeTab(existingChangesTab.paneId, existingChangesTab.tabId);
+          }
+          if (existingChangesNode) {
+            useInfinityStore
+              .getState()
+              .removeNode(existingChangesNode.canvasId, existingChangesNode.nodeId);
           }
         }
       }

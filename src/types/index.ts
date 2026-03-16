@@ -41,4 +41,12 @@ export interface FileDragState {
   fileName: string;
 }
 
-export type DragState = TabDragState | FileDragState;
+export interface ChangesDragState {
+  type: "changes";
+  filePath: string;
+  fileName: string;
+  staged: boolean;
+  isUntracked: boolean;
+}
+
+export type DragState = TabDragState | FileDragState | ChangesDragState;

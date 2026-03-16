@@ -366,6 +366,7 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
                     key={node.path}
                     node={node}
                     depth={0}
+                    isUntracked={false}
                     onToggleStage={handleToggleStage}
                     onContextMenu={handleNodeContextMenu}
                     onFileClick={handleFileClick}
@@ -385,6 +386,7 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
                     key={node.path}
                     node={node}
                     depth={0}
+                    isUntracked={true}
                     onToggleStage={handleToggleStage}
                     onContextMenu={handleNodeContextMenu}
                     onFileClick={handleFileClick}
