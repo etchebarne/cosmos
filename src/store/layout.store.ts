@@ -59,6 +59,8 @@ interface LayoutStore {
     isUntracked: boolean,
     sourcePaneId: string,
   ) => void;
+  dirtyTabs: Set<string>;
+  setTabDirty: (tabId: string, dirty: boolean) => void;
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -67,6 +69,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   activeWorkspacePath: null,
   lastEditorPaneId: null,
   activePaneId: null,
+  dirtyTabs: new Set<string>(),
 
   setWorkspace: (path) =>
     set((state) => {
@@ -404,5 +407,13 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         }) ?? state.layout;
 
       return { layout, lastEditorPaneId: newLeaf.id, activePaneId: newLeaf.id };
+    }),
+
+  setTabDirty: (tabId, dirty) =>
+    set((state) => {
+      const next = new Set(state.dirtyTabs);
+      if (dirty) next.add(tabId);
+      else next.delete(tabId);
+      return { dirtyTabs: next };
     }),
 }));

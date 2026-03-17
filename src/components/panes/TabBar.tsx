@@ -24,6 +24,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
   const closeTabsToRight = useLayoutStore((s) => s.closeTabsToRight);
   const closeAllTabs = useLayoutStore((s) => s.closeAllTabs);
   const addTab = useLayoutStore((s) => s.addTab);
+  const dirtyTabs = useLayoutStore((s) => s.dirtyTabs);
   const setDragState = useDragStore((s) => s.setDragState);
   const isDraggingRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: Tab } | null>(null);
@@ -116,16 +117,24 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
             >
               {tab.title}
             </span>
-            <button
-              className="flex items-center justify-center p-0.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-100 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border-secondary)]"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                closeTab(paneId, tab.id);
-              }}
-            >
-              <HugeiconsIcon icon={Cancel01Icon} size={12} />
-            </button>
+            <div className="relative flex items-center justify-center w-4 h-4">
+              {dirtyTabs.has(tab.id) && (
+                <span
+                  className="absolute w-2 h-2 bg-[var(--color-text-primary)] group-hover:opacity-0 transition-opacity duration-100"
+                  style={{ borderRadius: "50%" }}
+                />
+              )}
+              <button
+                className="flex items-center justify-center p-0.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-100 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border-secondary)]"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeTab(paneId, tab.id);
+                }}
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={12} />
+              </button>
+            </div>
           </div>
         );
       })}

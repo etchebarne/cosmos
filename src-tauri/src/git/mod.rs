@@ -541,6 +541,19 @@ pub fn watch_workspace(app: AppHandle, path: String) -> Result<(), String> {
                 dirs.dedup();
 
                 let _ = app_handle.emit("file-tree-changed", dirs);
+
+                // Collect unique file paths for editor content reload
+                let mut files: Vec<String> = events
+                    .iter()
+                    .filter(|e| e.path.is_file())
+                    .map(|e| e.path.to_string_lossy().to_string())
+                    .collect();
+                files.sort();
+                files.dedup();
+
+                if !files.is_empty() {
+                    let _ = app_handle.emit("file-content-changed", files);
+                }
             }
         },
     )

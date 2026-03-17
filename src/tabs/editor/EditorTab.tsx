@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import Editor, { type Monaco } from "@monaco-editor/react";
 import type { editor, Uri, IRange, IPosition } from "monaco-editor";
 import {
@@ -159,7 +160,8 @@ export function EditorTab({ tab }: TabContentProps) {
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [dirty, setDirty] = useState(false);
+  const dirty = useLayoutStore((s) => s.dirtyTabs.has(tab.id));
+  const setTabDirty = useLayoutStore((s) => s.setTabDirty);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const contentRef = useRef<string | null>(null);
@@ -182,6 +184,8 @@ export function EditorTab({ tab }: TabContentProps) {
 
   const fileUri = filePath ? pathToFileUri(filePath) : null;
 
+  const isExternalUpdateRef = useRef(false);
+
   // Refs to keep cleanup closure in sync with latest values
   const workspaceRef = useRef(workspace);
   workspaceRef.current = workspace;
@@ -189,6 +193,8 @@ export function EditorTab({ tab }: TabContentProps) {
   fileUriRef.current = fileUri;
   const filePathRef = useRef(filePath);
   filePathRef.current = filePath;
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
 
   const loadFile = useCallback(async () => {
     if (!filePath) return;
@@ -198,7 +204,7 @@ export function EditorTab({ tab }: TabContentProps) {
       const result = await invoke<string>("read_file", { path: filePath });
       setContent(result);
       contentRef.current = result;
-      setDirty(false);
+      setTabDirty(tab.id, false);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -214,7 +220,7 @@ export function EditorTab({ tab }: TabContentProps) {
     if (!filePath || contentRef.current === null) return;
     try {
       await invoke("write_file", { path: filePath, content: contentRef.current });
-      setDirty(false);
+      setTabDirty(tab.id, false);
 
       // Notify LSP of save
       if (workspace && fileUri) {
@@ -288,6 +294,7 @@ export function EditorTab({ tab }: TabContentProps) {
 
       lspOpenedRef.current = false;
       changeDisposableRef.current?.dispose();
+      useLayoutStore.getState().setTabDirty(tab.id, false);
       if (fp) editorInstances.delete(fp);
       if (ws && uri) {
         const client = useLspStore.getState().getClient(ws.path, lspLanguageRef.current);
@@ -295,6 +302,51 @@ export function EditorTab({ tab }: TabContentProps) {
       }
     };
   }, []);
+
+  // Reload editor content when the file is modified externally and the editor is clean.
+  useEffect(() => {
+    if (!filePath) return;
+
+    const unlisten = listen<string[]>("file-content-changed", async (event) => {
+      const changedFiles = event.payload;
+      // Normalize both paths for comparison (backslash-insensitive)
+      const norm = (p: string) => p.replace(/\\/g, "/").toLowerCase();
+      const normFilePath = norm(filePath);
+      if (!changedFiles.some((f) => norm(f) === normFilePath)) return;
+
+      // Don't reload if the user has unsaved edits
+      if (dirtyRef.current) return;
+
+      try {
+        const newContent = await invoke<string>("read_file", { path: filePath });
+        // Skip if content is identical (e.g. triggered by our own save)
+        if (newContent === contentRef.current) return;
+
+        contentRef.current = newContent;
+        const ed = editorRef.current;
+        if (ed) {
+          isExternalUpdateRef.current = true;
+          ed.setValue(newContent);
+          isExternalUpdateRef.current = false;
+        } else {
+          setContent(newContent);
+        }
+
+        // Notify LSP of the updated content
+        if (workspace && fileUri) {
+          versionRef.current++;
+          const client = getClient(workspace.path, lspLanguageRef.current);
+          client?.didChange(fileUri, versionRef.current, [{ text: newContent }]);
+        }
+      } catch {
+        // File may have been deleted — ignore
+      }
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [filePath, workspace, fileUri, getClient]);
 
   function handleEditorDidMount(instance: editor.IStandaloneCodeEditor, monaco: Monaco) {
     editorRef.current = instance;
@@ -345,7 +397,9 @@ export function EditorTab({ tab }: TabContentProps) {
     changeDisposableRef.current = instance.onDidChangeModelContent((e) => {
       // Update local state immediately (not debounced)
       contentRef.current = instance.getValue();
-      if (!dirty) setDirty(true);
+      // Skip dirty flag for programmatic reloads from external file changes
+      if (isExternalUpdateRef.current) return;
+      if (!dirty) setTabDirty(tab.id, true);
 
       if (!workspace || !fileUri) return;
       const client = getClient(workspace.path, lspLanguageRef.current);
@@ -452,13 +506,6 @@ export function EditorTab({ tab }: TabContentProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {dirty && (
-        <div className="flex items-center h-6 px-3 bg-[var(--color-bg-surface)] border-b border-[var(--color-border-primary)]">
-          <span className="text-[11px] text-[var(--color-text-secondary)]">
-            Modified — Ctrl+S to save
-          </span>
-        </div>
-      )}
       <div className="flex-1 min-h-0">
         <Editor
           path={fileUri ?? undefined}
