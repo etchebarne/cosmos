@@ -169,6 +169,11 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
     const observer = new ResizeObserver(() => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
+        // Skip resize when the container is hidden (e.g. workspace switched
+        // away). display:none collapses the element to 0×0; fitting then
+        // would send a bogus tiny resize to the PTY, corrupting TUI apps.
+        if (!el.offsetWidth && !el.offsetHeight) return;
+
         fitAddon.fit();
         if (spawned) {
           invoke("terminal_resize", {
