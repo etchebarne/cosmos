@@ -56,7 +56,7 @@ export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
     if (!activeWorkspace) return;
     invoke("watch_workspace", { path: activeWorkspace.path });
     return () => {
-      invoke("unwatch_workspace");
+      invoke("unwatch_workspace", { path: activeWorkspace.path });
     };
   }, [activeWorkspace]);
 

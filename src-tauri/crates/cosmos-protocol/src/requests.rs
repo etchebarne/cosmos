@@ -206,6 +206,9 @@ pub enum Request {
     LspUninstallServer {
         name: String,
     },
+
+    /// Keepalive ping — agent replies immediately.
+    Ping,
 }
 
 /// Wire format for a request message.

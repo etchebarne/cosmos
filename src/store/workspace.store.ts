@@ -141,7 +141,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     // Disconnect remote agent
     const closedWorkspace = state.workspaces[index];
     if (closedWorkspace?.connection?.type !== "local") {
-      invoke("remote_disconnect", { workspacePath: closedPath }).catch(() => {});
+      invoke("remote_disconnect", { workspacePath: closedPath }).catch((e) =>
+        console.warn("remote_disconnect failed:", e),
+      );
     }
 
     if (workspaces.length === 0) {

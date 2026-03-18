@@ -672,6 +672,7 @@ version = "0.1.0"
 dependencies = [
  "cosmos-core",
  "cosmos-protocol",
+ "serde",
  "serde_json",
  "tokio",
  "which",

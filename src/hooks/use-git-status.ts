@@ -41,7 +41,7 @@ export function useGitStatus(workspacePath: string | null, active = true) {
 
     return () => {
       unlisten.then((fn) => fn());
-      invoke("unwatch_workspace");
+      invoke("unwatch_workspace", { path: workspacePath });
     };
   }, [workspacePath, refresh, active]);
 

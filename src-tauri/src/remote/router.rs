@@ -4,18 +4,25 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use cosmos_protocol::events::Event;
-use cosmos_protocol::requests::Request;
 
 use super::agent::RemoteAgent;
 use super::connection::ConnectionType;
 
+/// An agent entry in the router, storing both the agent and its connection info
+/// so we can reconnect if the agent dies.
+struct AgentEntry {
+    agent: Arc<RemoteAgent>,
+    connection: ConnectionType,
+}
+
 /// Routes requests to the appropriate backend: local cosmos-core or remote agent.
 ///
 /// Each remote workspace has a `RemoteAgent` connection. Local workspaces use
-/// cosmos-core directly. The router manages the lifecycle of agent connections.
+/// cosmos-core directly. The router manages the lifecycle of agent connections
+/// and automatically reconnects dead agents.
 pub struct BackendRouter {
     /// Active remote agent connections, keyed by workspace path.
-    agents: Mutex<HashMap<String, Arc<RemoteAgent>>>,
+    agents: Mutex<HashMap<String, AgentEntry>>,
     /// Maps terminal IDs to their remote agent (for routing write/resize/close).
     remote_terminals: Mutex<HashMap<String, Arc<RemoteAgent>>>,
     /// Callback for delivering events from remote agents to the host.
@@ -31,27 +38,14 @@ impl BackendRouter {
         }
     }
 
-    /// Connect to a remote workspace. Spawns a cosmos-agent process.
-    /// If already connected to this workspace, skips.
-    pub async fn connect(
+    /// Build the event callback that prepends workspace prefix to path-based events.
+    fn make_event_callback(
         &self,
         workspace_path: &str,
-        conn: ConnectionType,
-    ) -> Result<(), String> {
-        {
-            let agents = self.agents.lock().await;
-            if let Some(existing) = agents.get(workspace_path) {
-                if existing.is_alive() {
-                    return Ok(()); // Already connected
-                }
-            }
-        }
-
-        // Build a prefix like "wsl://distro" from the workspace path so we can
-        // re-attach it to paths inside events coming from the remote agent.
+    ) -> Arc<dyn Fn(Event) + Send + Sync> {
         let prefix = Self::extract_prefix(workspace_path).unwrap_or_default();
         let on_event = self.on_event.clone();
-        let prefixed_callback: Arc<dyn Fn(Event) + Send + Sync> = if prefix.is_empty() {
+        if prefix.is_empty() {
             on_event
         } else {
             Arc::new(move |event| {
@@ -68,41 +62,55 @@ impl BackendRouter {
                             .map(|f| format!("{}{}", prefix, f))
                             .collect(),
                     },
+                    // Terminal and LSP events don't carry paths — they use IDs
+                    // that are already routed via remote_terminals / RemoteServerMap.
                     other => other,
                 };
                 on_event(event);
             })
-        };
+        }
+    }
 
-        let agent = RemoteAgent::spawn(conn, prefixed_callback).await?;
-        self.agents
-            .lock()
-            .await
-            .insert(workspace_path.to_string(), Arc::new(agent));
+    /// Connect to a remote workspace. Spawns a cosmos-agent process.
+    /// If already connected to this workspace, skips.
+    pub async fn connect(
+        &self,
+        workspace_path: &str,
+        conn: ConnectionType,
+    ) -> Result<(), String> {
+        // Quick check under lock — skip if already alive.
+        {
+            let agents = self.agents.lock().await;
+            if let Some(entry) = agents.get(workspace_path) {
+                if entry.agent.is_alive() {
+                    return Ok(());
+                }
+            }
+        }
+
+        // Spawn without holding the lock — this can take seconds for WSL startup.
+        let callback = self.make_event_callback(workspace_path);
+        let agent = RemoteAgent::spawn(conn.clone(), callback).await?;
+
+        // Re-acquire lock and insert.
+        self.agents.lock().await.insert(
+            workspace_path.to_string(),
+            AgentEntry {
+                agent: Arc::new(agent),
+                connection: conn,
+            },
+        );
         Ok(())
     }
 
-    /// Disconnect from a remote workspace.
+    /// Disconnect from a remote workspace. Cleans up associated terminal mappings.
     pub async fn disconnect(&self, workspace_path: &str) {
-        self.agents.lock().await.remove(workspace_path);
-    }
-
-    /// Get the remote agent for a workspace, if connected.
-    pub async fn get_agent(&self, workspace_path: &str) -> Option<Arc<RemoteAgent>> {
-        self.agents.lock().await.get(workspace_path).cloned()
-    }
-
-    /// Send a request to a remote workspace's agent.
-    pub async fn request(
-        &self,
-        workspace_path: &str,
-        request: Request,
-    ) -> Result<serde_json::Value, String> {
-        let agent = self
-            .get_agent(workspace_path)
-            .await
-            .ok_or_else(|| format!("No remote agent for workspace: {workspace_path}"))?;
-        agent.request(request).await
+        let removed = self.agents.lock().await.remove(workspace_path);
+        if removed.is_some() {
+            // Clean up terminal mappings that pointed to this workspace's agent
+            let mut terminals = self.remote_terminals.lock().await;
+            terminals.retain(|_, agent| agent.is_alive());
+        }
     }
 
     /// Check if a workspace has an active remote connection.
@@ -110,9 +118,9 @@ impl BackendRouter {
         self.agents.lock().await.contains_key(workspace_path)
     }
 
-    /// Returns true if the path looks like a remote path (e.g. `wsl://...`).
+    /// Returns true if the path looks like a remote path (e.g. `wsl://...` or `ssh://...`).
     pub fn is_remote_path(path: &str) -> bool {
-        path.starts_with("wsl://")
+        path.starts_with("wsl://") || path.starts_with("ssh://")
     }
 
     /// Extract the remote prefix (e.g. `wsl://distro`) from a workspace path.
@@ -125,6 +133,7 @@ impl BackendRouter {
     /// Resolve a path that may be remote.
     /// If the path starts with `wsl://distro/...`, finds the agent for that
     /// distro and returns `(agent, linux_path)`.
+    /// If the agent is dead, attempts automatic reconnection.
     /// Returns None for local paths.
     pub async fn resolve(&self, path: &str) -> Option<(Arc<RemoteAgent>, String)> {
         let rest = path.strip_prefix("wsl://")?;
@@ -132,23 +141,47 @@ impl BackendRouter {
         let distro = &rest[..slash];
         let linux_path = &rest[slash..]; // includes leading /
 
-        let mut agents = self.agents.lock().await;
         let prefix = format!("wsl://{distro}");
 
-        // Find agent, removing dead ones
-        let mut dead_key = None;
-        for (key, agent) in agents.iter() {
-            if key.starts_with(&prefix) {
-                if agent.is_alive() {
-                    return Some((agent.clone(), linux_path.to_string()));
+        // First pass: check if agent is alive.
+        let reconnect_info = {
+            let agents = self.agents.lock().await;
+            let mut found = None;
+            for (key, entry) in agents.iter() {
+                if key.starts_with(&prefix) {
+                    if entry.agent.is_alive() {
+                        return Some((entry.agent.clone(), linux_path.to_string()));
+                    }
+                    // Agent is dead — grab info for reconnection
+                    found = Some((key.clone(), entry.connection.clone()));
+                    break;
                 }
-                dead_key = Some(key.clone());
-                break;
+            }
+            found
+        };
+
+        // Agent is dead — attempt transparent reconnection.
+        if let Some((workspace_key, conn)) = reconnect_info {
+            eprintln!("[cosmos-remote] Agent dead for {workspace_key}, attempting reconnection...");
+            match self.connect(&workspace_key, conn).await {
+                Ok(()) => {
+                    eprintln!("[cosmos-remote] Reconnected to {workspace_key}");
+                    // Retry lookup with the new agent.
+                    let agents = self.agents.lock().await;
+                    if let Some(entry) = agents.get(&workspace_key) {
+                        if entry.agent.is_alive() {
+                            return Some((entry.agent.clone(), linux_path.to_string()));
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[cosmos-remote] Reconnection failed for {workspace_key}: {e}");
+                    // Remove the dead entry so is_remote_path check triggers the right error
+                    self.agents.lock().await.remove(&workspace_key);
+                }
             }
         }
-        if let Some(key) = dead_key {
-            agents.remove(&key);
-        }
+
         None
     }
 

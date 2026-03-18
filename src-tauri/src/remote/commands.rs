@@ -53,11 +53,19 @@ pub async fn remote_connect(
 }
 
 /// Disconnect a workspace from its remote backend.
+/// Also cleans up any LSP server mappings for the workspace.
 #[tauri::command]
 pub async fn remote_disconnect(
     router: State<'_, BackendRouter>,
+    remote_servers: State<'_, crate::lsp::RemoteServerMap>,
     workspace_path: String,
 ) -> Result<(), String> {
+    // Clean up LSP server mappings for this workspace
+    remote_servers
+        .0
+        .lock()
+        .await
+        .retain(|_, wp| wp != &workspace_path);
     router.disconnect(&workspace_path).await;
     Ok(())
 }
@@ -104,7 +112,7 @@ pub async fn remote_ensure_connected(
             Ok(true)
         }
         ConnectionType::Ssh { host, user } => {
-            deploy::deploy_to_ssh(host, user.as_deref()).await?;
+            deploy::deploy_to_ssh(&app, host, user.as_deref()).await?;
             router
                 .connect(&workspace_path, connection.clone())
                 .await?;

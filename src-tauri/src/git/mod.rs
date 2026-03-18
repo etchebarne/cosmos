@@ -510,8 +510,16 @@ pub async fn watch_workspace(
 
 #[tauri::command]
 pub async fn unwatch_workspace(
+    router: State<'_, BackendRouter>,
     watcher: State<'_, WatcherManager>,
+    path: Option<String>,
 ) -> Result<(), String> {
-    // TODO: also unwatch remote if applicable
+    // If we have a workspace path, try to unwatch on the remote agent
+    if let Some(ref p) = path {
+        if let Some((agent, _)) = router.resolve(p).await {
+            let _ = agent.request(Request::UnwatchWorkspace).await;
+            return Ok(());
+        }
+    }
     watcher.unwatch()
 }

@@ -31,7 +31,12 @@ pub async fn terminal_spawn(
     rows: u16,
 ) -> Result<(), String> {
     if let Some((agent, remote_cwd)) = router.resolve(&cwd).await {
-        agent
+        // Register before spawning so writes arriving immediately after spawn
+        // are routed correctly (avoids race with terminal_write).
+        router
+            .register_remote_terminal(id.clone(), agent.clone())
+            .await;
+        if let Err(e) = agent
             .request(Request::TerminalSpawn {
                 id: id.clone(),
                 program,
@@ -40,8 +45,11 @@ pub async fn terminal_spawn(
                 cols,
                 rows,
             })
-            .await?;
-        router.register_remote_terminal(id, agent).await;
+            .await
+        {
+            router.remove_remote_terminal(&id).await;
+            return Err(e);
+        }
         Ok(())
     } else if BackendRouter::is_remote_path(&cwd) {
         Err(format!("Remote agent not connected for path: {cwd}"))

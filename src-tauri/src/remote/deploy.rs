@@ -81,7 +81,12 @@ pub async fn deploy_to_wsl(app: &AppHandle, distro: &str) -> Result<(), String> 
 }
 
 /// Deploy the cosmos-agent binary to an SSH host.
-pub async fn deploy_to_ssh(host: &str, user: Option<&str>) -> Result<(), String> {
+/// Copies the pre-built agent binary via scp.
+pub async fn deploy_to_ssh(
+    app: &tauri::AppHandle,
+    host: &str,
+    user: Option<&str>,
+) -> Result<(), String> {
     let target = match user {
         Some(u) => format!("{u}@{host}"),
         None => host.to_string(),
@@ -100,7 +105,34 @@ pub async fn deploy_to_ssh(host: &str, user: Option<&str>) -> Result<(), String>
         ));
     }
 
-    // TODO: scp the agent binary for the target architecture
+    let agent_src = bundled_agent_path(app)?;
+    let scp_dest = format!("{target}:~/.cosmos-agent/cosmos-agent");
+
+    let output = tokio::process::Command::new("scp")
+        .args([&agent_src.to_string_lossy().to_string(), &scp_dest])
+        .output()
+        .await
+        .map_err(|e| format!("SCP failed: {e}"))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to copy agent binary: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    let output = tokio::process::Command::new("ssh")
+        .args([&target, "chmod", "+x", "~/.cosmos-agent/cosmos-agent"])
+        .output()
+        .await
+        .map_err(|e| format!("SSH chmod failed: {e}"))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to make agent executable: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
 
     Ok(())
 }

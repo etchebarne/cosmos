@@ -36,7 +36,7 @@ export function RemoteDialog({ open, onClose, distro }: RemoteDialogProps) {
         setCwd(home);
       })
       .catch(() => {
-        setCwd("/home");
+        setCwd("/");
       });
   }, [open, distro]);
 
@@ -67,7 +67,9 @@ export function RemoteDialog({ open, onClose, distro }: RemoteDialogProps) {
 
   const navigateUp = useCallback(() => {
     if (cwd === "/") return;
-    const parent = cwd.substring(0, cwd.lastIndexOf("/")) || "/";
+    // Remove trailing slash before finding parent
+    const normalized = cwd.endsWith("/") ? cwd.slice(0, -1) : cwd;
+    const parent = normalized.substring(0, normalized.lastIndexOf("/")) || "/";
     setCwd(parent);
   }, [cwd]);
 
@@ -112,7 +114,7 @@ export function RemoteDialog({ open, onClose, distro }: RemoteDialogProps) {
 
       onClose();
     } catch (e) {
-      setStatus(`Failed: ${e}`);
+      setStatus(`Connection failed: ${e}`);
       setConnecting(false);
     }
   }, [cwd, distro, openWorkspace, onClose]);

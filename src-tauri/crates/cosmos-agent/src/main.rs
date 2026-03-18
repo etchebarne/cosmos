@@ -71,10 +71,21 @@ fn ensure_node_runtime(data_dir: &std::path::Path) {
 
 /// Write a response to the shared stdout writer.
 fn send_response(writer: &SharedWriter, response: &ResponseMessage) {
-    let json = serde_json::to_string(response).unwrap();
+    let json = match serde_json::to_string(response) {
+        Ok(j) => j,
+        Err(e) => {
+            eprintln!("[cosmos-agent] failed to serialize response: {e}");
+            return;
+        }
+    };
     if let Ok(mut w) = writer.lock() {
         let _ = framing::write_message(&mut *w, &json);
     }
+}
+
+/// Serialize a value to JSON, converting errors to strings.
+fn to_json(val: impl serde::Serialize) -> Result<serde_json::Value, String> {
+    serde_json::to_value(val).map_err(|e| format!("Serialization error: {e}"))
 }
 
 /// Dispatch a request to the appropriate handler and return the JSON result.
@@ -83,11 +94,11 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         // ── File tree ──
         Request::ReadDir { path } => {
             let r = cosmos_core::file_tree::read_dir(&path)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::MoveFile { source, dest_dir } => {
             let r = cosmos_core::file_tree::move_file(&source, &dest_dir)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::CreateFile { path } => {
             cosmos_core::file_tree::create_file(&path)?;
@@ -99,11 +110,11 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         }
         Request::RenameEntry { path, new_name } => {
             let r = cosmos_core::file_tree::rename_entry(&path, &new_name)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::CopyEntry { source, dest_dir } => {
             let r = cosmos_core::file_tree::copy_entry(&source, &dest_dir)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::TrashEntry { path } => {
             cosmos_core::file_tree::trash_entry(&path)?;
@@ -117,7 +128,7 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         // ── Editor ──
         Request::ReadFile { path } => {
             let r = cosmos_core::editor::read_file(&path)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::WriteFile { path, content } => {
             cosmos_core::editor::write_file(&path, &content)?;
@@ -127,11 +138,11 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         // ── Git ──
         Request::GetGitBranch { path } => {
             let r = cosmos_core::git::get_git_branch(&path)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::GetGitStatus { path } => {
             let r = cosmos_core::git::get_git_status(&path)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::GitStage { path, files } => {
             cosmos_core::git::git_stage(&path, files)?;
@@ -151,7 +162,7 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         }
         Request::GitListBranches { path } => {
             let r = cosmos_core::git::git_list_branches(&path)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::GitCheckout { path, branch } => {
             cosmos_core::git::git_checkout(&path, &branch)?;
@@ -179,11 +190,11 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         }
         Request::GitStashList { path } => {
             let r = cosmos_core::git::git_stash_list(&path)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::GitStashShow { path, index } => {
             let r = cosmos_core::git::git_stash_show(&path, index)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::GitStashPop { path, index } => {
             cosmos_core::git::git_stash_pop(&path, index)?;
@@ -203,11 +214,11 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         }
         Request::GitDiff { path, file } => {
             let r = cosmos_core::git::git_diff(&path, &file)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::GitDiffUntracked { path, file } => {
             let r = cosmos_core::git::git_diff_untracked(&path, &file)?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::GitInit { path } => {
             cosmos_core::git::git_init(&path)?;
@@ -247,7 +258,7 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         // ── Terminal ──
         Request::TerminalListShells => {
             let r = cosmos_core::terminal::list_shells();
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::TerminalSpawn {
             id,
@@ -281,7 +292,7 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
             language_id,
         } => {
             let r = state.lsp.start(&workspace_path, &language_id).await?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::LspSend { server_id, message } => {
             state.lsp.send(&server_id, &message).await?;
@@ -297,11 +308,11 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
         }
         Request::LspCheckAvailability { workspace_path } => {
             let r = state.lsp.check_availability(&workspace_path);
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::LspScanProjects { workspace_path } => {
             let r = state.lsp.scan_projects(&workspace_path);
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::LspResolveRoot {
             file_path,
@@ -313,24 +324,27 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
                 &language_id,
                 &workspace_path,
             );
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::LspLanguageGroups => {
             let r = cosmos_core::lsp::LspManager::language_groups();
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::LspInstalledList => {
             let r = state.lsp.installed_list();
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::LspInstallServer { name } => {
             let r = state.lsp.install_server(&name).await?;
-            Ok(serde_json::to_value(r).unwrap())
+            Ok(to_json(r)?)
         }
         Request::LspUninstallServer { name } => {
             state.lsp.uninstall_server(&name)?;
             Ok(serde_json::Value::Null)
         }
+
+        // ── Keepalive ──
+        Request::Ping => Ok(serde_json::Value::Null),
     }
 }
 

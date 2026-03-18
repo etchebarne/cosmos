@@ -69,13 +69,16 @@ function App() {
 
   // Eagerly start LSP servers when a workspace becomes active so they can
   // index the project in the background before any file is opened.
+  // Uses connectingPaths.size as dependency instead of the Set itself to avoid
+  // identity-based re-renders while still reacting to connection state changes.
+  const connectingSize = connectingPaths.size;
   useEffect(() => {
     if (!ready || activeIndex === null) return;
     const activePath = workspaces[activeIndex]?.path;
     if (activePath && !connectingPaths.has(activePath)) {
       useLspStore.getState().warmupWorkspace(activePath);
     }
-  }, [ready, activeIndex, workspaces, connectingPaths]);
+  }, [ready, activeIndex, workspaces, connectingSize]);
 
   // Merge active layout into layouts map for rendering
   const allLayouts = useMemo(() => {

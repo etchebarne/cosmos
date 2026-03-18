@@ -274,7 +274,7 @@ export function FileTreeNode({
             setChildren(result);
             setLoaded(true);
           })
-          .catch(() => {});
+          .catch((e) => console.warn("read_dir failed:", e));
       } else {
         // Target directory is a different node — notify it via event
         window.dispatchEvent(
@@ -374,7 +374,7 @@ export function FileTreeNode({
       if (event.payload.some((dir) => normalizePath(dir) === normalized)) {
         invoke<DirEntry[]>("read_dir", { path: entry.path })
           .then((result) => setChildren(result))
-          .catch(() => {});
+          .catch((e) => console.warn("read_dir failed:", e));
       }
     });
 
@@ -421,7 +421,7 @@ export function FileTreeNode({
             setChildren(result);
             setLoaded(true);
           })
-          .catch(() => {});
+          .catch((e) => console.warn("read_dir failed:", e));
       }
     };
 

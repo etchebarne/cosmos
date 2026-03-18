@@ -31,7 +31,7 @@ export function ProjectBar() {
   useEffect(() => {
     invoke<string[]>("list_wsl_distros")
       .then(setWslDistros)
-      .catch(() => {});
+      .catch((e) => console.warn("Failed to list WSL distros:", e));
   }, []);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
@@ -84,12 +84,14 @@ export function ProjectBar() {
     <div className="flex items-center gap-2 h-[52px] min-h-[52px] px-3 bg-[var(--color-project-bar-bg)] border-b border-[var(--color-border-primary)]">
       {active && (
         <div className="flex items-center gap-1.5">
-          {active.connection?.type !== "local" && (
+          {active.connection && active.connection.type !== "local" && (
             <Tooltip
               content={
                 active.connection.type === "wsl"
                   ? `WSL: ${active.connection.distro}`
-                  : `SSH: ${active.connection.host}`
+                  : active.connection.type === "ssh"
+                    ? `SSH: ${active.connection.host}`
+                    : ""
               }
             >
               <div className="flex items-center justify-center text-[var(--color-accent-blue)]">
@@ -121,8 +123,8 @@ export function ProjectBar() {
           <Tooltip
             key={w.path}
             content={
-              w.connection?.type !== "local"
-                ? `${w.name} [${w.connection.type === "wsl" ? `WSL: ${w.connection.distro}` : `SSH: ${w.connection.host}`}]`
+              w.connection && w.connection.type !== "local"
+                ? `${w.name} [${w.connection.type === "wsl" ? `WSL: ${w.connection.distro}` : w.connection.type === "ssh" ? `SSH: ${w.connection.host}` : ""}]`
                 : w.name
             }
           >

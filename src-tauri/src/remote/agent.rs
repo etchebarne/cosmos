@@ -13,17 +13,25 @@ use super::connection::ConnectionType;
 
 const MAX_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
 
 /// A connection to a remote cosmos-agent process.
 pub struct RemoteAgent {
-    #[allow(dead_code)]
     child: Arc<Mutex<Child>>,
     stdin: Arc<Mutex<ChildStdin>>,
     next_id: AtomicU64,
     pending: Arc<Mutex<HashMap<u64, oneshot::Sender<ResponseMessage>>>>,
     alive: Arc<AtomicBool>,
-    #[allow(dead_code)]
     pub connection_type: ConnectionType,
+}
+
+impl Drop for RemoteAgent {
+    fn drop(&mut self) {
+        // Best-effort kill of the child process to avoid orphans.
+        if let Ok(mut child) = self.child.try_lock() {
+            let _ = child.start_kill();
+        }
+    }
 }
 
 impl RemoteAgent {
@@ -106,20 +114,56 @@ impl RemoteAgent {
 
             // Agent died — mark dead and fail all pending requests
             alive_clone.store(false, Ordering::SeqCst);
+            eprintln!("[cosmos-remote] Agent process exited");
             let mut p = pending_clone.lock().await;
             for (_, tx) in p.drain() {
                 let _ = tx.send(ResponseMessage::err(0, "Agent connection lost".into()));
             }
         });
 
-        Ok(Self {
+        let agent = Self {
             child: Arc::new(Mutex::new(child)),
             stdin: Arc::new(Mutex::new(stdin)),
             next_id: AtomicU64::new(1),
             pending,
-            alive,
+            alive: alive.clone(),
             connection_type: conn,
-        })
+        };
+
+        // Keepalive: periodically send a Ping to prevent idle pipe closure.
+        // Stops when the agent dies. We fire-and-forget (id=0, no pending receiver),
+        // so the response is silently discarded by the stdout reader.
+        let keepalive_stdin = agent.stdin.clone();
+        let keepalive_alive = alive;
+        tokio::spawn(async move {
+            // Pre-serialize since the message never changes
+            let msg = RequestMessage {
+                id: 0,
+                request: Request::Ping,
+            };
+            let json = match serde_json::to_string(&msg) {
+                Ok(j) => j,
+                Err(_) => return,
+            };
+            let framed = format!("Content-Length: {}\r\n\r\n{}", json.len(), json);
+            let bytes = framed.as_bytes();
+
+            loop {
+                tokio::time::sleep(KEEPALIVE_INTERVAL).await;
+                if !keepalive_alive.load(Ordering::SeqCst) {
+                    break;
+                }
+                let mut stdin = keepalive_stdin.lock().await;
+                if stdin.write_all(bytes).await.is_err() {
+                    break;
+                }
+                if stdin.flush().await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        Ok(agent)
     }
 
     /// Check if the agent process is still alive.

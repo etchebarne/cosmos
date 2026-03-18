@@ -3,7 +3,19 @@ use std::path::Path;
 
 use cosmos_protocol::types::DirEntry;
 
+/// Validate that a path doesn't contain traversal components (`..`).
+/// This prevents escaping workspace boundaries on the remote agent.
+fn validate_no_traversal(path: &str) -> Result<(), String> {
+    for component in Path::new(path).components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            return Err(format!("Path traversal not allowed: {path}"));
+        }
+    }
+    Ok(())
+}
+
 pub fn read_dir(path: &str) -> Result<Vec<DirEntry>, String> {
+    validate_no_traversal(path)?;
     let entries = fs::read_dir(path).map_err(|e| e.to_string())?;
 
     let mut dirs: Vec<DirEntry> = Vec::new();
@@ -51,6 +63,8 @@ pub fn read_dir(path: &str) -> Result<Vec<DirEntry>, String> {
 }
 
 pub fn move_file(source: &str, dest_dir: &str) -> Result<String, String> {
+    validate_no_traversal(source)?;
+    validate_no_traversal(dest_dir)?;
     let source_path = Path::new(source);
     let dest_path = Path::new(dest_dir);
 
@@ -75,6 +89,7 @@ pub fn move_file(source: &str, dest_dir: &str) -> Result<String, String> {
 }
 
 pub fn create_file(path: &str) -> Result<(), String> {
+    validate_no_traversal(path)?;
     let p = Path::new(path);
     if p.exists() {
         return Err(format!(
@@ -87,6 +102,7 @@ pub fn create_file(path: &str) -> Result<(), String> {
 }
 
 pub fn create_dir(path: &str) -> Result<(), String> {
+    validate_no_traversal(path)?;
     let p = Path::new(path);
     if p.exists() {
         return Err(format!(
@@ -99,6 +115,10 @@ pub fn create_dir(path: &str) -> Result<(), String> {
 }
 
 pub fn rename_entry(path: &str, new_name: &str) -> Result<String, String> {
+    validate_no_traversal(path)?;
+    if new_name.contains("..") || new_name.contains('/') || new_name.contains('\\') {
+        return Err(format!("Invalid file name: {new_name}"));
+    }
     let p = Path::new(path);
     let parent = p.parent().ok_or("No parent directory")?;
     let new_path = parent.join(new_name);
@@ -110,6 +130,8 @@ pub fn rename_entry(path: &str, new_name: &str) -> Result<String, String> {
 }
 
 pub fn copy_entry(source: &str, dest_dir: &str) -> Result<String, String> {
+    validate_no_traversal(source)?;
+    validate_no_traversal(dest_dir)?;
     let src = Path::new(source);
     let dest = Path::new(dest_dir);
     let file_name = src
@@ -174,10 +196,12 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
 }
 
 pub fn trash_entry(path: &str) -> Result<(), String> {
+    validate_no_traversal(path)?;
     trash::delete(path).map_err(|e| e.to_string())
 }
 
 pub fn delete_entry(path: &str) -> Result<(), String> {
+    validate_no_traversal(path)?;
     let p = Path::new(path);
     if p.is_dir() {
         fs::remove_dir_all(p).map_err(|e| e.to_string())

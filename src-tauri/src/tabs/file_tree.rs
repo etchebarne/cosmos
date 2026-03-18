@@ -192,6 +192,9 @@ pub async fn delete_entry(
 
 #[tauri::command]
 pub fn reveal_in_explorer(app: AppHandle, path: &str) -> Result<(), String> {
+    if BackendRouter::is_remote_path(path) {
+        return Err("Cannot reveal remote files in the local file explorer".into());
+    }
     app.opener()
         .reveal_item_in_dir(Path::new(path))
         .map_err(|e| e.to_string())
