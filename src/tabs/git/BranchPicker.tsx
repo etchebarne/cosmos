@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitBranchIcon, Delete02Icon } from "@hugeicons/core-free-icons";
@@ -90,16 +90,14 @@ export function BranchPicker({ workspacePath, onClose, onSwitch, anchorRef }: Br
   const filtered = branches.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
 
   // Position the dropdown above the anchor
-  const [position, setPosition] = useState({ bottom: 0, left: 0, width: 0 });
-  useEffect(() => {
-    if (anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      setPosition({
-        bottom: window.innerHeight - rect.top,
-        left: rect.left,
-        width: Math.max(rect.width, 260),
-      });
-    }
+  const position = useMemo(() => {
+    const rect = anchorRef.current?.getBoundingClientRect();
+    if (!rect) return { bottom: 0, left: 0, width: 0 };
+    return {
+      bottom: window.innerHeight - rect.top,
+      left: rect.left,
+      width: Math.max(rect.width, 260),
+    };
   }, [anchorRef]);
 
   return (

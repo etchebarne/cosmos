@@ -151,9 +151,7 @@ export function DragOverlay() {
   const dropTargetRef = useRef<DropTarget | null>(null);
 
   // Keep ref in sync for mouseup handler
-  useEffect(() => {
-    dropTargetRef.current = dropTarget;
-  });
+  dropTargetRef.current = dropTarget;
 
   useEffect(() => {
     if (!dragState) {
