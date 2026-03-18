@@ -57,6 +57,9 @@ export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
     if (!el) return;
 
     const adjust = (e: MouseEvent) => {
+      // Skip adjustment for middle-button (pan) events — ReactFlow's d3-zoom
+      // needs raw screen coordinates; adjusting them causes a jump on pan start.
+      if (e.button === 1 || e.buttons === 4) return;
       const z = reactFlow.getZoom();
       if (z === 1) return;
       const rect = el.getBoundingClientRect();
