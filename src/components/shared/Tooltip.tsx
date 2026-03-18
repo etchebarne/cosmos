@@ -10,8 +10,9 @@ interface TooltipProps {
 
 export function Tooltip({ content, children, delay = 400, side = "bottom" }: TooltipProps) {
   const [visible, setVisible] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0, actualSide: side });
   const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const show = useCallback(() => {
@@ -24,12 +25,36 @@ export function Tooltip({ content, children, delay = 400, side = "bottom" }: Too
   }, []);
 
   useLayoutEffect(() => {
-    if (!visible || !triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    setPosition({
-      x: rect.left + rect.width / 2,
-      y: side === "bottom" ? rect.bottom + 6 : rect.top - 6,
-    });
+    if (!visible || !triggerRef.current || !tooltipRef.current) return;
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const padding = 6;
+
+    let x = triggerRect.left + triggerRect.width / 2;
+    let actualSide = side;
+
+    // Flip side if not enough space
+    if (
+      side === "bottom" &&
+      triggerRect.bottom + padding + tooltipRect.height > window.innerHeight
+    ) {
+      actualSide = "top";
+    } else if (side === "top" && triggerRect.top - padding - tooltipRect.height < 0) {
+      actualSide = "bottom";
+    }
+
+    const y = actualSide === "bottom" ? triggerRect.bottom + padding : triggerRect.top - padding;
+
+    // Clamp horizontally so tooltip stays within viewport
+    const halfWidth = tooltipRect.width / 2;
+    if (x - halfWidth < padding) {
+      x = halfWidth + padding;
+    } else if (x + halfWidth > window.innerWidth - padding) {
+      x = window.innerWidth - halfWidth - padding;
+    }
+
+    setPosition({ x, y, actualSide });
   }, [visible, side]);
 
   return (
@@ -40,12 +65,15 @@ export function Tooltip({ content, children, delay = 400, side = "bottom" }: Too
       {visible &&
         createPortal(
           <div
+            ref={tooltipRef}
             className="fixed z-50 px-2 py-1 text-xs whitespace-nowrap bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] text-[var(--color-text-primary)] shadow-lg pointer-events-none"
             style={{
               left: position.x,
               top: position.y,
               transform:
-                side === "bottom" ? "translateX(-50%)" : "translateX(-50%) translateY(-100%)",
+                position.actualSide === "bottom"
+                  ? "translateX(-50%)"
+                  : "translateX(-50%) translateY(-100%)",
             }}
           >
             {content}
