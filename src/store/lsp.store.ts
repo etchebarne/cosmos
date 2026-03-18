@@ -17,8 +17,8 @@ export type ServerStatus =
   | "installing";
 
 export interface ServerAvailability {
-  language_id: string;
-  server_name: string;
+  languageId: string;
+  serverName: string;
   available: boolean;
 }
 
@@ -248,22 +248,24 @@ export const useLspStore = create<LspState>()(
       const promise = (async (): Promise<LspClient | null> => {
         // Ask Rust to spawn the language server with the resolved project root
         const result = await invoke<{
-          server_id: string;
-          server_name: string;
-          server_language: string;
+          serverId: string;
+          serverName: string;
+          serverLanguage: string;
         }>("lsp_start", {
           workspacePath: projectRoot,
           languageId,
         });
 
         // Create transport and client
-        const transport = new TauriLspTransport(result.server_id);
+        const transport = new TauriLspTransport(result.serverId);
         await transport.connect();
-        const client = new LspClient(transport);
+        // For remote workspaces (wsl://distro/path), pass the prefix so the
+        // client can map URIs between editor paths and native Linux paths.
+        const wslMatch = projectRoot.match(/^(wsl:\/\/[^/]+)/);
+        const client = new LspClient(transport, wslMatch?.[1]);
 
         transport.onServerStopped((error) => handleServerStopped(workspacePath, serverLang, error));
 
-        // Initialize the LSP server with the project root as rootUri
         await client.initialize(projectRoot);
 
         // Track work-done progress (indexing, loading, etc.)
@@ -271,7 +273,7 @@ export const useLspStore = create<LspState>()(
           const key = progressKey(workspacePath, serverLang, token);
           if (value.kind === "begin") {
             progressTokens.set(key, {
-              serverName: result.server_name,
+              serverName: result.serverName,
               title: value.title,
               message: value.message,
               percentage: value.percentage,
@@ -297,11 +299,11 @@ export const useLspStore = create<LspState>()(
             state.servers[workspacePath] = {};
           }
           state.servers[workspacePath][serverLang] = {
-            serverId: result.server_id,
+            serverId: result.serverId,
             languageId: serverLang,
             client,
             status: "running",
-            serverName: result.server_name,
+            serverName: result.serverName,
             errorMessage: null,
             providerDisposables: [],
           };
@@ -338,7 +340,7 @@ export const useLspStore = create<LspState>()(
 
         // Deep-scan the workspace tree for project markers (Cargo.toml, package.json, etc.)
         // at any depth, with each project resolved to its correct root directory.
-        let projects: { language_id: string; project_root: string; available: boolean }[];
+        let projects: { languageId: string; projectRoot: string; available: boolean }[];
         try {
           projects = await invoke<typeof projects>("lsp_scan_projects", { workspacePath });
         } catch {
@@ -350,15 +352,13 @@ export const useLspStore = create<LspState>()(
         for (const project of projects) {
           if (!project.available) continue;
 
-          const serverLang = resolveServerLanguage(project.language_id);
+          const serverLang = resolveServerLanguage(project.languageId);
           const existing = get().servers[workspacePath]?.[serverLang];
           if (existing) continue;
 
-          initializeServer(workspacePath, project.project_root, project.language_id).catch(
-            (err) => {
-              console.warn(`[LSP] Warmup failed for ${project.language_id}:`, err);
-            },
-          );
+          initializeServer(workspacePath, project.projectRoot, project.languageId).catch((err) => {
+            console.warn(`[LSP] Warmup failed for ${project.languageId}:`, err);
+          });
         }
       },
 
@@ -433,6 +433,12 @@ export const useLspStore = create<LspState>()(
 
           console.error(`LSP ${status} for ${serverLang}:`, err);
 
+          // Guard: another concurrent startServer may have already handled this
+          const already = get().servers[workspacePath]?.[serverLang];
+          if (already?.status === "unavailable" || already?.status === "error") {
+            return null;
+          }
+
           set((state) => {
             if (!state.servers[workspacePath]) {
               state.servers[workspacePath] = {};
@@ -488,7 +494,7 @@ export const useLspStore = create<LspState>()(
         }
 
         try {
-          await invoke("lsp_install_server", { name: serverName });
+          await invoke("lsp_install_server", { name: serverName, workspacePath });
 
           useToastStore.getState().addToast({
             message: `${serverName} installed successfully`,

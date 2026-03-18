@@ -287,11 +287,13 @@ export function TerminalTab({ tab }: TabContentProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    invoke<ShellInfo[]>("terminal_list_shells").then((s) => {
+    invoke<ShellInfo[]>("terminal_list_shells", {
+      workspacePath: workspace?.path ?? null,
+    }).then((s) => {
       setShells(s);
       setLoading(false);
     });
-  }, []);
+  }, [workspace?.path]);
 
   const handleSelect = useCallback((shell: ShellInfo) => {
     setSelectedShell(shell);

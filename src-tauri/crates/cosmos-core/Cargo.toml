@@ -1,0 +1,26 @@
+[package]
+name = "cosmos-core"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["installer"]
+# The installer feature pulls in heavy deps (reqwest, zip, flate2, tar)
+# needed for downloading/extracting LSP servers.
+installer = ["dep:zip", "dep:flate2", "dep:tar"]
+
+[dependencies]
+cosmos-protocol = { path = "../cosmos-protocol" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+notify-debouncer-mini = "0.5"
+notify = "7"
+tokio = { version = "1", features = ["process", "io-util", "sync", "rt"] }
+which = "7"
+portable-pty = "0.9"
+trash = "5"
+
+# Optional: only needed with "installer" feature
+zip = { version = "2", optional = true, default-features = false, features = ["deflate"] }
+flate2 = { version = "1", optional = true, default-features = false, features = ["rust_backend"] }
+tar = { version = "0.4", optional = true }

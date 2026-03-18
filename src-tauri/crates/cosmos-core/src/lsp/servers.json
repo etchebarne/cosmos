@@ -1,0 +1,198 @@
+[
+  {
+    "languages": ["rust"],
+    "server": "rust-analyzer",
+    "bin": "rust-analyzer",
+    "args": [],
+    "markers": ["Cargo.toml"]
+  },
+  {
+    "languages": ["c", "cpp"],
+    "server": "clangd",
+    "bin": "clangd",
+    "args": [],
+    "markers": ["CMakeLists.txt", ".clangd", "compile_commands.json"]
+  },
+  {
+    "languages": ["go"],
+    "server": "gopls",
+    "bin": "gopls",
+    "args": [],
+    "markers": ["go.mod"]
+  },
+  {
+    "languages": ["zig"],
+    "server": "zls",
+    "bin": "zls",
+    "args": [],
+    "markers": ["build.zig"]
+  },
+  {
+    "languages": ["typescript", "javascript", "typescriptreact", "javascriptreact"],
+    "server": "typescript-language-server",
+    "bin": "typescript-language-server",
+    "args": ["--stdio"],
+    "markers": ["tsconfig.json", "package.json", "jsconfig.json"]
+  },
+  {
+    "languages": ["css", "scss", "less"],
+    "server": "css-lsp",
+    "bin": "vscode-css-language-server",
+    "args": ["--stdio"],
+    "markers": ["package.json"]
+  },
+  {
+    "languages": ["html"],
+    "server": "html-lsp",
+    "bin": "vscode-html-language-server",
+    "args": ["--stdio"],
+    "markers": ["package.json"]
+  },
+  {
+    "languages": ["json", "jsonc"],
+    "server": "json-lsp",
+    "bin": "vscode-json-language-server",
+    "args": ["--stdio"],
+    "markers": ["package.json"]
+  },
+  {
+    "languages": ["svelte"],
+    "server": "svelte-language-server",
+    "bin": "svelteserver",
+    "args": ["--stdio"],
+    "markers": ["svelte.config.js", "package.json"]
+  },
+  {
+    "languages": ["vue"],
+    "server": "vue-language-server",
+    "bin": "vue-language-server",
+    "args": ["--stdio"],
+    "markers": ["vue.config.js", "package.json"]
+  },
+  {
+    "languages": ["astro"],
+    "server": "astro-language-server",
+    "bin": "astro-ls",
+    "args": ["--stdio"],
+    "markers": ["astro.config.mjs", "package.json"]
+  },
+  {
+    "languages": ["tailwindcss"],
+    "server": "tailwindcss-language-server",
+    "bin": "tailwindcss-language-server",
+    "args": ["--stdio"],
+    "markers": ["tailwind.config.js", "tailwind.config.ts", "package.json"]
+  },
+  {
+    "languages": ["python"],
+    "server": "python-lsp-server",
+    "bin": "pylsp",
+    "args": [],
+    "markers": ["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"]
+  },
+  {
+    "languages": ["lua"],
+    "server": "lua-language-server",
+    "bin": "lua-language-server",
+    "args": [],
+    "markers": [".luarc.json", ".luarc.jsonc"]
+  },
+  {
+    "languages": ["ruby"],
+    "server": "solargraph",
+    "bin": "solargraph",
+    "args": ["stdio"],
+    "markers": ["Gemfile"]
+  },
+  {
+    "languages": ["php"],
+    "server": "intelephense",
+    "bin": "intelephense",
+    "args": ["--stdio"],
+    "markers": ["composer.json"]
+  },
+  {
+    "languages": ["shellscript"],
+    "server": "bash-language-server",
+    "bin": "bash-language-server",
+    "args": ["start"],
+    "markers": []
+  },
+  {
+    "languages": ["yaml"],
+    "server": "yaml-language-server",
+    "bin": "yaml-language-server",
+    "args": ["--stdio"],
+    "markers": []
+  },
+  {
+    "languages": ["toml"],
+    "server": "taplo",
+    "bin": "taplo",
+    "args": ["lsp", "stdio"],
+    "markers": []
+  },
+  {
+    "languages": ["markdown"],
+    "server": "marksman",
+    "bin": "marksman",
+    "args": ["server"],
+    "markers": [".marksman.toml"]
+  },
+  {
+    "languages": ["dockerfile"],
+    "server": "dockerfile-language-server-nodejs",
+    "bin": "docker-langserver",
+    "args": ["--stdio"],
+    "markers": ["Dockerfile"]
+  },
+  {
+    "languages": ["java"],
+    "server": "jdtls",
+    "bin": "jdtls",
+    "args": [],
+    "markers": ["pom.xml", "build.gradle", "build.gradle.kts"]
+  },
+  {
+    "languages": ["kotlin"],
+    "server": "kotlin-language-server",
+    "bin": "kotlin-language-server",
+    "args": [],
+    "markers": ["build.gradle.kts", "build.gradle"]
+  },
+  {
+    "languages": ["csharp"],
+    "server": "omnisharp",
+    "bin": "omnisharp",
+    "args": [],
+    "markers": ["*.csproj", "*.sln"]
+  },
+  {
+    "languages": ["elixir"],
+    "server": "elixir-ls",
+    "bin": "elixir-ls",
+    "args": [],
+    "markers": ["mix.exs"]
+  },
+  {
+    "languages": ["haskell"],
+    "server": "haskell-language-server",
+    "bin": "haskell-language-server-wrapper",
+    "args": ["--lsp"],
+    "markers": ["cabal.project", "stack.yaml", "hie.yaml"]
+  },
+  {
+    "languages": ["dart"],
+    "server": "dart-language-server",
+    "bin": "dart",
+    "args": ["language-server", "--protocol=lsp"],
+    "markers": ["pubspec.yaml"]
+  },
+  {
+    "languages": ["terraform"],
+    "server": "terraform-ls",
+    "bin": "terraform-ls",
+    "args": ["serve"],
+    "markers": ["main.tf"]
+  }
+]

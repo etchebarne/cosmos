@@ -644,6 +644,8 @@ dependencies = [
 name = "cosmos"
 version = "0.1.0"
 dependencies = [
+ "cosmos-core",
+ "cosmos-protocol",
  "flate2",
  "notify",
  "notify-debouncer-mini",
@@ -662,6 +664,43 @@ dependencies = [
  "trash",
  "which",
  "zip",
+]
+
+[[package]]
+name = "cosmos-agent"
+version = "0.1.0"
+dependencies = [
+ "cosmos-core",
+ "cosmos-protocol",
+ "serde_json",
+ "tokio",
+ "which",
+]
+
+[[package]]
+name = "cosmos-core"
+version = "0.1.0"
+dependencies = [
+ "cosmos-protocol",
+ "flate2",
+ "notify",
+ "notify-debouncer-mini",
+ "portable-pty",
+ "serde",
+ "serde_json",
+ "tar",
+ "tokio",
+ "trash",
+ "which",
+ "zip",
+]
+
+[[package]]
+name = "cosmos-protocol"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

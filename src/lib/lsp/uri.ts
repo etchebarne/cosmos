@@ -28,7 +28,10 @@ export function pathToFileUri(path: string): string {
   // Percent-encode special characters (spaces, #, ?, etc.)
   normalized = encodeFilePath(normalized);
 
-  // file:///c:/Users/... (three slashes for absolute paths)
+  // file:///c:/Users/... (Windows) or file:///home/... (Linux)
+  if (normalized.startsWith("/")) {
+    return `file://${normalized}`;
+  }
   return `file:///${normalized}`;
 }
 

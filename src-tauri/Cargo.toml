@@ -1,3 +1,7 @@
+[workspace]
+members = [".", "crates/cosmos-protocol", "crates/cosmos-core", "crates/cosmos-agent"]
+resolver = "2"
+
 [package]
 name = "cosmos"
 version = "0.1.0"
@@ -35,4 +39,6 @@ tar = "0.4"
 portable-pty = "0.9"
 tauri-plugin-clipboard-manager = "2.3.2"
 trash = "5"
+cosmos-protocol = { path = "crates/cosmos-protocol" }
+cosmos-core = { path = "crates/cosmos-core" }
 

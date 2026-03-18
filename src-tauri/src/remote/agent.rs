@@ -1,0 +1,271 @@
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+
+use cosmos_protocol::events::Event;
+use cosmos_protocol::requests::{Request, RequestMessage, ResponseMessage};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::process::{Child, ChildStdin, ChildStdout};
+use tokio::sync::{oneshot, Mutex};
+
+use super::connection::ConnectionType;
+
+const MAX_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// A connection to a remote cosmos-agent process.
+pub struct RemoteAgent {
+    #[allow(dead_code)]
+    child: Arc<Mutex<Child>>,
+    stdin: Arc<Mutex<ChildStdin>>,
+    next_id: AtomicU64,
+    pending: Arc<Mutex<HashMap<u64, oneshot::Sender<ResponseMessage>>>>,
+    alive: Arc<AtomicBool>,
+    #[allow(dead_code)]
+    pub connection_type: ConnectionType,
+}
+
+impl RemoteAgent {
+    pub async fn spawn(
+        conn: ConnectionType,
+        on_event: Arc<dyn Fn(Event) + Send + Sync>,
+    ) -> Result<Self, String> {
+        let mut child = match &conn {
+            ConnectionType::Local => {
+                return Err("Cannot spawn remote agent for local connection".into());
+            }
+            ConnectionType::Wsl { distro } => {
+                let mut cmd = tokio::process::Command::new("wsl.exe");
+                // Use -lic so bash sources .bashrc/.profile fully (including
+                // nvm/fnm/volta setup that lives behind the interactive guard).
+                // exec replaces the shell so no stray bash process lingers.
+                cmd.args([
+                    "-d",
+                    distro,
+                    "--",
+                    "bash",
+                    "-lic",
+                    "exec ~/.cosmos-agent/cosmos-agent",
+                ]);
+                cmd.stdin(std::process::Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::piped());
+                #[cfg(target_os = "windows")]
+                {
+                    cmd.creation_flags(0x08000000);
+                }
+                cmd.spawn()
+                    .map_err(|e| format!("Failed to spawn agent: {e}"))?
+            }
+            ConnectionType::Ssh { host, user } => {
+                let target = match user {
+                    Some(u) => format!("{u}@{host}"),
+                    None => host.clone(),
+                };
+                let mut cmd = tokio::process::Command::new("ssh");
+                cmd.args([&target, "~/.cosmos-agent/cosmos-agent"]);
+                cmd.stdin(std::process::Stdio::piped())
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::piped());
+                cmd.spawn()
+                    .map_err(|e| format!("Failed to spawn agent: {e}"))?
+            }
+        };
+
+        let stdin = child.stdin.take().ok_or("Failed to take agent stdin")?;
+        let stdout = child.stdout.take().ok_or("Failed to take agent stdout")?;
+
+        if let Some(stderr) = child.stderr.take() {
+            tokio::spawn(async move {
+                let mut reader = BufReader::new(stderr);
+                let mut line = String::new();
+                loop {
+                    line.clear();
+                    match reader.read_line(&mut line).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(_) => {
+                            let trimmed = line.trim();
+                            if !trimmed.is_empty() {
+                                eprintln!("[cosmos-agent stderr] {trimmed}");
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        let pending: Arc<Mutex<HashMap<u64, oneshot::Sender<ResponseMessage>>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+        let alive = Arc::new(AtomicBool::new(true));
+
+        let pending_clone = pending.clone();
+        let alive_clone = alive.clone();
+        tokio::spawn(async move {
+            read_agent_stdout(stdout, pending_clone.clone(), on_event).await;
+
+            // Agent died — mark dead and fail all pending requests
+            alive_clone.store(false, Ordering::SeqCst);
+            let mut p = pending_clone.lock().await;
+            for (_, tx) in p.drain() {
+                let _ = tx.send(ResponseMessage::err(0, "Agent connection lost".into()));
+            }
+        });
+
+        Ok(Self {
+            child: Arc::new(Mutex::new(child)),
+            stdin: Arc::new(Mutex::new(stdin)),
+            next_id: AtomicU64::new(1),
+            pending,
+            alive,
+            connection_type: conn,
+        })
+    }
+
+    /// Check if the agent process is still alive.
+    pub fn is_alive(&self) -> bool {
+        self.alive.load(Ordering::SeqCst)
+    }
+
+    /// Send a request and wait for the response with the default timeout.
+    pub async fn request(&self, request: Request) -> Result<serde_json::Value, String> {
+        self.request_with_timeout(request, REQUEST_TIMEOUT).await
+    }
+
+    /// Send a request without waiting for a response (fire-and-forget).
+    /// Used for operations like lsp_send where the response is meaningless.
+    pub async fn notify(&self, request: Request) -> Result<(), String> {
+        if !self.is_alive() {
+            return Err("Agent connection is dead".into());
+        }
+
+        let id = self.next_id.fetch_add(1, Ordering::SeqCst);
+        let msg = RequestMessage { id, request };
+        let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
+
+        let mut stdin = self.stdin.lock().await;
+        let header = format!("Content-Length: {}\r\n\r\n", json.len());
+        stdin
+            .write_all(header.as_bytes())
+            .await
+            .map_err(|e| format!("Agent write failed: {e}"))?;
+        stdin
+            .write_all(json.as_bytes())
+            .await
+            .map_err(|e| format!("Agent write failed: {e}"))?;
+        stdin
+            .flush()
+            .await
+            .map_err(|e| format!("Agent flush failed: {e}"))?;
+        Ok(())
+    }
+
+    /// Send a request and wait for the response with a custom timeout.
+    pub async fn request_with_timeout(
+        &self,
+        request: Request,
+        timeout: Duration,
+    ) -> Result<serde_json::Value, String> {
+        if !self.is_alive() {
+            return Err("Agent connection is dead".into());
+        }
+
+        let id = self.next_id.fetch_add(1, Ordering::SeqCst);
+        let msg = RequestMessage { id, request };
+        let json = serde_json::to_string(&msg).map_err(|e| e.to_string())?;
+
+        let (tx, rx) = oneshot::channel();
+        self.pending.lock().await.insert(id, tx);
+
+        // Write the framed message
+        {
+            let mut stdin = self.stdin.lock().await;
+            let header = format!("Content-Length: {}\r\n\r\n", json.len());
+            if let Err(e) = stdin.write_all(header.as_bytes()).await {
+                self.pending.lock().await.remove(&id);
+                return Err(format!("Agent write failed: {e}"));
+            }
+            if let Err(e) = stdin.write_all(json.as_bytes()).await {
+                self.pending.lock().await.remove(&id);
+                return Err(format!("Agent write failed: {e}"));
+            }
+            if let Err(e) = stdin.flush().await {
+                self.pending.lock().await.remove(&id);
+                return Err(format!("Agent flush failed: {e}"));
+            }
+        }
+
+        // Wait with timeout
+        match tokio::time::timeout(timeout, rx).await {
+            Ok(Ok(response)) => {
+                if let Some(err) = response.error {
+                    Err(err)
+                } else {
+                    Ok(response.result.unwrap_or(serde_json::Value::Null))
+                }
+            }
+            Ok(Err(_)) => {
+                // Channel closed — agent died
+                Err("Agent connection lost".into())
+            }
+            Err(_) => {
+                // Timeout — clean up pending
+                self.pending.lock().await.remove(&id);
+                Err("Agent request timed out".into())
+            }
+        }
+    }
+}
+
+async fn read_agent_stdout(
+    stdout: ChildStdout,
+    pending: Arc<Mutex<HashMap<u64, oneshot::Sender<ResponseMessage>>>>,
+    on_event: Arc<dyn Fn(Event) + Send + Sync>,
+) {
+    let mut reader = BufReader::new(stdout);
+    loop {
+        let mut content_length: Option<usize> = None;
+        loop {
+            let mut line = String::new();
+            match reader.read_line(&mut line).await {
+                Ok(0) => return,
+                Err(_) => return,
+                Ok(_) => {}
+            }
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                break;
+            }
+            if let Some(val) = trimmed.strip_prefix("Content-Length:") {
+                content_length = val.trim().parse().ok();
+            }
+        }
+
+        let length = match content_length {
+            Some(l) if l <= MAX_MESSAGE_SIZE => l,
+            _ => continue,
+        };
+
+        let mut body = vec![0u8; length];
+        if reader.read_exact(&mut body).await.is_err() {
+            return;
+        }
+
+        let text = match String::from_utf8(body) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+
+        if let Ok(resp) = serde_json::from_str::<ResponseMessage>(&text) {
+            let mut p = pending.lock().await;
+            if let Some(tx) = p.remove(&resp.id) {
+                let _ = tx.send(resp);
+            }
+            continue;
+        }
+
+        if let Ok(event) = serde_json::from_str::<Event>(&text) {
+            on_event(event);
+        }
+    }
+}

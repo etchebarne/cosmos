@@ -23,10 +23,12 @@ function WorkspacePane({
   workspace,
   layout,
   isActive,
+  connecting,
 }: {
   workspace: Workspace;
   layout: PaneNode;
   isActive: boolean;
+  connecting: boolean;
 }) {
   const contextValue = useMemo(() => ({ workspace, isActive }), [workspace, isActive]);
 
@@ -34,7 +36,7 @@ function WorkspacePane({
     <WorkspaceProvider value={contextValue}>
       <PanePortalProvider layout={layout}>
         <div className={isActive ? "flex w-full h-full min-w-0 min-h-0" : "hidden"}>
-          <PaneContainer node={layout} />
+          {!connecting && <PaneContainer node={layout} />}
         </div>
       </PanePortalProvider>
     </WorkspaceProvider>
@@ -45,6 +47,7 @@ function App() {
   const layout = useLayoutStore((s) => s.layout);
   const layouts = useLayoutStore((s) => s.layouts);
   const activeWorkspacePath = useLayoutStore((s) => s.activeWorkspacePath);
+  const connectingPaths = useWorkspaceStore((s) => s.connectingPaths);
   const setWorkspace = useLayoutStore((s) => s.setWorkspace);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeIndex = useWorkspaceStore((s) => s.activeIndex);
@@ -69,10 +72,10 @@ function App() {
   useEffect(() => {
     if (!ready || activeIndex === null) return;
     const activePath = workspaces[activeIndex]?.path;
-    if (activePath) {
+    if (activePath && !connectingPaths.has(activePath)) {
       useLspStore.getState().warmupWorkspace(activePath);
     }
-  }, [ready, activeIndex, workspaces]);
+  }, [ready, activeIndex, workspaces, connectingPaths]);
 
   // Merge active layout into layouts map for rendering
   const allLayouts = useMemo(() => {
@@ -100,6 +103,7 @@ function App() {
               workspace={ws}
               layout={wsLayout}
               isActive={ws.path === activeWorkspacePath}
+              connecting={connectingPaths.has(ws.path)}
             />
           );
         })}

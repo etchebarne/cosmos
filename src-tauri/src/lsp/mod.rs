@@ -1,406 +1,285 @@
-pub mod detection;
-pub mod framing;
-pub mod installer;
-pub mod registry;
-
 use std::collections::HashMap;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager, State};
-use tokio::io::BufReader;
-use tokio::process::{Child, ChildStdin};
+
+use cosmos_core::lsp::LspManager;
+use cosmos_protocol::requests::Request;
+use cosmos_protocol::types::*;
+use tauri::State;
 use tokio::sync::Mutex;
 
-#[cfg(target_os = "windows")]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
+use crate::remote::router::BackendRouter;
 
-use detection::{
-    check_availability, find_project_root, resolve_command, resolve_server_for_language,
-    scan_workspace_projects, server_language_group, DetectedProject, ServerAvailability,
-};
-use installer::InstalledServer;
-use registry::RegistryEntry;
+/// Tracks which server IDs belong to remote agents, mapping server_id -> workspace_path.
+/// This allows lsp_send and lsp_stop (which only receive a server_id) to route correctly.
+pub struct RemoteServerMap(pub Mutex<HashMap<String, String>>);
 
-struct LspServer {
-    #[allow(dead_code)]
-    child: Child,
-    stdin: ChildStdin,
-    #[allow(dead_code)]
-    language_id: String,
-}
-
-/// Per-server locking: the outer Mutex guards the HashMap itself (held briefly
-/// for lookups/inserts/removes), while each server has its own Arc<Mutex> so
-/// that a slow stdin write on one server never blocks operations on others.
-pub struct LspState {
-    servers: Arc<Mutex<HashMap<String, Arc<Mutex<LspServer>>>>>,
-}
-
-impl Default for LspState {
-    fn default() -> Self {
-        Self {
-            servers: Arc::new(Mutex::new(HashMap::new())),
-        }
+impl RemoteServerMap {
+    pub fn new() -> Self {
+        Self(Mutex::new(HashMap::new()))
     }
 }
 
-fn make_server_id(workspace_path: &str, language_id: &str) -> String {
-    // Sanitize path for use in Tauri event names which only allow
-    // alphanumeric, '-', '/', ':', '_' characters.
-    let safe_path: String = workspace_path
-        .chars()
-        .map(|c| if c == '\\' { '/' } else { c })
-        .collect();
-    format!("{language_id}:{safe_path}")
-}
-
-/// Extract the workspace path suffix from a server ID.
-/// Server IDs are formatted as "language:path".
-fn server_id_workspace(server_id: &str) -> Option<&str> {
-    server_id.split_once(':').map(|(_, path)| path)
-}
-
-fn spawn_server(
-    command: &str,
-    args: &[String],
-    working_dir: &str,
-) -> std::io::Result<(Child, Option<tokio::process::ChildStderr>)> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-
-        let mut child = if command.ends_with(".cmd") || command.ends_with(".bat") {
-            tokio::process::Command::new("cmd")
-                .arg("/C")
-                .arg(command)
-                .args(args)
-                .current_dir(working_dir)
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .creation_flags(CREATE_NO_WINDOW)
-                .spawn()?
-        } else {
-            tokio::process::Command::new(command)
-                .args(args)
-                .current_dir(working_dir)
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .creation_flags(CREATE_NO_WINDOW)
-                .spawn()?
-        };
-        let stderr = child.stderr.take();
-        Ok((child, stderr))
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let mut child = tokio::process::Command::new(command)
-            .args(args)
-            .current_dir(working_dir)
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()?;
-        let stderr = child.stderr.take();
-        Ok((child, stderr))
-    }
-}
-
-// ── Status event payload ──
-
-#[derive(serde::Serialize, Clone)]
-struct StatusPayload {
-    status: String,
-    error: Option<String>,
-}
-
-// ── LSP lifecycle commands ──
-
-#[derive(serde::Serialize)]
-pub struct LspStartResult {
-    pub server_id: String,
-    pub server_name: String,
-    pub server_language: String,
+/// Extract the WSL prefix (e.g. "wsl://Ubuntu") from a full workspace path.
+fn wsl_prefix(full_path: &str) -> Option<&str> {
+    let rest = full_path.strip_prefix("wsl://")?;
+    let slash = rest.find('/')?;
+    Some(&full_path[..("wsl://".len() + slash)])
 }
 
 #[tauri::command]
 pub async fn lsp_start(
-    app: AppHandle,
-    state: State<'_, LspState>,
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
+    remote_servers: State<'_, RemoteServerMap>,
     workspace_path: String,
     language_id: String,
 ) -> Result<LspStartResult, String> {
-    let group = server_language_group(&language_id);
-    let server_id = make_server_id(&workspace_path, group);
-
-    // Check if already running
-    {
-        let servers = state.servers.lock().await;
-        if servers.contains_key(&server_id) {
-            // Look up the server name for the response
-            let server_name = detection::server_name_for_language(&language_id)
-                .unwrap_or("unknown")
-                .to_string();
-            return Ok(LspStartResult {
-                server_id,
-                server_name,
-                server_language: group.to_string(),
-            });
-        }
+    if let Some((agent, linux_path)) = router.resolve(&workspace_path).await {
+        let result = agent
+            .request(Request::LspStart {
+                workspace_path: linux_path,
+                language_id,
+            })
+            .await?;
+        let start_result: LspStartResult =
+            serde_json::from_value(result).map_err(|e| e.to_string())?;
+        remote_servers
+            .0
+            .lock()
+            .await
+            .insert(start_result.server_id.clone(), workspace_path);
+        return Ok(start_result);
     }
-
-    // Look up the server config from the language defaults table
-    let config = resolve_server_for_language(&language_id)
-        .ok_or_else(|| format!("No language server configured for {language_id}"))?;
-
-    // Resolve command: check local installations first, then PATH
-    let resolved_command = resolve_command(&app, &config.command);
-
-    // Spawn the language server process (now captures stderr)
-    let (mut child, stderr) = spawn_server(&resolved_command, &config.args, &workspace_path)
-        .map_err(|e| format!("Failed to start {}: {e}", config.command))?;
-
-    let stdin = child.stdin.take().ok_or("Failed to take stdin")?;
-    let stdout = child.stdout.take().ok_or("Failed to take stdout")?;
-
-    // Spawn background task to log stderr output
-    if let Some(stderr) = stderr {
-        let server_name = config.server_name.clone();
-        tokio::spawn(async move {
-            use tokio::io::AsyncBufReadExt;
-            let mut reader = BufReader::new(stderr);
-            let mut line = String::new();
-            loop {
-                line.clear();
-                match reader.read_line(&mut line).await {
-                    Ok(0) => break, // EOF
-                    Ok(_) => {
-                        let trimmed = line.trim();
-                        if !trimmed.is_empty() {
-                            eprintln!("[LSP stderr][{server_name}] {trimmed}");
-                        }
-                    }
-                    Err(_) => break,
-                }
-            }
-        });
+    if BackendRouter::is_remote_path(&workspace_path) {
+        return Err(format!("Remote agent not connected for path: {workspace_path}"));
     }
-
-    // Spawn background task to read stdout and emit messages to frontend
-    let app_clone = app.clone();
-    let sid = server_id.clone();
-    let servers_ref = state.servers.clone();
-    tokio::spawn(async move {
-        let mut reader = BufReader::new(stdout);
-        loop {
-            match framing::read_message(&mut reader).await {
-                Ok(msg) => {
-                    let event = format!("lsp-message:{}", sid);
-                    let _ = app_clone.emit(&event, &msg);
-                }
-                Err(e) => {
-                    // Remove dead server from the HashMap so a new one can be spawned
-                    servers_ref.lock().await.remove(&sid);
-
-                    let event = format!("lsp-status:{}", sid);
-                    let _ = app_clone.emit(
-                        &event,
-                        &StatusPayload {
-                            status: "stopped".into(),
-                            error: if e == "EOF" { None } else { Some(e) },
-                        },
-                    );
-                    break;
-                }
-            }
-        }
-    });
-
-    let server = Arc::new(Mutex::new(LspServer {
-        child,
-        stdin,
-        language_id: group.to_string(),
-    }));
-
-    state.servers.lock().await.insert(server_id.clone(), server);
-
-    Ok(LspStartResult {
-        server_id,
-        server_name: config.server_name,
-        server_language: group.to_string(),
-    })
+    state.start(&workspace_path, &language_id).await
 }
 
 #[tauri::command]
 pub async fn lsp_send(
-    app: AppHandle,
-    state: State<'_, LspState>,
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
+    remote_servers: State<'_, RemoteServerMap>,
     server_id: String,
     message: String,
 ) -> Result<(), String> {
-    // Clone the Arc so we can drop the map lock before writing
-    let server_arc = {
-        let servers = state.servers.lock().await;
-        servers
-            .get(&server_id)
-            .cloned()
-            .ok_or_else(|| format!("Server {server_id} not found"))?
-    };
-
-    let result = {
-        let mut server = server_arc.lock().await;
-        framing::write_message(&mut server.stdin, &message).await
-    };
-
-    // If write failed, the server is likely dead — clean up and notify frontend
-    if let Err(ref e) = result {
-        state.servers.lock().await.remove(&server_id);
-        let event = format!("lsp-status:{}", server_id);
-        let _ = app.emit(
-            &event,
-            &StatusPayload {
-                status: "stopped".into(),
-                error: Some(e.clone()),
-            },
-        );
+    let wp = remote_servers.0.lock().await.get(&server_id).cloned();
+    if let Some(wp) = wp {
+        if let Some((agent, _)) = router.resolve(&wp).await {
+            // Fire-and-forget: the LSP response comes back via events, not
+            // the agent response. Waiting would just cause timeouts.
+            agent
+                .notify(Request::LspSend {
+                    server_id,
+                    message,
+                })
+                .await?;
+            return Ok(());
+        }
     }
-
-    result
+    state.send(&server_id, &message).await
 }
 
 #[tauri::command]
-pub async fn lsp_stop(state: State<'_, LspState>, server_id: String) -> Result<(), String> {
-    let server_arc = {
-        let mut servers = state.servers.lock().await;
-        servers.remove(&server_id)
-    };
-    if let Some(arc) = server_arc {
-        let mut server = arc.lock().await;
-        let _ = server.child.kill().await;
+pub async fn lsp_stop(
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
+    remote_servers: State<'_, RemoteServerMap>,
+    server_id: String,
+) -> Result<(), String> {
+    let wp = remote_servers.0.lock().await.remove(&server_id);
+    if let Some(wp) = wp {
+        if let Some((agent, _)) = router.resolve(&wp).await {
+            agent.request(Request::LspStop { server_id }).await?;
+            return Ok(());
+        }
     }
-    Ok(())
+    state.stop(&server_id).await
 }
 
 #[tauri::command]
 pub async fn lsp_stop_workspace(
-    state: State<'_, LspState>,
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
+    remote_servers: State<'_, RemoteServerMap>,
     workspace_path: String,
 ) -> Result<(), String> {
-    let safe_path = workspace_path.replace('\\', "/");
+    if let Some((agent, linux_path)) = router.resolve(&workspace_path).await {
+        let mut map = remote_servers.0.lock().await;
+        map.retain(|_, wp| wp != &workspace_path);
+        drop(map);
 
-    let removed: Vec<Arc<Mutex<LspServer>>> = {
-        let mut servers = state.servers.lock().await;
-        // Use exact match on the workspace path portion of the server ID
-        // to avoid accidentally matching overlapping paths.
-        let keys_to_remove: Vec<String> = servers
-            .keys()
-            .filter(|k| server_id_workspace(k) == Some(&safe_path))
-            .cloned()
-            .collect();
-        keys_to_remove
-            .into_iter()
-            .filter_map(|key| servers.remove(&key))
-            .collect()
-    };
-
-    for arc in removed {
-        let mut server = arc.lock().await;
-        let _ = server.child.kill().await;
+        agent
+            .request(Request::LspStopWorkspace {
+                workspace_path: linux_path,
+            })
+            .await?;
+        return Ok(());
     }
-    Ok(())
+    if BackendRouter::is_remote_path(&workspace_path) {
+        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+    }
+    state.stop_workspace(&workspace_path).await
 }
 
 #[tauri::command]
 pub async fn lsp_check_availability(
-    app: AppHandle,
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
     workspace_path: String,
 ) -> Result<Vec<ServerAvailability>, String> {
-    // Run blocking filesystem checks off the async runtime
-    tokio::task::spawn_blocking(move || check_availability(&app, &workspace_path))
+    if let Some((agent, linux_path)) = router.resolve(&workspace_path).await {
+        let result = agent
+            .request(Request::LspCheckAvailability {
+                workspace_path: linux_path,
+            })
+            .await?;
+        return serde_json::from_value(result).map_err(|e| e.to_string());
+    }
+    if BackendRouter::is_remote_path(&workspace_path) {
+        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+    }
+    let mgr = state.inner().clone();
+    tokio::task::spawn_blocking(move || mgr.check_availability(&workspace_path))
         .await
         .map_err(|e| e.to_string())
 }
-
-// ── Language group command ──
 
 #[tauri::command]
 pub async fn lsp_language_groups() -> Result<HashMap<String, String>, String> {
-    Ok(detection::language_groups())
+    Ok(LspManager::language_groups())
 }
-
-// ── Workspace scanning ──
 
 #[tauri::command]
 pub async fn lsp_scan_projects(
-    app: AppHandle,
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
     workspace_path: String,
 ) -> Result<Vec<DetectedProject>, String> {
-    // Run blocking filesystem walk off the async runtime
-    tokio::task::spawn_blocking(move || scan_workspace_projects(&app, &workspace_path))
+    if let Some((agent, linux_path)) = router.resolve(&workspace_path).await {
+        let result = agent
+            .request(Request::LspScanProjects {
+                workspace_path: linux_path,
+            })
+            .await?;
+        let mut projects: Vec<DetectedProject> =
+            serde_json::from_value(result).map_err(|e| e.to_string())?;
+        // Prepend wsl prefix to project_root so the frontend can route lsp_start correctly
+        if let Some(prefix) = wsl_prefix(&workspace_path) {
+            for project in &mut projects {
+                project.project_root = format!("{}{}", prefix, project.project_root);
+            }
+        }
+        return Ok(projects);
+    }
+    if BackendRouter::is_remote_path(&workspace_path) {
+        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+    }
+    let mgr = state.inner().clone();
+    tokio::task::spawn_blocking(move || mgr.scan_projects(&workspace_path))
         .await
         .map_err(|e| e.to_string())
 }
 
-// ── Project root resolution ──
-
 #[tauri::command]
 pub async fn lsp_resolve_root(
+    router: State<'_, BackendRouter>,
     file_path: String,
     language_id: String,
     workspace_path: String,
 ) -> Result<String, String> {
-    // Run blocking filesystem walk off the async runtime
-    tokio::task::spawn_blocking(move || find_project_root(&file_path, &language_id, &workspace_path))
-        .await
-        .map_err(|e| e.to_string())
-}
-
-// ── Registry commands ──
-
-/// Load the full registry: embedded + user custom entries from config dir.
-fn load_full_registry(app: &AppHandle) -> Vec<RegistryEntry> {
-    let base = registry::load_registry();
-    match app.path().app_config_dir() {
-        Ok(config_dir) => {
-            let custom_path = config_dir.join("custom-registry.json");
-            let custom = registry::load_custom_entries(&custom_path);
-            registry::merge_registries(base, custom)
-        }
-        Err(_) => base,
+    if let Some((agent, linux_wp)) = router.resolve(&workspace_path).await {
+        let prefix = wsl_prefix(&workspace_path).unwrap_or_default();
+        let linux_fp = file_path
+            .strip_prefix(prefix)
+            .unwrap_or(&file_path)
+            .to_string();
+        let result = agent
+            .request(Request::LspResolveRoot {
+                file_path: linux_fp,
+                language_id,
+                workspace_path: linux_wp,
+            })
+            .await?;
+        let root: String = serde_json::from_value(result).map_err(|e| e.to_string())?;
+        return Ok(format!("{}{}", prefix, root));
     }
+    if BackendRouter::is_remote_path(&workspace_path) {
+        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+    }
+    tokio::task::spawn_blocking(move || {
+        LspManager::resolve_root(&file_path, &language_id, &workspace_path)
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn lsp_registry_list(app: AppHandle) -> Result<Vec<RegistryEntry>, String> {
-    Ok(load_full_registry(&app))
+pub async fn lsp_registry_list(
+    state: State<'_, Arc<LspManager>>,
+) -> Result<Vec<RegistryEntry>, String> {
+    Ok(state.registry_list())
 }
 
 #[tauri::command]
-pub async fn lsp_registry_search(app: AppHandle, query: String) -> Result<Vec<RegistryEntry>, String> {
-    Ok(registry::search_in(load_full_registry(&app), &query))
-}
-
-// ── Server management commands ──
-
-#[tauri::command]
-pub async fn lsp_installed_list(app: AppHandle) -> Result<Vec<InstalledServer>, String> {
-    Ok(installer::list_installed(&app))
+pub async fn lsp_registry_search(
+    state: State<'_, Arc<LspManager>>,
+    query: String,
+) -> Result<Vec<RegistryEntry>, String> {
+    Ok(state.registry_search(&query))
 }
 
 #[tauri::command]
-pub async fn lsp_install_server(app: AppHandle, name: String) -> Result<InstalledServer, String> {
-    let entries = load_full_registry(&app);
-    let entry = entries
-        .iter()
-        .find(|e| e.name == name)
-        .or_else(|| entries.iter().find(|e| e.bin.as_deref() == Some(name.as_str())))
-        .cloned()
-        .ok_or_else(|| format!("Server '{name}' not found in registry"))?;
-
-    installer::install_server(&app, &entry).await
+pub async fn lsp_installed_list(
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
+    workspace_path: Option<String>,
+) -> Result<Vec<InstalledServer>, String> {
+    if let Some(wp) = &workspace_path {
+        if let Some((agent, _)) = router.resolve(wp).await {
+            let result = agent.request(Request::LspInstalledList).await?;
+            return serde_json::from_value(result).map_err(|e| e.to_string());
+        }
+    }
+    Ok(state.installed_list())
 }
 
 #[tauri::command]
-pub async fn lsp_uninstall_server(app: AppHandle, name: String) -> Result<(), String> {
-    installer::uninstall_server(&app, &name)
+pub async fn lsp_install_server(
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
+    name: String,
+    workspace_path: Option<String>,
+) -> Result<InstalledServer, String> {
+    if let Some(wp) = &workspace_path {
+        if let Some((agent, _)) = router.resolve(wp).await {
+            let result = agent
+                .request_with_timeout(
+                    Request::LspInstallServer { name },
+                    std::time::Duration::from_secs(300),
+                )
+                .await?;
+            return serde_json::from_value(result).map_err(|e| e.to_string());
+        }
+    }
+    state.install_server(&name).await
+}
+
+#[tauri::command]
+pub async fn lsp_uninstall_server(
+    state: State<'_, Arc<LspManager>>,
+    router: State<'_, BackendRouter>,
+    name: String,
+    workspace_path: Option<String>,
+) -> Result<(), String> {
+    if let Some(wp) = &workspace_path {
+        if let Some((agent, _)) = router.resolve(wp).await {
+            agent
+                .request(Request::LspUninstallServer { name })
+                .await?;
+            return Ok(());
+        }
+    }
+    state.uninstall_server(&name)
 }

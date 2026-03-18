@@ -1,0 +1,15 @@
+[package]
+name = "cosmos-agent"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "cosmos-agent"
+path = "src/main.rs"
+
+[dependencies]
+cosmos-protocol = { path = "../cosmos-protocol" }
+cosmos-core = { path = "../cosmos-core" }
+serde_json = "1"
+which = "7"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

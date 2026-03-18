@@ -1,10 +1,51 @@
 mod git;
 mod lsp;
+mod remote;
 mod settings;
 mod tabs;
 mod terminal;
 
-use std::sync::Mutex;
+use std::sync::Arc;
+
+use cosmos_core::EventSink;
+use cosmos_protocol::events::Event;
+use tauri::{AppHandle, Emitter, Manager};
+
+struct TauriEventSink(AppHandle);
+
+impl EventSink for TauriEventSink {
+    fn emit(&self, event: Event) {
+        match event {
+            Event::GitChanged => {
+                let _ = self.0.emit("git-changed", ());
+            }
+            Event::FileTreeChanged { dirs } => {
+                let _ = self.0.emit("file-tree-changed", dirs);
+            }
+            Event::FileContentChanged { files } => {
+                let _ = self.0.emit("file-content-changed", files);
+            }
+            Event::TerminalData { id, data } => {
+                let _ = self.0.emit(&format!("terminal-data-{}", id), data);
+            }
+            Event::TerminalExit { id } => {
+                let _ = self.0.emit(&format!("terminal-exit-{}", id), ());
+            }
+            Event::LspMessage { server_id, message } => {
+                let _ = self.0.emit(&format!("lsp-message:{}", server_id), &message);
+            }
+            Event::LspStopped { server_id, error } => {
+                let _ = self.0.emit(
+                    &format!("lsp-status:{}", server_id),
+                    &serde_json::json!({
+                        "status": "stopped",
+                        "error": error,
+                    }),
+                );
+            }
+        }
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,11 +54,45 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .manage(git::FsWatcherState {
-            watcher: Mutex::new(None),
+        .setup(|app| {
+            let handle = app.handle().clone();
+            let events: Arc<dyn EventSink> = Arc::new(TauriEventSink(handle.clone()));
+
+            // Watcher
+            app.manage(cosmos_core::watcher::WatcherManager::new(events.clone()));
+
+            // Terminal
+            app.manage(cosmos_core::terminal::TerminalManager::new(events.clone()));
+
+            // LSP
+            let servers_dir = handle
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data dir")
+                .join("servers");
+            let custom_registry = handle
+                .path()
+                .app_config_dir()
+                .ok()
+                .map(|d| d.join("custom-registry.json"));
+            app.manage(std::sync::Arc::new(cosmos_core::lsp::LspManager::new(
+                events.clone(),
+                servers_dir,
+                custom_registry,
+            )));
+
+            // Remote LSP server tracking (server_id -> workspace_path)
+            app.manage(lsp::RemoteServerMap::new());
+
+            // Backend router for remote workspaces
+            let event_callback: Arc<dyn Fn(Event) + Send + Sync> = {
+                let sink = events.clone();
+                Arc::new(move |event| sink.emit(event))
+            };
+            app.manage(remote::router::BackendRouter::new(event_callback));
+
+            Ok(())
         })
-        .manage(lsp::LspState::default())
-        .manage(terminal::TerminalState::default())
         .invoke_handler(tauri::generate_handler![
             tabs::file_tree::read_dir,
             tabs::file_tree::move_file,
@@ -78,6 +153,15 @@ pub fn run() {
             terminal::terminal_resize,
             terminal::terminal_close,
             settings::get_settings_schema,
+            remote::commands::list_wsl_distros,
+            remote::commands::deploy_agent_wsl,
+            remote::commands::check_agent_version,
+            remote::commands::wsl_resolve_home,
+            remote::commands::wsl_list_dir,
+            remote::commands::remote_connect,
+            remote::commands::remote_disconnect,
+            remote::commands::remote_is_connected,
+            remote::commands::remote_ensure_connected,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

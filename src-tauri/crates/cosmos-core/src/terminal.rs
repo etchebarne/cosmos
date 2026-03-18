@@ -1,0 +1,222 @@
+use std::collections::HashMap;
+use std::io::{Read, Write};
+use std::sync::{Arc, Mutex};
+
+use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+
+use cosmos_protocol::events::Event;
+use cosmos_protocol::types::ShellInfo;
+
+use crate::EventSink;
+
+struct TerminalInstance {
+    writer: Box<dyn Write + Send>,
+    master: Box<dyn portable_pty::MasterPty + Send>,
+    child: Box<dyn portable_pty::Child + Send + Sync>,
+}
+
+pub struct TerminalManager {
+    events: Arc<dyn EventSink>,
+    terminals: Mutex<HashMap<String, TerminalInstance>>,
+}
+
+impl TerminalManager {
+    pub fn new(events: Arc<dyn EventSink>) -> Self {
+        Self {
+            events,
+            terminals: Mutex::new(HashMap::new()),
+        }
+    }
+
+    pub fn spawn(
+        &self,
+        id: String,
+        program: &str,
+        args: &[String],
+        cwd: &str,
+        cols: u16,
+        rows: u16,
+    ) -> Result<(), String> {
+        let pty_system = native_pty_system();
+
+        let pair = pty_system
+            .openpty(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .map_err(|e| e.to_string())?;
+
+        let mut cmd = CommandBuilder::new(program);
+        for arg in args {
+            cmd.arg(arg);
+        }
+        cmd.cwd(cwd);
+
+        let child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
+        drop(pair.slave);
+
+        let reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
+        let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
+
+        {
+            let mut terminals = self.terminals.lock().map_err(|e| e.to_string())?;
+            terminals.insert(
+                id.clone(),
+                TerminalInstance {
+                    writer,
+                    master: pair.master,
+                    child,
+                },
+            );
+        }
+
+        // Background reader thread
+        let events = self.events.clone();
+        let event_id = id.clone();
+        std::thread::spawn(move || {
+            let mut reader = reader;
+            let mut buf = [0u8; 4096];
+            loop {
+                match reader.read(&mut buf) {
+                    Ok(0) => break,
+                    Ok(n) => {
+                        let data = String::from_utf8_lossy(&buf[..n]).to_string();
+                        events.emit(Event::TerminalData {
+                            id: event_id.clone(),
+                            data,
+                        });
+                    }
+                    Err(_) => break,
+                }
+            }
+            events.emit(Event::TerminalExit { id: event_id });
+        });
+
+        Ok(())
+    }
+
+    pub fn write(&self, id: &str, data: &str) -> Result<(), String> {
+        let mut terminals = self.terminals.lock().map_err(|e| e.to_string())?;
+        let terminal = terminals.get_mut(id).ok_or("Terminal not found")?;
+        terminal
+            .writer
+            .write_all(data.as_bytes())
+            .map_err(|e| e.to_string())?;
+        terminal.writer.flush().map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn resize(&self, id: &str, cols: u16, rows: u16) -> Result<(), String> {
+        let terminals = self.terminals.lock().map_err(|e| e.to_string())?;
+        let terminal = terminals.get(id).ok_or("Terminal not found")?;
+        terminal
+            .master
+            .resize(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn close(&self, id: &str) -> Result<(), String> {
+        let mut terminals = self.terminals.lock().map_err(|e| e.to_string())?;
+        if let Some(mut terminal) = terminals.remove(id) {
+            let _ = terminal.child.kill();
+        }
+        Ok(())
+    }
+}
+
+pub fn list_shells() -> Vec<ShellInfo> {
+    let mut shells = Vec::new();
+
+    #[cfg(target_os = "windows")]
+    {
+        // PowerShell 7+
+        if which::which("pwsh").is_ok() {
+            shells.push(ShellInfo {
+                name: "PowerShell".into(),
+                program: "pwsh.exe".into(),
+                args: vec![],
+            });
+        }
+
+        // Windows PowerShell 5.1
+        shells.push(ShellInfo {
+            name: "Windows PowerShell".into(),
+            program: "powershell.exe".into(),
+            args: vec![],
+        });
+
+        // Command Prompt
+        shells.push(ShellInfo {
+            name: "Command Prompt".into(),
+            program: "cmd.exe".into(),
+            args: vec![],
+        });
+
+        // Git Bash
+        let git_bash_paths = [
+            r"C:\Program Files\Git\bin\bash.exe",
+            r"C:\Program Files (x86)\Git\bin\bash.exe",
+        ];
+        for path in &git_bash_paths {
+            if std::path::Path::new(path).exists() {
+                shells.push(ShellInfo {
+                    name: "Git Bash".into(),
+                    program: path.to_string(),
+                    args: vec!["--login".into()],
+                });
+                break;
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let mut seen_names = std::collections::HashSet::new();
+        if let Ok(content) = std::fs::read_to_string("/etc/shells") {
+            for line in content.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                let name = std::path::Path::new(line)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| line.to_string());
+                // Skip minimal shells that don't work well as interactive terminals
+                if matches!(name.as_str(), "sh" | "dash" | "rbash") {
+                    continue;
+                }
+                if !seen_names.insert(name.clone()) {
+                    continue;
+                }
+                shells.push(ShellInfo {
+                    name,
+                    program: line.to_string(),
+                    args: vec![],
+                });
+            }
+        }
+
+        if shells.is_empty() {
+            for (name, path) in [("bash", "/bin/bash"), ("sh", "/bin/sh")] {
+                if std::path::Path::new(path).exists() {
+                    shells.push(ShellInfo {
+                        name: name.to_string(),
+                        program: path.to_string(),
+                        args: vec![],
+                    });
+                }
+            }
+        }
+    }
+
+    shells
+}

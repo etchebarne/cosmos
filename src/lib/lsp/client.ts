@@ -74,9 +74,12 @@ export class LspClient {
   private transport: TauriLspTransport;
   capabilities: ServerCapabilities | null = null;
   private openDocuments = new Set<string>();
+  /** WSL prefix (e.g. "wsl://Ubuntu") to strip from outgoing URIs and add to incoming ones. */
+  private wslPrefix: string | null = null;
 
-  constructor(transport: TauriLspTransport) {
+  constructor(transport: TauriLspTransport, wslPrefix?: string) {
     this.transport = transport;
+    this.wslPrefix = wslPrefix ?? null;
 
     // Handle server request to create a progress token — just acknowledge it
     this.transport.onRequest("window/workDoneProgress/create", () => null);
@@ -105,6 +108,23 @@ export class LspClient {
     this.transport.onRequest("workspace/diagnostics/refresh", () => null);
   }
 
+  /** Convert an editor URI to a server URI (strip wsl:// prefix from the path). */
+  toServerUri(uri: string): string {
+    if (!this.wslPrefix) return uri;
+    // Monaco percent-encodes the colon: wsl%3A//Ubuntu instead of wsl://Ubuntu
+    const encoded = this.wslPrefix.replace(":", "%3A");
+    // file:///wsl%3A//Ubuntu/home/... → file:///home/...
+    return uri.replace(`/${encoded}`, "").replace(`/${this.wslPrefix}`, "");
+  }
+
+  /** Convert a server URI back to an editor URI (add wsl:// prefix to the path). */
+  fromServerUri(uri: string): string {
+    if (!this.wslPrefix) return uri;
+    // file:///home/... → file:///wsl%3A//Ubuntu/home/...
+    const encoded = this.wslPrefix.replace(":", "%3A");
+    return uri.replace("file:///", `file:///${encoded}/`);
+  }
+
   /** Subscribe to work-done progress updates (indexing, loading, etc.). */
   onProgress(handler: (token: string | number, value: WorkDoneProgressValue) => void): void {
     this.transport.onNotification("$/progress", (params: unknown) => {
@@ -116,7 +136,7 @@ export class LspClient {
   }
 
   async initialize(workspacePath: string): Promise<InitializeResult> {
-    const rootUri = pathToFileUri(workspacePath);
+    const rootUri = this.toServerUri(pathToFileUri(workspacePath));
 
     const params: InitializeParams = {
       processId: null,
@@ -200,7 +220,16 @@ export class LspClient {
           workDoneProgress: true,
         },
       },
-      workspaceFolders: [{ uri: rootUri, name: workspacePath.split(/[\\/]/).pop() ?? "" }],
+      workspaceFolders: [
+        {
+          uri: rootUri,
+          name:
+            workspacePath
+              .split(/[\\/]/)
+              .pop()
+              ?.replace(/^wsl:\/\/[^/]+/, "") ?? "",
+        },
+      ],
     };
 
     const result = await this.transport.sendRequest<InitializeResult>("initialize", params);
@@ -218,8 +247,9 @@ export class LspClient {
     if (this.openDocuments.has(uri)) return;
     this.openDocuments.add(uri);
 
+    const serverUri = this.toServerUri(uri);
     const params: DidOpenTextDocumentParams = {
-      textDocument: { uri, languageId, version, text },
+      textDocument: { uri: serverUri, languageId, version, text },
     };
     this.transport.sendNotification("textDocument/didOpen", params);
   }
@@ -239,7 +269,7 @@ export class LspClient {
         : changes;
 
     const params: DidChangeTextDocumentParams = {
-      textDocument: { uri, version },
+      textDocument: { uri: this.toServerUri(uri), version },
       contentChanges: actualChanges,
     };
     this.transport.sendNotification("textDocument/didChange", params);
@@ -250,14 +280,14 @@ export class LspClient {
     this.openDocuments.delete(uri);
 
     const params: DidCloseTextDocumentParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
     };
     this.transport.sendNotification("textDocument/didClose", params);
   }
 
   didSave(uri: string, text?: string): void {
     const params: DidSaveTextDocumentParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       ...(text !== undefined && { text }),
     };
     this.transport.sendNotification("textDocument/didSave", params);
@@ -276,7 +306,7 @@ export class LspClient {
     character: number,
   ): Promise<CompletionList | CompletionItem[] | null> {
     const params: CompletionParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       position: { line, character },
     };
     return this.transport.sendRequest("textDocument/completion", params);
@@ -288,7 +318,7 @@ export class LspClient {
 
   async hover(uri: string, line: number, character: number): Promise<Hover | null> {
     const params: HoverParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       position: { line, character },
     };
     return this.transport.sendRequest("textDocument/hover", params);
@@ -300,7 +330,7 @@ export class LspClient {
     character: number,
   ): Promise<Location | Location[] | LocationLink[] | null> {
     const params: TextDocumentPositionParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       position: { line, character },
     };
     return this.transport.sendRequest("textDocument/definition", params);
@@ -308,7 +338,7 @@ export class LspClient {
 
   async references(uri: string, line: number, character: number): Promise<Location[] | null> {
     const params: ReferenceParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       position: { line, character },
       context: { includeDeclaration: true },
     };
@@ -317,7 +347,7 @@ export class LspClient {
 
   async signatureHelp(uri: string, line: number, character: number): Promise<SignatureHelp | null> {
     const params: SignatureHelpParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       position: { line, character },
     };
     return this.transport.sendRequest("textDocument/signatureHelp", params);
@@ -329,7 +359,7 @@ export class LspClient {
     diagnostics: { range: Range; message: string; severity?: number; code?: number | string }[],
   ): Promise<(CodeAction | Command)[] | null> {
     const params: CodeActionParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       range,
       context: { diagnostics: diagnostics as CodeActionParams["context"]["diagnostics"] },
     };
@@ -342,7 +372,7 @@ export class LspClient {
     insertSpaces: boolean,
   ): Promise<TextEdit[] | null> {
     const params: DocumentFormattingParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       options: { tabSize, insertSpaces },
     };
     return this.transport.sendRequest("textDocument/formatting", params);
@@ -355,7 +385,7 @@ export class LspClient {
     insertSpaces: boolean,
   ): Promise<TextEdit[] | null> {
     const params: DocumentRangeFormattingParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       range,
       options: { tabSize, insertSpaces },
     };
@@ -368,7 +398,7 @@ export class LspClient {
     character: number,
   ): Promise<Range | { range: Range; placeholder: string } | null> {
     const params: PrepareRenameParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       position: { line, character },
     };
     return this.transport.sendRequest("textDocument/prepareRename", params);
@@ -381,7 +411,7 @@ export class LspClient {
     newName: string,
   ): Promise<WorkspaceEdit | null> {
     const params: RenameParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
       position: { line, character },
       newName,
     };
@@ -390,7 +420,7 @@ export class LspClient {
 
   async documentSymbol(uri: string): Promise<DocumentSymbol[] | SymbolInformation[] | null> {
     const params: DocumentSymbolParams = {
-      textDocument: { uri },
+      textDocument: { uri: this.toServerUri(uri) },
     };
     return this.transport.sendRequest("textDocument/documentSymbol", params);
   }
@@ -404,10 +434,11 @@ export class LspClient {
   // ── Diagnostics ──
 
   onDiagnostics(handler: (params: PublishDiagnosticsParams) => void): void {
-    this.transport.onNotification(
-      "textDocument/publishDiagnostics",
-      handler as (params: unknown) => void,
-    );
+    this.transport.onNotification("textDocument/publishDiagnostics", ((params: unknown) => {
+      const p = params as PublishDiagnosticsParams;
+      if (p?.uri) p.uri = this.fromServerUri(p.uri);
+      handler(p);
+    }) as (params: unknown) => void);
   }
 
   // ── Lifecycle ──

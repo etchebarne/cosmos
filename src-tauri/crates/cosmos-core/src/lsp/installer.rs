@@ -1,70 +1,43 @@
 use std::path::{Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use cosmos_protocol::types::{InstalledServer, RegistryEntry};
 
-use super::registry::{
-    find_platform_asset, resolve_template, strip_exec_prefix, strip_subpath, RegistryEntry,
-};
+use super::registry::{find_platform_asset, resolve_template, strip_exec_prefix, strip_subpath};
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct InstalledServer {
-    pub name: String,
-    pub version: String,
-    pub source_type: String,
-    pub bin_path: String, // relative to the server's install dir
+fn meta_path(servers_dir: &Path, name: &str) -> PathBuf {
+    servers_dir.join(name).join(".cosmos-meta.json")
 }
 
-fn servers_dir(app: &AppHandle) -> PathBuf {
-    let data_dir = app
-        .path()
-        .app_data_dir()
-        .expect("Failed to get app data dir");
-    data_dir.join("servers")
-}
-
-fn server_dir(app: &AppHandle, name: &str) -> PathBuf {
-    servers_dir(app).join(name)
-}
-
-fn meta_path(app: &AppHandle, name: &str) -> PathBuf {
-    server_dir(app, name).join(".cosmos-meta.json")
-}
-
-pub fn get_installed_meta(app: &AppHandle, name: &str) -> Option<InstalledServer> {
-    let content = std::fs::read_to_string(meta_path(app, name)).ok()?;
+pub fn get_installed_meta(servers_dir: &Path, name: &str) -> Option<InstalledServer> {
+    let content = std::fs::read_to_string(meta_path(servers_dir, name)).ok()?;
     serde_json::from_str(&content).ok()
 }
 
-pub fn list_installed(app: &AppHandle) -> Vec<InstalledServer> {
-    let dir = servers_dir(app);
-    if !dir.exists() {
+pub fn list_installed(servers_dir: &Path) -> Vec<InstalledServer> {
+    if !servers_dir.exists() {
         return vec![];
     }
 
-    std::fs::read_dir(&dir)
+    std::fs::read_dir(servers_dir)
         .ok()
         .map(|entries| {
             entries
                 .filter_map(|e| e.ok())
                 .filter_map(|e| {
                     let name = e.file_name().to_string_lossy().to_string();
-                    get_installed_meta(app, &name)
+                    get_installed_meta(servers_dir, &name)
                 })
                 .collect()
         })
         .unwrap_or_default()
 }
 
-/// Find the absolute path to an installed server's binary by its command name.
-/// Checks all installed servers for a binary matching the given command.
-pub fn find_installed_binary(app: &AppHandle, command: &str) -> Option<PathBuf> {
-    let dir = servers_dir(app);
-    if !dir.exists() {
+pub fn find_installed_binary(servers_dir: &Path, command: &str) -> Option<PathBuf> {
+    if !servers_dir.exists() {
         return None;
     }
 
-    for entry in std::fs::read_dir(&dir).ok()?.flatten() {
+    for entry in std::fs::read_dir(servers_dir).ok()?.flatten() {
         let meta_file = entry.path().join(".cosmos-meta.json");
         if let Ok(content) = std::fs::read_to_string(&meta_file) {
             if let Ok(meta) = serde_json::from_str::<InstalledServer>(&content) {
@@ -81,12 +54,12 @@ pub fn find_installed_binary(app: &AppHandle, command: &str) -> Option<PathBuf> 
 }
 
 pub async fn install_server(
-    app: &AppHandle,
+    servers_dir: &Path,
     entry: &RegistryEntry,
 ) -> Result<InstalledServer, String> {
     let source_type = entry.source_type.as_deref().ok_or("No source type")?;
     let version = entry.version.as_deref().ok_or("No version")?;
-    let dir = server_dir(app, &entry.name);
+    let dir = servers_dir.join(&entry.name);
 
     std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create directory: {e}"))?;
 
@@ -107,14 +80,14 @@ pub async fn install_server(
     };
 
     let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?;
-    std::fs::write(meta_path(app, &entry.name), meta_json)
+    std::fs::write(meta_path(servers_dir, &entry.name), meta_json)
         .map_err(|e| format!("Failed to save metadata: {e}"))?;
 
     Ok(meta)
 }
 
-pub fn uninstall_server(app: &AppHandle, name: &str) -> Result<(), String> {
-    let dir = server_dir(app, name);
+pub fn uninstall_server(servers_dir: &Path, name: &str) -> Result<(), String> {
+    let dir = servers_dir.join(name);
     if dir.exists() {
         std::fs::remove_dir_all(&dir).map_err(|e| format!("Failed to remove server: {e}"))?;
     }
@@ -122,7 +95,6 @@ pub fn uninstall_server(app: &AppHandle, name: &str) -> Result<(), String> {
 }
 
 // ── Shell command helper ──
-// On Windows, tools like npm/python/go are .cmd/.bat scripts that need cmd.exe to execute.
 
 fn shell_command(program: &str) -> tokio::process::Command {
     #[cfg(target_os = "windows")]
@@ -144,7 +116,6 @@ async fn install_github(entry: &RegistryEntry, install_dir: &Path) -> Result<Str
     let (_platform, asset) =
         find_platform_asset(assets).ok_or("No asset available for this platform")?;
 
-    // Parse source_id: "pkg:github/owner/repo@version"
     let source = entry
         .source_id
         .strip_prefix("pkg:github/")
@@ -153,27 +124,31 @@ async fn install_github(entry: &RegistryEntry, install_dir: &Path) -> Result<Str
         .split_once('@')
         .ok_or("No version in github source")?;
 
-    // Resolve file name: strip :subpath, resolve {{version}} template
     let file_template = strip_subpath(&asset.file);
     let file_name = resolve_template(file_template, version);
 
     let url = format!("https://github.com/{repo_path}/releases/download/{version}/{file_name}");
 
-    let response = reqwest::get(&url)
-        .await
-        .map_err(|e| format!("Download failed: {e}"))?;
-    if !response.status().is_success() {
-        return Err(format!(
-            "Download failed: HTTP {}",
-            response.status()
-        ));
-    }
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| format!("Failed to read response: {e}"))?;
+    let temp_dir = std::env::temp_dir();
+    let temp_file = temp_dir.join(format!("cosmos-lsp-{}.tmp", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
 
-    // Determine bin path from asset or entry
+    let output = shell_command("curl")
+        .args(["-sSL", "-o", temp_file.to_str().unwrap(), &url])
+        .output()
+        .await
+        .map_err(|e| format!("Download failed to execute curl: {}", e))?;
+
+    if !output.status.success() {
+        let _ = std::fs::remove_file(&temp_file);
+        return Err(format!("Download failed: curl returned {}", output.status));
+    }
+
+    let bytes = std::fs::read(&temp_file).map_err(|e| {
+        let _ = std::fs::remove_file(&temp_file);
+        format!("Failed to read downloaded file: {}", e)
+    })?;
+    let _ = std::fs::remove_file(&temp_file);
+
     let raw_bin = asset
         .bin
         .as_deref()
@@ -187,7 +162,6 @@ async fn install_github(entry: &RegistryEntry, install_dir: &Path) -> Result<Str
         extract_zip(&bytes, install_dir)?;
         Ok(bin_name.to_string())
     } else if file_name.ends_with(".gz") {
-        // Single gzipped binary — write with the standard bin name
         let standard_name = entry.bin.as_deref().unwrap_or(&entry.name);
         #[cfg(target_os = "windows")]
         let out_name = if standard_name.ends_with(".exe") {
@@ -201,7 +175,6 @@ async fn install_github(entry: &RegistryEntry, install_dir: &Path) -> Result<Str
         extract_gz(&bytes, install_dir, &out_name)?;
         Ok(out_name)
     } else if file_name.ends_with(".exe") || !file_name.contains('.') {
-        // Bare binary (e.g. marksman.exe on Windows, or extensionless on Unix)
         let standard_name = entry.bin.as_deref().unwrap_or(&entry.name);
         #[cfg(target_os = "windows")]
         let out_name = if standard_name.ends_with(".exe") {
@@ -240,13 +213,16 @@ async fn install_npm(entry: &RegistryEntry, install_dir: &Path) -> Result<String
         .split_once('@')
         .ok_or("No version in npm source")?;
 
-    // URL decode: %40 → @
     let package = package_encoded.replace("%40", "@");
+
+    // Create a package.json so npm install works reliably in this directory
+    // (--prefix can fail to create .bin symlinks on some npm versions)
+    let pkg_json = r#"{"private":true}"#;
+    std::fs::write(install_dir.join("package.json"), pkg_json)
+        .map_err(|e| format!("Failed to create package.json: {e}"))?;
 
     let mut args = vec![
         "install".to_string(),
-        "--prefix".to_string(),
-        install_dir.to_string_lossy().to_string(),
         format!("{package}@{version}"),
     ];
 
@@ -254,8 +230,9 @@ async fn install_npm(entry: &RegistryEntry, install_dir: &Path) -> Result<String
         args.extend(extras.iter().cloned());
     }
 
-    let output = shell_command("npm")
+    let output = tokio::process::Command::new("npm")
         .args(&args)
+        .current_dir(install_dir)
         .output()
         .await
         .map_err(|e| format!("Failed to run npm: {e}"))?;
@@ -273,6 +250,16 @@ async fn install_npm(entry: &RegistryEntry, install_dir: &Path) -> Result<String
     #[cfg(not(target_os = "windows"))]
     let bin_path = format!("node_modules/.bin/{bin_name}");
 
+    // Ensure the binary is executable (npm doesn't always set this)
+    #[cfg(unix)]
+    {
+        let full_bin = install_dir.join(&bin_path);
+        if full_bin.exists() {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&full_bin, std::fs::Permissions::from_mode(0o755)).ok();
+        }
+    }
+
     Ok(bin_path)
 }
 
@@ -284,7 +271,6 @@ async fn install_pypi(entry: &RegistryEntry, install_dir: &Path) -> Result<Strin
         .strip_prefix("pkg:pypi/")
         .ok_or("Invalid pypi source")?;
 
-    // Handle extras in the URL: package@version?extra=all
     let (main_part, extras_query) = source.split_once('?').unwrap_or((source, ""));
     let (package, version) = main_part
         .split_once('@')
@@ -297,7 +283,6 @@ async fn install_pypi(entry: &RegistryEntry, install_dir: &Path) -> Result<Strin
 
     let venv_dir = install_dir.join("venv");
 
-    // Create venv
     let output = shell_command("python")
         .args(["-m", "venv", &venv_dir.to_string_lossy()])
         .output()
@@ -409,9 +394,10 @@ async fn install_golang(entry: &RegistryEntry, install_dir: &Path) -> Result<Str
         ));
     }
 
-    let bin_name = entry.bin.as_deref().unwrap_or_else(|| {
-        module.rsplit('/').next().unwrap_or(module)
-    });
+    let bin_name = entry
+        .bin
+        .as_deref()
+        .unwrap_or_else(|| module.rsplit('/').next().unwrap_or(module));
     #[cfg(target_os = "windows")]
     let bin_path = format!("bin/{bin_name}.exe");
     #[cfg(not(target_os = "windows"))]
@@ -457,7 +443,6 @@ fn extract_gz(data: &[u8], dest: &Path, bin_name: &str) -> Result<(), String> {
     std::fs::write(&out_path, &decompressed)
         .map_err(|e| format!("Failed to write binary: {e}"))?;
 
-    // Make executable on Unix
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;

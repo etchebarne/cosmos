@@ -1,13 +1,13 @@
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-use serde::{Deserialize, Serialize};
-use tauri::AppHandle;
+use serde::Deserialize;
 
+use cosmos_protocol::types::{DetectedProject, ServerAvailability};
+
+#[cfg(feature = "installer")]
 use super::installer;
-
-// ── Server config loaded from servers.json ──
 
 #[derive(Deserialize)]
 struct ServerEntry {
@@ -22,12 +22,9 @@ struct ServerEntry {
 
 const SERVERS_JSON: &str = include_str!("servers.json");
 
-/// Parsed server configs, loaded once at startup.
 static SERVERS: LazyLock<Vec<ServerEntry>> = LazyLock::new(|| {
     serde_json::from_str(SERVERS_JSON).expect("Failed to parse servers.json")
 });
-
-// ── Public types ──
 
 pub struct ServerConfig {
     pub language_id: String,
@@ -36,29 +33,12 @@ pub struct ServerConfig {
     pub args: Vec<String>,
 }
 
-#[derive(Serialize, Clone)]
-pub struct ServerAvailability {
-    pub language_id: String,
-    pub server_name: String,
-    pub available: bool,
-}
-
-#[derive(Serialize, Clone)]
-pub struct DetectedProject {
-    pub language_id: String,
-    pub server_name: String,
-    pub project_root: String,
-    pub available: bool,
-}
-
-// ── Lookups (all derived from servers.json) ──
-
-/// Find the server entry that handles a given Monaco language ID.
 fn find_entry(language_id: &str) -> Option<&'static ServerEntry> {
-    SERVERS.iter().find(|e| e.languages.iter().any(|l| l == language_id))
+    SERVERS
+        .iter()
+        .find(|e| e.languages.iter().any(|l| l == language_id))
 }
 
-/// Resolve the server config for a given Monaco language ID.
 pub fn resolve_server_for_language(language_id: &str) -> Option<ServerConfig> {
     let entry = find_entry(language_id)?;
     Some(ServerConfig {
@@ -69,13 +49,10 @@ pub fn resolve_server_for_language(language_id: &str) -> Option<ServerConfig> {
     })
 }
 
-/// Get the server name for a given language (for display purposes).
 pub fn server_name_for_language(language_id: &str) -> Option<&'static str> {
     find_entry(language_id).map(|e| e.server.as_str())
 }
 
-/// Map a language to its server group (the first language in the entry).
-/// Languages that share a server share a group, e.g. javascript → typescript.
 pub fn server_language_group(language_id: &str) -> &str {
     match find_entry(language_id) {
         Some(entry) => &entry.languages[0],
@@ -83,8 +60,6 @@ pub fn server_language_group(language_id: &str) -> &str {
     }
 }
 
-/// Return the language → group mapping for all non-identity entries.
-/// Used by the frontend as the single source of truth for language grouping.
 pub fn language_groups() -> HashMap<String, String> {
     let mut groups = HashMap::new();
     for entry in SERVERS.iter() {
@@ -98,27 +73,34 @@ pub fn language_groups() -> HashMap<String, String> {
 
 // ── Binary availability ──
 
-pub fn is_server_available(app: &AppHandle, command: &str) -> bool {
-    installer::find_installed_binary(app, command).is_some() || which::which(command).is_ok()
-}
-
-pub fn resolve_command(app: &AppHandle, command: &str) -> String {
-    if let Some(local_path) = installer::find_installed_binary(app, command) {
-        local_path.to_string_lossy().to_string()
-    } else {
-        command.to_string()
+pub fn is_server_available(servers_dir: &Path, command: &str) -> bool {
+    #[cfg(feature = "installer")]
+    if installer::find_installed_binary(servers_dir, command).is_some() {
+        return true;
     }
+    let _ = servers_dir; // suppress unused warning when installer disabled
+    which::which(command).is_ok()
 }
 
-// ── Root-level availability check ──
+pub fn resolve_command(servers_dir: &Path, command: &str) -> String {
+    #[cfg(feature = "installer")]
+    if let Some(local_path) = installer::find_installed_binary(servers_dir, command) {
+        return local_path.to_string_lossy().to_string();
+    }
+    let _ = servers_dir;
+    command.to_string()
+}
 
-pub fn check_availability(app: &AppHandle, workspace_path: &str) -> Vec<ServerAvailability> {
+pub fn check_availability(
+    servers_dir: &Path,
+    workspace_path: &str,
+) -> Vec<ServerAvailability> {
     detect_workspace_languages(workspace_path)
         .into_iter()
         .filter_map(|lang| {
             let config = resolve_server_for_language(&lang)?;
             Some(ServerAvailability {
-                available: is_server_available(app, &config.command),
+                available: is_server_available(servers_dir, &config.command),
                 server_name: config.server_name,
                 language_id: config.language_id,
             })
@@ -130,15 +112,31 @@ pub fn check_availability(app: &AppHandle, workspace_path: &str) -> Vec<ServerAv
 
 const MAX_SCAN_DEPTH: usize = 5;
 const SKIP_DIRS: &[&str] = &[
-    "node_modules", ".git", "target", "dist", "build", "vendor", ".next",
-    "__pycache__", ".venv", "venv", ".tox", "out", ".output", ".nuxt",
-    ".svelte-kit", "coverage", ".cache", "tmp", ".tmp",
+    "node_modules",
+    ".git",
+    "target",
+    "dist",
+    "build",
+    "vendor",
+    ".next",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".tox",
+    "out",
+    ".output",
+    ".nuxt",
+    ".svelte-kit",
+    "coverage",
+    ".cache",
+    "tmp",
+    ".tmp",
 ];
 
-/// Scan the workspace tree for project marker files and return all detected
-/// projects with their resolved roots.
-pub fn scan_workspace_projects(app: &AppHandle, workspace_path: &str) -> Vec<DetectedProject> {
-    // Build (markers, group) pairs, deduplicated by group
+pub fn scan_workspace_projects(
+    servers_dir: &Path,
+    workspace_path: &str,
+) -> Vec<DetectedProject> {
     let mut marker_groups: Vec<(&[String], &str)> = Vec::new();
     let mut seen_groups = HashSet::new();
     for entry in SERVERS.iter() {
@@ -151,9 +149,8 @@ pub fn scan_workspace_projects(app: &AppHandle, workspace_path: &str) -> Vec<Det
         }
     }
 
-    // Walk the tree, keeping only the shallowest root per language group
     let mut found: HashMap<String, String> = HashMap::new();
-    let mut stack: Vec<(std::path::PathBuf, usize)> =
+    let mut stack: Vec<(PathBuf, usize)> =
         vec![(Path::new(workspace_path).to_path_buf(), 0)];
 
     while let Some((dir, depth)) = stack.pop() {
@@ -199,7 +196,7 @@ pub fn scan_workspace_projects(app: &AppHandle, workspace_path: &str) -> Vec<Det
         .filter_map(|(group, project_root)| {
             let config = resolve_server_for_language(&group)?;
             Some(DetectedProject {
-                available: is_server_available(app, &config.command),
+                available: is_server_available(servers_dir, &config.command),
                 server_name: config.server_name,
                 language_id: group,
                 project_root,
@@ -208,10 +205,6 @@ pub fn scan_workspace_projects(app: &AppHandle, workspace_path: &str) -> Vec<Det
         .collect()
 }
 
-// ── Project root resolution (walk-up from file) ──
-
-/// Find the nearest project root for a language by walking up from `file_path`.
-/// Stops at `workspace_root` (won't go above it). Falls back to `workspace_root`.
 pub fn find_project_root(file_path: &str, language_id: &str, workspace_root: &str) -> String {
     let markers = match find_entry(language_id) {
         Some(entry) if !entry.markers.is_empty() => &entry.markers,
@@ -236,8 +229,6 @@ pub fn find_project_root(file_path: &str, language_id: &str, workspace_root: &st
 
     workspace_root.to_string()
 }
-
-// ── Root-level language detection (used by check_availability) ──
 
 fn detect_workspace_languages(workspace_path: &str) -> Vec<String> {
     let root = Path::new(workspace_path);

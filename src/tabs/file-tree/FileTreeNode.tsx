@@ -91,7 +91,8 @@ function normalizePath(p: string): string {
 }
 
 function joinPath(dir: string, name: string): string {
-  return dir.endsWith("/") || dir.endsWith("\\") ? dir + name : dir + "\\" + name;
+  const sep = dir.startsWith("wsl://") || dir.includes("/") ? "/" : "\\";
+  return dir.endsWith("/") || dir.endsWith("\\") ? dir + name : dir + sep + name;
 }
 
 function getFileIcon(name: string, extension: string | null): IconSvgElement {
@@ -266,14 +267,22 @@ export function FileTreeNode({
 
   const refreshDir = useCallback(
     (dirPath: string) => {
-      invoke<DirEntry[]>("read_dir", { path: dirPath })
-        .then((result) => {
-          if (normalizePath(dirPath) === normalizePath(entry.path)) {
+      if (normalizePath(dirPath) === normalizePath(entry.path)) {
+        // This node IS the directory to refresh — update directly
+        invoke<DirEntry[]>("read_dir", { path: dirPath })
+          .then((result) => {
             setChildren(result);
             setLoaded(true);
-          }
-        })
-        .catch(() => {});
+          })
+          .catch(() => {});
+      } else {
+        // Target directory is a different node — notify it via event
+        window.dispatchEvent(
+          new CustomEvent("file-tree-refresh", {
+            detail: { dir: dirPath },
+          }),
+        );
+      }
     },
     [entry.path],
   );
@@ -398,6 +407,27 @@ export function FileTreeNode({
     window.addEventListener("file-tree-create", handler);
     return () => window.removeEventListener("file-tree-create", handler);
   }, [entry.isDir, entry.path, loaded]);
+
+  // Listen for refresh requests from child nodes (e.g. after rename/trash/delete)
+  useEffect(() => {
+    if (!entry.isDir) return;
+
+    const normalized = normalizePath(entry.path);
+    const handler = (e: Event) => {
+      const { dir } = (e as CustomEvent).detail;
+      if (normalizePath(dir) === normalized) {
+        invoke<DirEntry[]>("read_dir", { path: entry.path })
+          .then((result) => {
+            setChildren(result);
+            setLoaded(true);
+          })
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener("file-tree-refresh", handler);
+    return () => window.removeEventListener("file-tree-refresh", handler);
+  }, [entry.isDir, entry.path]);
 
   const handleFileMouseDown = useCallback(
     (e: React.MouseEvent) => {

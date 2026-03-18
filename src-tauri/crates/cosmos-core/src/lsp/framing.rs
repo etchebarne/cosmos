@@ -1,15 +1,11 @@
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{ChildStdin, ChildStdout};
 
-/// Maximum allowed LSP message size (64 MB). Prevents OOM from a misbehaving
-/// server sending an enormous Content-Length value.
 const MAX_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
 
-/// Read one LSP message from a Content-Length framed stream.
 pub async fn read_message(reader: &mut BufReader<ChildStdout>) -> Result<String, String> {
     let mut content_length: Option<usize> = None;
 
-    // Read headers until empty line
     loop {
         let mut line = String::new();
         let bytes_read = reader
@@ -33,7 +29,6 @@ pub async fn read_message(reader: &mut BufReader<ChildStdout>) -> Result<String,
                     .map_err(|e| format!("Invalid Content-Length: {e}"))?,
             );
         }
-        // Skip other headers (e.g. Content-Type)
     }
 
     let length = content_length.ok_or("Missing Content-Length header")?;
@@ -51,7 +46,6 @@ pub async fn read_message(reader: &mut BufReader<ChildStdout>) -> Result<String,
     String::from_utf8(body).map_err(|e| e.to_string())
 }
 
-/// Frame a JSON string with Content-Length header for LSP stdin.
 pub fn frame_message(json: &str) -> Vec<u8> {
     let header = format!("Content-Length: {}\r\n\r\n", json.len());
     let mut buf = Vec::with_capacity(header.len() + json.len());
@@ -60,7 +54,6 @@ pub fn frame_message(json: &str) -> Vec<u8> {
     buf
 }
 
-/// Write a framed LSP message to stdin.
 pub async fn write_message(stdin: &mut ChildStdin, json: &str) -> Result<(), String> {
     let data = frame_message(json);
     stdin.write_all(&data).await.map_err(|e| e.to_string())?;
