@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useToastStore } from "../store/toast.store";
 
 type GitAction = "fetch" | "pull" | "pull_rebase" | "push" | "force_push";
 
@@ -39,8 +40,18 @@ export function useGitActions(
         refresh();
         setActionDone(true);
         setTimeout(() => setActionDone(false), 2000);
+        useToastStore.getState().addToast({
+          message: `${act.label} completed successfully`,
+          type: "success",
+          duration: 4000,
+        });
       } catch (e) {
-        setError(String(e));
+        const msg = String(e);
+        setError(msg);
+        useToastStore.getState().addToast({
+          message: `${act.label} failed: ${msg}`,
+          type: "error",
+        });
       } finally {
         setActionRunning(false);
       }
