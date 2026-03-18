@@ -282,11 +282,25 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
     <div className="flex flex-col h-full font-ui">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border-primary)]">
-        <span className="text-xs text-[var(--color-text-primary)]">
-          {changes.length === 0
-            ? "No Changes"
-            : `${changes.length} Change${changes.length !== 1 ? "s" : ""}`}
-        </span>
+        <div className="flex items-center gap-1">
+          <button
+            className="p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer disabled:opacity-50"
+            onClick={refresh}
+            disabled={loading}
+            title="Refresh"
+          >
+            <HugeiconsIcon
+              icon={loading ? Loading03Icon : ArrowReloadHorizontalIcon}
+              size={14}
+              className={loading ? "animate-spin" : ""}
+            />
+          </button>
+          <span className="text-xs text-[var(--color-text-primary)]">
+            {changes.length === 0
+              ? "No Changes"
+              : `${changes.length} Change${changes.length !== 1 ? "s" : ""}`}
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           <button
             className="text-xs text-[var(--color-accent-blue)] hover:text-[var(--color-accent-blue-hover)] transition-colors cursor-pointer"
@@ -534,17 +548,6 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
             <span className="text-[11px] text-[var(--color-text-tertiary)] truncate flex-1 font-mono">
               {status.lastCommitMessage}
             </span>
-            <button
-              className="shrink-0 p-1 hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer rounded-none group"
-              onClick={refresh}
-              title="Refresh Git Status"
-            >
-              <HugeiconsIcon
-                icon={ArrowReloadHorizontalIcon}
-                size={14}
-                className="text-[var(--color-text-tertiary)] group-hover:text-[var(--color-text-primary)] transition-colors"
-              />
-            </button>
           </div>
         )}
       </div>
