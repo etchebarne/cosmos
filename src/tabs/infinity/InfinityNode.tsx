@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { NodeResizer, type NodeProps } from "@xyflow/react";
+import { NodeResizer, type NodeProps, useReactFlow } from "@xyflow/react";
 import type { InfinityNode as InfinityNodeType } from "../../store/infinity.store";
 import { useInfinityStore } from "../../store/infinity.store";
 import { getTabDefinition } from "../registry";
@@ -8,6 +8,7 @@ import { TabIcon } from "../../components/shared/TabIcon";
 export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
   const removeNode = useInfinityStore((s) => s.removeNode);
   const contentRef = useRef<HTMLDivElement>(null);
+  const reactFlow = useReactFlow();
   const definition = getTabDefinition(data.tabType);
   if (!definition) return null;
 
@@ -44,6 +45,46 @@ export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
       el.removeEventListener("wheel", bubbleHandler);
     };
   }, []);
+
+  // Adjust mouse/pointer coordinates for CSS-scaled content.
+  // ReactFlow applies transform: scale(z) to the viewport; child components
+  // (e.g. xterm.js) that derive positions from clientX/clientY paired with
+  // getBoundingClientRect() see a scaled rect but expect unscaled offsets,
+  // causing clicks and selections to land at the wrong position.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    const adjust = (e: MouseEvent) => {
+      const z = reactFlow.getZoom();
+      if (z === 1) return;
+      const rect = el.getBoundingClientRect();
+      const ax = rect.left + (e.clientX - rect.left) / z;
+      const ay = rect.top + (e.clientY - rect.top) / z;
+      Object.defineProperty(e, "clientX", { value: ax, configurable: true });
+      Object.defineProperty(e, "clientY", { value: ay, configurable: true });
+      Object.defineProperty(e, "x", { value: ax, configurable: true });
+      Object.defineProperty(e, "y", { value: ay, configurable: true });
+    };
+
+    const events = [
+      "pointerdown",
+      "pointermove",
+      "pointerup",
+      "mousedown",
+      "mousemove",
+      "mouseup",
+    ] as const;
+    for (const evt of events) {
+      el.addEventListener(evt, adjust as EventListener, { capture: true });
+    }
+    return () => {
+      for (const evt of events) {
+        el.removeEventListener(evt, adjust as EventListener, { capture: true });
+      }
+    };
+  }, [reactFlow]);
 
   return (
     <>
