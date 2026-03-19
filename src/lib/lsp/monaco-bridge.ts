@@ -306,13 +306,13 @@ export function registerLspProviders(
                 if ("targetUri" in loc) {
                   const link = loc as LocationLink;
                   return {
-                    uri: monaco.Uri.parse(link.targetUri),
+                    uri: monaco.Uri.parse(client.fromServerUri(link.targetUri)),
                     range: toMonacoRange(link.targetRange),
                   };
                 }
                 const location = loc as LspLocation;
                 return {
-                  uri: monaco.Uri.parse(location.uri),
+                  uri: monaco.Uri.parse(client.fromServerUri(location.uri)),
                   range: toMonacoRange(location.range),
                 };
               });
@@ -340,7 +340,7 @@ export function registerLspProviders(
               const result = await client.references(uri, lspPos.line, lspPos.character);
               if (!result) return null;
               return result.map((loc) => ({
-                uri: monaco.Uri.parse(loc.uri) as Uri,
+                uri: monaco.Uri.parse(client.fromServerUri(loc.uri)) as Uri,
                 range: toMonacoRange(loc.range),
               }));
             } catch (e) {
@@ -443,7 +443,7 @@ export function registerLspProviders(
                       for (const [editUri, textEdits] of Object.entries(action.edit.changes)) {
                         for (const te of textEdits) {
                           edits.push({
-                            resource: monaco.Uri.parse(editUri),
+                            resource: monaco.Uri.parse(client.fromServerUri(editUri)),
                             textEdit: {
                               range: toMonacoRange(te.range),
                               text: te.newText,
@@ -459,7 +459,9 @@ export function registerLspProviders(
                         if ("textDocument" in change && "edits" in change) {
                           for (const te of change.edits as TextEdit[]) {
                             edits.push({
-                              resource: monaco.Uri.parse(change.textDocument.uri),
+                              resource: monaco.Uri.parse(
+                                client.fromServerUri(change.textDocument.uri),
+                              ),
                               textEdit: {
                                 range: toMonacoRange(te.range),
                                 text: te.newText,
@@ -564,7 +566,7 @@ export function registerLspProviders(
                 for (const [editUri, textEdits] of Object.entries(result.changes)) {
                   for (const te of textEdits) {
                     edits.push({
-                      resource: monaco.Uri.parse(editUri),
+                      resource: monaco.Uri.parse(client.fromServerUri(editUri)),
                       textEdit: {
                         range: toMonacoRange(te.range),
                         text: te.newText,
@@ -580,7 +582,7 @@ export function registerLspProviders(
                   if ("textDocument" in change && "edits" in change) {
                     for (const te of change.edits as TextEdit[]) {
                       edits.push({
-                        resource: monaco.Uri.parse(change.textDocument.uri),
+                        resource: monaco.Uri.parse(client.fromServerUri(change.textDocument.uri)),
                         textEdit: {
                           range: toMonacoRange(te.range),
                           text: te.newText,

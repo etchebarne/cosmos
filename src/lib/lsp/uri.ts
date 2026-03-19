@@ -48,6 +48,17 @@ export function fileUriToPath(uri: string): string {
 
   path = decodeURIComponent(path);
 
+  // After decoding, strip embedded wsl:// prefix: /wsl://distro/path → wsl://distro/path
+  if (path.startsWith("/wsl://")) {
+    return path.slice(1);
+  }
+
+  // After decoding, handle percent-encoded drive letters (e.g. /c%3A/ decoded to /c:/)
+  // Strip the leading / so we get a valid Windows path
+  if (/^\/[a-zA-Z]:/.test(path)) {
+    path = path.slice(1);
+  }
+
   // On Windows, restore backslashes
   if (/^[a-zA-Z]:/.test(path)) {
     path = path.replace(/\//g, "\\");
