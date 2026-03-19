@@ -40,7 +40,7 @@ export function Dropdown({ value, options, onChange }: DropdownProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-full py-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-lg">
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-full py-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-[3px_3px_0_rgba(0,0,0,0.25)] animate-fade-in-down origin-top">
           {options.map((opt) => (
             <button
               key={opt.value}

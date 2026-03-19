@@ -65,8 +65,7 @@ export function Tooltip({ content, children, delay = 400, side = "bottom" }: Too
       {visible &&
         createPortal(
           <div
-            ref={tooltipRef}
-            className="fixed z-50 px-2 py-1 text-xs whitespace-nowrap bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] text-[var(--color-text-primary)] shadow-lg pointer-events-none"
+            className="fixed z-50 pointer-events-none"
             style={{
               left: position.x,
               top: position.y,
@@ -76,7 +75,16 @@ export function Tooltip({ content, children, delay = 400, side = "bottom" }: Too
                   : "translateX(-50%) translateY(-100%)",
             }}
           >
-            {content}
+            <div
+              ref={tooltipRef}
+              className={`px-2.5 py-1.5 text-xs font-medium tracking-wide whitespace-nowrap bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] text-[var(--color-text-primary)] shadow-[3px_3px_0_rgba(0,0,0,0.25)] ${
+                position.actualSide === "bottom"
+                  ? "animate-fade-in-up"
+                  : "animate-fade-in-down"
+              }`}
+            >
+              {content}
+            </div>
           </div>,
           document.body,
         )}

@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
+import autoAnimate from "@formkit/auto-animate";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useLayoutStore } from "../../store/layout.store";
@@ -62,6 +63,15 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const prevTabCountRef = useRef(tabs.length);
+
+  useEffect(() => {
+    if (tabBarRef.current) {
+      autoAnimate(tabBarRef.current, {
+        duration: 150,
+        easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (tabs.length > prevTabCountRef.current && tabBarRef.current) {

@@ -425,7 +425,7 @@ export function DragOverlay() {
     <div className="fixed inset-0 z-50" style={{ cursor: "grabbing" }}>
       {/* Ghost tab */}
       <div
-        className="absolute flex items-center gap-2 px-3 h-8 bg-[var(--color-tab-active-bg)] border border-[var(--color-accent-blue)] text-xs text-[var(--color-text-primary)] opacity-90 pointer-events-none"
+        className="absolute flex items-center gap-2 px-3 h-8 bg-[var(--color-bg-elevated)] border border-[var(--color-accent-blue)] text-xs text-[var(--color-text-primary)] pointer-events-none animate-lift"
         style={{ left: mousePos.x + 12, top: mousePos.y - 16 }}
       >
         {ghostLabel}
