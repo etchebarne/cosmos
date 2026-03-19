@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,6 +23,8 @@ pub struct RemoteAgent {
     pending: Arc<Mutex<HashMap<u64, oneshot::Sender<ResponseMessage>>>>,
     alive: Arc<AtomicBool>,
     pub connection_type: ConnectionType,
+    /// Terminal IDs spawned on this agent, used to emit TerminalExit on death.
+    terminal_ids: Arc<Mutex<HashSet<String>>>,
 }
 
 impl Drop for RemoteAgent {
@@ -72,7 +74,12 @@ impl RemoteAgent {
                     None => host.clone(),
                 };
                 let mut cmd = tokio::process::Command::new("ssh");
-                cmd.args([&target, "~/.cosmos-agent/cosmos-agent"]);
+                cmd.args([
+                    "-o", "ServerAliveInterval=15",
+                    "-o", "ServerAliveCountMax=3",
+                    &target,
+                    "~/.cosmos-agent/cosmos-agent",
+                ]);
                 cmd.stdin(std::process::Stdio::piped())
                     .stdout(std::process::Stdio::piped())
                     .stderr(std::process::Stdio::piped());
@@ -107,10 +114,13 @@ impl RemoteAgent {
             Arc::new(Mutex::new(HashMap::new()));
         let alive = Arc::new(AtomicBool::new(true));
 
+        let terminal_ids: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
+
         let pending_clone = pending.clone();
         let alive_clone = alive.clone();
+        let terminal_ids_clone = terminal_ids.clone();
         tokio::spawn(async move {
-            read_agent_stdout(stdout, pending_clone.clone(), on_event).await;
+            read_agent_stdout(stdout, pending_clone.clone(), on_event.clone()).await;
 
             // Agent died — mark dead and fail all pending requests
             alive_clone.store(false, Ordering::SeqCst);
@@ -118,6 +128,12 @@ impl RemoteAgent {
             let mut p = pending_clone.lock().await;
             for (_, tx) in p.drain() {
                 let _ = tx.send(ResponseMessage::err(0, "Agent connection lost".into()));
+            }
+
+            // Emit TerminalExit for every terminal that was on this agent
+            let ids = terminal_ids_clone.lock().await;
+            for id in ids.iter() {
+                on_event(Event::TerminalExit { id: id.clone() });
             }
         });
 
@@ -128,6 +144,7 @@ impl RemoteAgent {
             pending,
             alive: alive.clone(),
             connection_type: conn,
+            terminal_ids,
         };
 
         // Keepalive: periodically send a Ping to prevent idle pipe closure.
@@ -169,6 +186,16 @@ impl RemoteAgent {
     /// Check if the agent process is still alive.
     pub fn is_alive(&self) -> bool {
         self.alive.load(Ordering::SeqCst)
+    }
+
+    /// Register a terminal ID so we can emit TerminalExit if the agent dies.
+    pub async fn register_terminal(&self, id: String) {
+        self.terminal_ids.lock().await.insert(id);
+    }
+
+    /// Unregister a terminal ID (e.g. when the terminal is closed normally).
+    pub async fn unregister_terminal(&self, id: &str) {
+        self.terminal_ids.lock().await.remove(id);
     }
 
     /// Send a request and wait for the response with the default timeout.

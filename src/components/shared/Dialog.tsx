@@ -45,7 +45,9 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className={`w-full max-w-md bg-[var(--color-bg-page)] border border-[var(--color-border-primary)] shadow-[6px_6px_0_rgba(0,0,0,0.25)] flex flex-col max-h-[70vh] ${isClosing ? "animate-fade-out-down" : "animate-fade-in-up"}`}>
+      <div
+        className={`w-full max-w-md bg-[var(--color-bg-page)] border border-[var(--color-border-primary)] shadow-[6px_6px_0_rgba(0,0,0,0.25)] flex flex-col max-h-[70vh] ${isClosing ? "animate-fade-out-down" : "animate-fade-in-up"}`}
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]">
           <span className="text-sm font-medium text-[var(--color-text-primary)]">{title}</span>
           <button

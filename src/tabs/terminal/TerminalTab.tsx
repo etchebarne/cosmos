@@ -263,7 +263,9 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
 
         // Keyboard input → PTY
         const onData = terminal.onData((data) => {
-          invoke("terminal_write", { id: terminalId, data });
+          invoke("terminal_write", { id: terminalId, data }).catch(() => {
+            terminal.write("\r\n\x1b[31m[Connection lost]\x1b[0m\r\n");
+          });
         });
         cleanups.push(() => onData.dispose());
       });

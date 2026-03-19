@@ -78,9 +78,7 @@ export function Tooltip({ content, children, delay = 400, side = "bottom" }: Too
             <div
               ref={tooltipRef}
               className={`px-2.5 py-1.5 text-xs font-medium tracking-wide whitespace-nowrap bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] text-[var(--color-text-primary)] shadow-[3px_3px_0_rgba(0,0,0,0.25)] ${
-                position.actualSide === "bottom"
-                  ? "animate-fade-in-up"
-                  : "animate-fade-in-down"
+                position.actualSide === "bottom" ? "animate-fade-in-up" : "animate-fade-in-down"
               }`}
             >
               {content}

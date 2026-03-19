@@ -187,16 +187,28 @@ impl BackendRouter {
 
     /// Register a terminal ID as belonging to a remote agent.
     pub async fn register_remote_terminal(&self, id: String, agent: Arc<RemoteAgent>) {
+        agent.register_terminal(id.clone()).await;
         self.remote_terminals.lock().await.insert(id, agent);
     }
 
     /// Get the remote agent for a terminal ID, if it was spawned remotely.
+    /// Returns None and cleans up if the agent is dead.
     pub async fn get_remote_terminal(&self, id: &str) -> Option<Arc<RemoteAgent>> {
-        self.remote_terminals.lock().await.get(id).cloned()
+        let mut terminals = self.remote_terminals.lock().await;
+        if let Some(agent) = terminals.get(id) {
+            if agent.is_alive() {
+                return Some(agent.clone());
+            }
+            // Agent is dead — clean up this mapping
+            terminals.remove(id);
+        }
+        None
     }
 
     /// Remove a remote terminal registration.
     pub async fn remove_remote_terminal(&self, id: &str) {
-        self.remote_terminals.lock().await.remove(id);
+        if let Some(agent) = self.remote_terminals.lock().await.remove(id) {
+            agent.unregister_terminal(id).await;
+        }
     }
 }
