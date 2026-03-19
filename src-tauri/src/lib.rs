@@ -56,6 +56,15 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .setup(|app| {
             let handle = app.handle().clone();
+
+            // Set high-res window icon to avoid blurry taskbar icon on Windows
+            // (Tauri's codegen only reads the first ICO entry, which may be low-res)
+            if let Some(window) = app.get_webview_window("main") {
+                let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
+                    .expect("Failed to load window icon");
+                let _ = window.set_icon(icon);
+            }
+
             let events: Arc<dyn EventSink> = Arc::new(TauriEventSink(handle.clone()));
 
             // Watcher
