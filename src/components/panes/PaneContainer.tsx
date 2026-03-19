@@ -80,6 +80,8 @@ function SplitView({ node }: { node: Extract<PaneNode, { type: "split" }> }) {
           </div>
           {i < node.children.length - 1 && (
             <div
+              role="separator"
+              aria-label={`Resize ${node.direction === "horizontal" ? "columns" : "rows"}`}
               className={`shrink-0 bg-[var(--color-divider)] z-10 relative hover:bg-[var(--color-accent-blue)] ${
                 node.direction === "horizontal"
                   ? "w-px cursor-col-resize after:absolute after:inset-y-0 after:-left-[3px] after:-right-[3px]"
@@ -102,6 +104,7 @@ function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
     <div className="flex flex-col w-full h-full min-w-0 min-h-0">
       <TabBar paneId={node.id} tabs={node.tabs} activeTabId={node.activeTabId} />
       <div
+        role="tabpanel"
         ref={contentRef}
         data-pane-content={node.id}
         className="flex-1 min-h-0 bg-[var(--color-bg-page)] relative overflow-hidden"

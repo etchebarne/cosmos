@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { useLspStore } from "./lsp.store";
+import { cleanupEditorInstances } from "../tabs/editor/EditorTab";
 
 const WORKSPACE_COLORS = [
   "#4B8EF5",
@@ -133,9 +134,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const workspaces = state.workspaces.filter((_, i) => i !== index);
     let activeIndex: number | null = state.activeIndex;
 
-    // Stop LSP servers for the closed workspace
+    // Stop LSP servers and clean up editor caches for the closed workspace
     if (closedPath) {
       useLspStore.getState().stopWorkspace(closedPath);
+      cleanupEditorInstances(closedPath);
     }
 
     // Disconnect remote agent

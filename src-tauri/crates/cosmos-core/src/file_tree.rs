@@ -181,13 +181,26 @@ pub fn copy_entry(source: &str, dest_dir: &str) -> Result<String, String> {
     Ok(new_path.to_string_lossy().to_string())
 }
 
+/// Maximum directory nesting depth for recursive copy to prevent stack overflow.
+const MAX_COPY_DEPTH: u32 = 64;
+
 fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
+    copy_dir_recursive_inner(src, dst, 0)
+}
+
+fn copy_dir_recursive_inner(src: &Path, dst: &Path, depth: u32) -> Result<(), String> {
+    if depth > MAX_COPY_DEPTH {
+        return Err(format!(
+            "Directory nesting too deep (>{MAX_COPY_DEPTH} levels): {}",
+            src.display()
+        ));
+    }
     fs::create_dir_all(dst).map_err(|e| e.to_string())?;
     for entry in fs::read_dir(src).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         let dest_entry = dst.join(entry.file_name());
         if entry.file_type().map_err(|e| e.to_string())?.is_dir() {
-            copy_dir_recursive(&entry.path(), &dest_entry)?;
+            copy_dir_recursive_inner(&entry.path(), &dest_entry, depth + 1)?;
         } else {
             fs::copy(entry.path(), &dest_entry).map_err(|e| e.to_string())?;
         }

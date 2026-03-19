@@ -6,6 +6,7 @@ import { registerCustomTheme } from "@pierre/diffs";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { getTheme } from "../../lib/themes";
+import { getChangesMeta } from "../../types";
 import type { TabContentProps } from "../types";
 
 // Register a custom theme — the callback reads getTheme() at invocation time
@@ -65,8 +66,9 @@ function buildThemeCss(): string {
 
 export function ChangesTab({ tab }: TabContentProps) {
   const workspace = useActiveWorkspace();
-  const filePath = tab.metadata?.filePath as string;
-  const isUntracked = tab.metadata?.isUntracked as boolean;
+  const meta = getChangesMeta(tab);
+  const filePath = meta?.filePath ?? "";
+  const isUntracked = meta?.isUntracked ?? false;
 
   const [patch, setPatch] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

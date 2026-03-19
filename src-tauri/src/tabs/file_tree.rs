@@ -9,8 +9,12 @@ use tauri_plugin_opener::OpenerExt;
 use crate::remote::router::BackendRouter;
 
 /// Extract the `wsl://distro` prefix from a full remote path.
-fn remote_prefix<'a>(full_path: &'a str, linux_path: &str) -> &'a str {
-    &full_path[..full_path.len() - linux_path.len()]
+fn remote_prefix<'a>(full_path: &'a str, linux_path: &str) -> Result<&'a str, String> {
+    let cutoff = full_path
+        .len()
+        .checked_sub(linux_path.len())
+        .ok_or_else(|| format!("Invalid remote path prefix: full={full_path}, linux={linux_path}"))?;
+    Ok(&full_path[..cutoff])
 }
 
 /// Return an error when a remote path has no connected agent.
@@ -31,7 +35,7 @@ pub async fn read_dir(
             .await?;
         let mut entries: Vec<DirEntry> =
             serde_json::from_value(val).map_err(|e| e.to_string())?;
-        let prefix = remote_prefix(&path, &remote_path);
+        let prefix = remote_prefix(&path, &remote_path)?;
         for entry in &mut entries {
             entry.path = format!("{}{}", prefix, entry.path);
         }
@@ -50,7 +54,7 @@ pub async fn move_file(
     dest_dir: String,
 ) -> Result<String, String> {
     if let Some((agent, remote_source)) = router.resolve(&source).await {
-        let prefix = remote_prefix(&source, &remote_source).to_string();
+        let prefix = remote_prefix(&source, &remote_source)?.to_string();
         let remote_dest = router
             .resolve(&dest_dir)
             .await
@@ -112,7 +116,7 @@ pub async fn rename_entry(
     new_name: String,
 ) -> Result<String, String> {
     if let Some((agent, remote_path)) = router.resolve(&path).await {
-        let prefix = remote_prefix(&path, &remote_path).to_string();
+        let prefix = remote_prefix(&path, &remote_path)?.to_string();
         let val = agent
             .request(Request::RenameEntry {
                 path: remote_path,
@@ -135,7 +139,7 @@ pub async fn copy_entry(
     dest_dir: String,
 ) -> Result<String, String> {
     if let Some((agent, remote_source)) = router.resolve(&source).await {
-        let prefix = remote_prefix(&source, &remote_source).to_string();
+        let prefix = remote_prefix(&source, &remote_source)?.to_string();
         let remote_dest = router
             .resolve(&dest_dir)
             .await

@@ -143,7 +143,11 @@ pub fn get_git_status(path: &str) -> Result<GitStatusInfo, String> {
 
             let (additions, deletions) = if x == '?' && y == '?' {
                 let full_path = dir.join(file_path);
-                let count = std::fs::read_to_string(&full_path)
+                // Cap line-counting to 1 MB to avoid reading huge untracked files
+                let count = std::fs::metadata(&full_path)
+                    .ok()
+                    .filter(|m| m.len() <= 1_024 * 1_024)
+                    .and_then(|_| std::fs::read_to_string(&full_path).ok())
                     .map(|s| s.lines().count() as i32)
                     .unwrap_or(0);
                 (count, 0)

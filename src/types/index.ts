@@ -1,11 +1,35 @@
 // ── Tab & Pane tree ──
 
+export interface EditorTabMetadata {
+  filePath: string;
+}
+
+export interface ChangesTabMetadata {
+  filePath: string;
+  staged: boolean;
+  isUntracked: boolean;
+}
+
 export interface Tab {
   id: string;
   type: string;
   title: string;
   icon: string;
   metadata?: Record<string, unknown>;
+}
+
+/** Type-safe accessor for editor tab metadata. */
+export function getEditorMeta(tab: Tab): EditorTabMetadata | undefined {
+  if (tab.type === "editor" && tab.metadata?.filePath) {
+    return tab.metadata as unknown as EditorTabMetadata;
+  }
+}
+
+/** Type-safe accessor for changes tab metadata. */
+export function getChangesMeta(tab: Tab): ChangesTabMetadata | undefined {
+  if (tab.type === "changes" && tab.metadata?.filePath) {
+    return tab.metadata as unknown as ChangesTabMetadata;
+  }
 }
 
 export interface PaneLeaf {

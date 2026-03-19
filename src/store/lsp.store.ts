@@ -105,6 +105,10 @@ const RESTART_DELAY_MS = 5_000;
 // Track active progress tokens across all servers.
 // Key: "workspacePath\0serverLang\0token"
 const progressTokens = new Map<string, IndexProgress>();
+// Auto-expire stale progress tokens that never received an "end" event.
+const progressTimers = new Map<string, ReturnType<typeof setTimeout>>();
+/** Max time a progress token can live without an "end" event (5 minutes). */
+const PROGRESS_TIMEOUT_MS = 5 * 60 * 1000;
 
 function progressKey(workspacePath: string, serverLang: string, token: string | number): string {
   return `${workspacePath}\0${serverLang}\0${token}`;
@@ -287,6 +291,16 @@ export const useLspStore = create<LspState>()(
               message: value.message,
               percentage: value.percentage,
             });
+            // Auto-expire if "end" is never received
+            clearTimeout(progressTimers.get(key));
+            progressTimers.set(
+              key,
+              setTimeout(() => {
+                progressTokens.delete(key);
+                progressTimers.delete(key);
+                syncProgressState(workspacePath);
+              }, PROGRESS_TIMEOUT_MS),
+            );
           } else if (value.kind === "report") {
             const existing = progressTokens.get(key);
             if (existing) {
@@ -298,6 +312,8 @@ export const useLspStore = create<LspState>()(
             }
           } else if (value.kind === "end") {
             progressTokens.delete(key);
+            clearTimeout(progressTimers.get(key));
+            progressTimers.delete(key);
           }
           syncProgressState(workspacePath);
         });
@@ -426,12 +442,9 @@ export const useLspStore = create<LspState>()(
 
           // Detect "not found" errors (binary not on PATH or shim can't resolve)
           const isNotFound =
-            errorStr.includes("not found") ||
-            errorStr.includes("No such file") ||
-            errorStr.includes("program not found") ||
-            errorStr.includes("os error 2") ||
-            errorStr.includes("The system cannot find") ||
-            errorStr.includes("Unknown binary");
+            /not found|No such file|program not found|os error 2|cannot find|Unknown binary/i.test(
+              errorStr,
+            );
 
           // Server binary existed but crashed immediately during init
           // (e.g. rustup proxy when component isn't installed)
@@ -582,10 +595,16 @@ export const useLspStore = create<LspState>()(
 
         await Promise.allSettled(shutdownPromises);
 
-        // Clean up progress tokens for this workspace
+        // Clean up progress tokens and timers for this workspace
         const prefix = workspacePath + "\0";
         for (const key of progressTokens.keys()) {
           if (key.startsWith(prefix)) progressTokens.delete(key);
+        }
+        for (const [key, timer] of progressTimers) {
+          if (key.startsWith(prefix)) {
+            clearTimeout(timer);
+            progressTimers.delete(key);
+          }
         }
 
         // Clean up restart attempt tracking

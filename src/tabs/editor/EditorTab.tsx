@@ -14,6 +14,7 @@ import { useLayoutStore } from "../../store/layout.store";
 import { useEditorStore } from "../../store/editor.store";
 import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
 import { getTheme } from "../../lib/themes";
+import { getEditorMeta } from "../../types";
 import type { TabContentProps } from "../types";
 
 // ── Language detection from file extension (for early LSP start) ──
@@ -60,6 +61,16 @@ function languageIdFromPath(filePath: string): string {
 const editorInstances = new Map<string, editor.IStandaloneCodeEditor>();
 const pendingReveals = new Map<string, { lineNumber: number; column: number }>();
 let editorOpenerRegistered = false;
+
+/** Clear module-level caches for a workspace path prefix. */
+export function cleanupEditorInstances(workspacePath: string) {
+  for (const key of editorInstances.keys()) {
+    if (key.startsWith(workspacePath)) editorInstances.delete(key);
+  }
+  for (const key of pendingReveals.keys()) {
+    if (key.startsWith(workspacePath)) pendingReveals.delete(key);
+  }
+}
 
 /** Convert a file URI to an OS path with the drive letter uppercased to match OS convention. */
 function uriToNormalizedPath(uri: string): string {
@@ -156,7 +167,7 @@ function defineCosmosTheme(monaco: Monaco) {
 }
 
 export function EditorTab({ tab }: TabContentProps) {
-  const filePath = tab.metadata?.filePath as string | undefined;
+  const filePath = getEditorMeta(tab)?.filePath;
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -304,6 +315,7 @@ export function EditorTab({ tab }: TabContentProps) {
   }, []);
 
   // Reload editor content when the file is modified externally and the editor is clean.
+  // Uses refs for workspace/fileUri/getClient to keep the listener stable across store updates.
   useEffect(() => {
     if (!filePath) return;
 
@@ -333,10 +345,12 @@ export function EditorTab({ tab }: TabContentProps) {
         }
 
         // Notify LSP of the updated content
-        if (workspace && fileUri) {
+        const ws = workspaceRef.current;
+        const uri = fileUriRef.current;
+        if (ws && uri) {
           versionRef.current++;
-          const client = getClient(workspace.path, lspLanguageRef.current);
-          client?.didChange(fileUri, versionRef.current, [{ text: newContent }]);
+          const client = useLspStore.getState().getClient(ws.path, lspLanguageRef.current);
+          client?.didChange(uri, versionRef.current, [{ text: newContent }]);
         }
       } catch {
         // File may have been deleted — ignore
@@ -346,7 +360,7 @@ export function EditorTab({ tab }: TabContentProps) {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [filePath, workspace, fileUri, getClient]);
+  }, [filePath]);
 
   function handleEditorDidMount(instance: editor.IStandaloneCodeEditor, monaco: Monaco) {
     editorRef.current = instance;

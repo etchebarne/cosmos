@@ -1,4 +1,6 @@
+import { memo } from "react";
 import { getTabDefinition } from "../../tabs";
+import { ErrorBoundary } from "../shared/ErrorBoundary";
 import type { Tab } from "../../types";
 
 interface TabContentProps {
@@ -6,7 +8,7 @@ interface TabContentProps {
   paneId: string;
 }
 
-export function TabContent({ tab, paneId }: TabContentProps) {
+export const TabContent = memo(function TabContent({ tab, paneId }: TabContentProps) {
   const definition = getTabDefinition(tab.type);
 
   if (!definition) {
@@ -20,5 +22,9 @@ export function TabContent({ tab, paneId }: TabContentProps) {
   }
 
   const Component = definition.component;
-  return <Component tab={tab} paneId={paneId} />;
-}
+  return (
+    <ErrorBoundary>
+      <Component tab={tab} paneId={paneId} />
+    </ErrorBoundary>
+  );
+});

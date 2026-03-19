@@ -17,5 +17,5 @@ export function useClickOutside(
     };
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
-  }, [ref, enabled]);
+  }, [enabled]); // ref is a stable RefObject — not a dependency
 }

@@ -7,6 +7,7 @@ import { PanePortalProvider } from "./components/panes/PanePortalContext";
 import { DragOverlay } from "./components/panes/DragOverlay";
 import { ToastContainer } from "./components/shared/Toast";
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
+import { useShallow } from "zustand/react/shallow";
 import { useLayoutStore } from "./store/layout.store";
 import { useWorkspaceStore } from "./store/workspace.store";
 import { useSettingsStore } from "./store/settings.store";
@@ -52,15 +53,23 @@ function WorkspacePane({
 }
 
 function App() {
-  const layout = useLayoutStore((s) => s.layout);
-  const layouts = useLayoutStore((s) => s.layouts);
-  const activeWorkspacePath = useLayoutStore((s) => s.activeWorkspacePath);
-  const connectingPaths = useWorkspaceStore((s) => s.connectingPaths);
-  const setWorkspace = useLayoutStore((s) => s.setWorkspace);
-  const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const activeIndex = useWorkspaceStore((s) => s.activeIndex);
-  const ready = useWorkspaceStore((s) => s.ready);
-  const init = useWorkspaceStore((s) => s.init);
+  const { layout, layouts, activeWorkspacePath, setWorkspace } = useLayoutStore(
+    useShallow((s) => ({
+      layout: s.layout,
+      layouts: s.layouts,
+      activeWorkspacePath: s.activeWorkspacePath,
+      setWorkspace: s.setWorkspace,
+    })),
+  );
+  const { connectingPaths, workspaces, activeIndex, ready, init } = useWorkspaceStore(
+    useShallow((s) => ({
+      connectingPaths: s.connectingPaths,
+      workspaces: s.workspaces,
+      activeIndex: s.activeIndex,
+      ready: s.ready,
+      init: s.init,
+    })),
+  );
   const initSettings = useSettingsStore((s) => s.init);
 
   useEffect(() => {

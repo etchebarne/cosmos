@@ -63,6 +63,44 @@ interface LayoutStore {
   setTabDirty: (tabId: string, dirty: boolean) => void;
 }
 
+/**
+ * Find an existing tab across all leaves, or determine the best pane
+ * to open a new tab in (preferring editor/changes panes).
+ */
+function resolveOpenTarget(
+  layout: PaneNode,
+  lastEditorPaneId: string | null,
+  tabType: string,
+  filePath: string,
+) {
+  const leaves = findAllLeaves(layout);
+
+  // Check if a tab for this file is already open
+  for (const leaf of leaves) {
+    const existing = leaf.tabs.find(
+      (t) => t.type === tabType && (t.metadata?.filePath as string) === filePath,
+    );
+    if (existing) {
+      return { kind: "existing" as const, leaf, tab: existing };
+    }
+  }
+
+  // Find panes that already have editor or changes tabs
+  const editorPanes = leaves.filter((leaf) =>
+    leaf.tabs.some((t) => t.type === "editor" || t.type === "changes"),
+  );
+
+  let targetPaneId: string | null = null;
+  if (editorPanes.length === 1) {
+    targetPaneId = editorPanes[0].id;
+  } else if (editorPanes.length > 1) {
+    const lastUsed = editorPanes.find((p) => p.id === lastEditorPaneId);
+    targetPaneId = lastUsed ? lastUsed.id : editorPanes[0].id;
+  }
+
+  return { kind: "new" as const, targetPaneId };
+}
+
 export const useLayoutStore = create<LayoutStore>((set) => ({
   layout: createLeaf(),
   layouts: {},
@@ -284,43 +322,21 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
   openFile: (filePath, fileName, sourcePaneId) =>
     set((state) => {
-      const leaves = findAllLeaves(state.layout);
+      const result = resolveOpenTarget(state.layout, state.lastEditorPaneId, "editor", filePath);
 
-      // Check if file is already open in any pane
-      for (const leaf of leaves) {
-        const existing = leaf.tabs.find(
-          (t) => t.type === "editor" && (t.metadata?.filePath as string) === filePath,
-        );
-        if (existing) {
-          // Focus the existing tab
-          const layout =
-            updateNode(state.layout, leaf.id, (l) => ({
-              ...l,
-              activeTabId: existing.id,
-            })) ?? state.layout;
-          return { layout, lastEditorPaneId: leaf.id, activePaneId: leaf.id };
-        }
+      if (result.kind === "existing") {
+        const layout =
+          updateNode(state.layout, result.leaf.id, (l) => ({
+            ...l,
+            activeTabId: result.tab.id,
+          })) ?? state.layout;
+        return { layout, lastEditorPaneId: result.leaf.id, activePaneId: result.leaf.id };
       }
 
       const tab = createTab("editor", fileName, { filePath });
-
-      // Find panes that already have editor or changes tabs
-      const editorPanes = leaves.filter((leaf) =>
-        leaf.tabs.some((t) => t.type === "editor" || t.type === "changes"),
-      );
-
-      let targetPaneId: string | null = null;
-
-      if (editorPanes.length === 1) {
-        targetPaneId = editorPanes[0].id;
-      } else if (editorPanes.length > 1) {
-        // Prefer the last-used editor pane if it still has editor tabs
-        const lastUsed = editorPanes.find((p) => p.id === state.lastEditorPaneId);
-        targetPaneId = lastUsed ? lastUsed.id : editorPanes[0].id;
-      }
+      const { targetPaneId } = result;
 
       if (targetPaneId) {
-        // Add tab to existing editor pane
         const layout =
           updateNode(state.layout, targetPaneId, (leaf) => ({
             ...leaf,
@@ -330,7 +346,6 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         return { layout, lastEditorPaneId: targetPaneId, activePaneId: targetPaneId };
       }
 
-      // No editor/changes pane exists — split from source pane
       const newLeaf = createLeaf([tab]);
       const layout =
         updateNode(state.layout, sourcePaneId, (leaf) => {
@@ -349,38 +364,19 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
   openChanges: (filePath, fileName, staged, isUntracked, sourcePaneId) =>
     set((state) => {
-      const leaves = findAllLeaves(state.layout);
+      const result = resolveOpenTarget(state.layout, state.lastEditorPaneId, "changes", filePath);
 
-      // Check if a changes tab for this file is already open
-      for (const leaf of leaves) {
-        const existing = leaf.tabs.find(
-          (t) => t.type === "changes" && (t.metadata?.filePath as string) === filePath,
-        );
-        if (existing) {
-          const layout =
-            updateNode(state.layout, leaf.id, (l) => ({
-              ...l,
-              activeTabId: existing.id,
-            })) ?? state.layout;
-          return { layout, lastEditorPaneId: leaf.id, activePaneId: leaf.id };
-        }
+      if (result.kind === "existing") {
+        const layout =
+          updateNode(state.layout, result.leaf.id, (l) => ({
+            ...l,
+            activeTabId: result.tab.id,
+          })) ?? state.layout;
+        return { layout, lastEditorPaneId: result.leaf.id, activePaneId: result.leaf.id };
       }
 
       const tab = createTab("changes", fileName, { filePath, staged, isUntracked });
-
-      // Find panes that have editor or changes tabs
-      const editorPanes = leaves.filter((leaf) =>
-        leaf.tabs.some((t) => t.type === "editor" || t.type === "changes"),
-      );
-
-      let targetPaneId: string | null = null;
-
-      if (editorPanes.length === 1) {
-        targetPaneId = editorPanes[0].id;
-      } else if (editorPanes.length > 1) {
-        const lastUsed = editorPanes.find((p) => p.id === state.lastEditorPaneId);
-        targetPaneId = lastUsed ? lastUsed.id : editorPanes[0].id;
-      }
+      const { targetPaneId } = result;
 
       if (targetPaneId) {
         const layout =
@@ -392,7 +388,6 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         return { layout, lastEditorPaneId: targetPaneId, activePaneId: targetPaneId };
       }
 
-      // No editor/changes pane exists — split from source pane
       const newLeaf = createLeaf([tab]);
       const layout =
         updateNode(state.layout, sourcePaneId, (leaf) => {

@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { memo, useRef, useState, useCallback, useEffect } from "react";
 import autoAnimate from "@formkit/auto-animate";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
@@ -17,7 +17,7 @@ interface TabBarProps {
 
 const DRAG_THRESHOLD = 5;
 
-export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
+export const TabBar = memo(function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const closeTab = useLayoutStore((s) => s.closeTab);
   const closeOtherTabs = useLayoutStore((s) => s.closeOtherTabs);
@@ -90,6 +90,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
   return (
     <div
       ref={tabBarRef}
+      role="tablist"
       className="flex items-center h-9 min-h-9 bg-[var(--color-project-bar-bg)] border-b border-[var(--color-border-primary)] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:h-0"
       data-tabbar-pane={paneId}
       onWheel={handleWheel}
@@ -99,6 +100,8 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
         return (
           <div
             key={tab.id}
+            role="tab"
+            aria-selected={isActive}
             data-tab
             className={`group flex items-center gap-2 h-full px-3 cursor-grab select-none whitespace-nowrap ${
               isActive
@@ -135,6 +138,7 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
                 />
               )}
               <button
+                aria-label={`Close ${tab.title}`}
                 className="flex items-center justify-center p-0.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-100 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border-secondary)]"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
@@ -190,4 +194,4 @@ export function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
         })()}
     </div>
   );
-}
+});
