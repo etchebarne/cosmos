@@ -518,22 +518,28 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
         )}
 
         {/* Commit input */}
-        <div className="p-3">
-          <textarea
-            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-secondary)] px-3 py-2.5 text-[13px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:border-[var(--color-accent-blue)] focus:ring-1 focus:ring-[var(--color-accent-blue)] rounded-none transition-all"
-            placeholder="Commit message (Cmd+Enter to commit)"
-            rows={3}
-            value={commitMessage}
-            onChange={(e) => setCommitMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                handleCommit();
-              }
-            }}
-          />
-          <div className="flex items-center justify-end mt-2">
+        <div className="relative border-b border-[var(--color-border-primary)] bg-gradient-to-b from-[var(--color-bg-surface)] to-transparent">
+          <ScrollArea className="w-full h-[140px]">
+            <textarea
+              className="w-full bg-transparent border-none px-4 py-4 text-[13px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:ring-0 rounded-none overflow-hidden block"
+              style={{ minHeight: "140px", paddingBottom: "3rem" }}
+              placeholder="Commit message (Cmd+Enter to commit)"
+              value={commitMessage}
+              onChange={(e) => {
+                setCommitMessage(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                  handleCommit();
+                }
+              }}
+            />
+          </ScrollArea>
+          <div className="absolute bottom-3 right-3 pointer-events-none">
             <button
-              className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] text-[11px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-none"
+              className="flex items-center gap-1.5 px-2.5 py-0.5 bg-[var(--color-bg-elevated)] border border-[var(--color-border-secondary)] text-[11px] font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-bg-surface)] hover:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-none shadow-sm pointer-events-auto"
               onClick={handleCommit}
               disabled={committing || !commitMessage.trim() || stagedCount === 0}
             >
@@ -544,7 +550,7 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
 
         {/* Last commit */}
         {status?.lastCommitMessage && (
-          <div className="flex items-center gap-2 px-3 py-2 border-t border-[var(--color-border-primary)] bg-[var(--color-bg-elevated)]">
+          <div className="flex items-center gap-2 px-3 py-2 bg-transparent">
             <span className="text-[11px] text-[var(--color-text-tertiary)] truncate flex-1 font-mono">
               {status.lastCommitMessage}
             </span>
