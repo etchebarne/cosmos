@@ -13,4 +13,12 @@ cosmos-core = { path = "../cosmos-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 which = "7"
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = [
+  "rt-multi-thread",
+  "macros",
+  "net",
+  "io-util",
+  "io-std",
+  "sync",
+] }
+libc = "0.2"

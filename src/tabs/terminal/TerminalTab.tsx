@@ -185,6 +185,13 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
           invoke("terminal_close", { id: terminalId });
           return;
         }
+        // Resize to force TUI applications to redraw their screen
+        fitAddon.fit();
+        invoke("terminal_resize", {
+          id: terminalId,
+          cols: terminal.cols,
+          rows: terminal.rows,
+        });
         terminal.write("\x1b[32m[Connected]\x1b[0m\r\n");
       } catch {
         if (!disposed) {

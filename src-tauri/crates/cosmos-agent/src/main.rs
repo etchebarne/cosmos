@@ -1,36 +1,23 @@
-use std::io::{self, Stdout};
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::io;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use cosmos_core::EventSink;
 use cosmos_protocol::events::Event;
 use cosmos_protocol::framing;
 use cosmos_protocol::requests::{Request, RequestMessage, ResponseMessage};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
+use tokio::sync::broadcast;
 
-/// Shared stdout writer — used by both the event sink and the main request loop
-/// to prevent interleaved writes that would corrupt Content-Length framing.
-type SharedWriter = Arc<Mutex<Stdout>>;
-
-/// Event sink that writes Content-Length framed JSON notifications to stdout.
-struct StdoutEventSink {
-    writer: SharedWriter,
-}
-
-impl EventSink for StdoutEventSink {
-    fn emit(&self, event: Event) {
-        if let Ok(json) = serde_json::to_string(&event) {
-            if let Ok(mut w) = self.writer.lock() {
-                let _ = framing::write_message(&mut *w, &json);
-            }
-        }
-    }
-}
+// ── Shared types ──
 
 struct AgentState {
     watcher: cosmos_core::watcher::WatcherManager,
     terminals: cosmos_core::terminal::TerminalManager,
     lsp: cosmos_core::lsp::LspManager,
 }
+
+// ── Helpers ──
 
 fn agent_data_dir() -> PathBuf {
     let home = std::env::var("HOME")
@@ -41,12 +28,11 @@ fn agent_data_dir() -> PathBuf {
 
 /// If `node` isn't available but an alternative JS runtime (bun) is,
 /// create a symlink so npm-installed scripts with `#!/usr/bin/env node` work.
-fn ensure_node_runtime(data_dir: &std::path::Path) {
+fn ensure_node_runtime(data_dir: &Path) {
     if which::which("node").is_ok() {
         return;
     }
 
-    // Check for alternative runtimes
     let alt = which::which("bun");
     if let Ok(runtime_path) = alt {
         let bin_dir = data_dir.join("bin");
@@ -62,33 +48,67 @@ fn ensure_node_runtime(data_dir: &std::path::Path) {
                 let _ = std::fs::copy(&runtime_path, &node_shim);
             }
         }
-        // Prepend to PATH
         if let Ok(path) = std::env::var("PATH") {
             std::env::set_var("PATH", format!("{}:{}", bin_dir.display(), path));
         }
     }
 }
 
-/// Write a response to the shared stdout writer.
-fn send_response(writer: &SharedWriter, response: &ResponseMessage) {
-    let json = match serde_json::to_string(response) {
-        Ok(j) => j,
-        Err(e) => {
-            eprintln!("[cosmos-agent] failed to serialize response: {e}");
-            return;
-        }
-    };
-    if let Ok(mut w) = writer.lock() {
-        let _ = framing::write_message(&mut *w, &json);
-    }
-}
-
-/// Serialize a value to JSON, converting errors to strings.
 fn to_json(val: impl serde::Serialize) -> Result<serde_json::Value, String> {
     serde_json::to_value(val).map_err(|e| format!("Serialization error: {e}"))
 }
 
-/// Dispatch a request to the appropriate handler and return the JSON result.
+// ── Async framing (for Unix socket I/O) ──
+
+async fn async_read_message(
+    reader: &mut (impl AsyncBufReadExt + Unpin),
+) -> io::Result<String> {
+    let mut content_length: Option<usize> = None;
+    loop {
+        let mut line = String::new();
+        let n = reader.read_line(&mut line).await?;
+        if n == 0 {
+            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "EOF"));
+        }
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            break;
+        }
+        if let Some(val) = trimmed.strip_prefix("Content-Length:") {
+            content_length = Some(val.trim().parse().map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Invalid Content-Length: {e}"),
+                )
+            })?);
+        }
+    }
+    let length = content_length
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing Content-Length"))?;
+    if length > 64 * 1024 * 1024 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Message too large",
+        ));
+    }
+    let mut body = vec![0u8; length];
+    reader.read_exact(&mut body).await?;
+    String::from_utf8(body)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))
+}
+
+async fn async_write_message(
+    writer: &mut (impl AsyncWriteExt + Unpin),
+    json: &str,
+) -> io::Result<()> {
+    let header = format!("Content-Length: {}\r\n\r\n", json.len());
+    writer.write_all(header.as_bytes()).await?;
+    writer.write_all(json.as_bytes()).await?;
+    writer.flush().await
+}
+
+// ── Request dispatcher (shared between daemon and inline modes) ──
+
 async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Value, String> {
     match request {
         // ── File tree ──
@@ -260,6 +280,10 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
             let r = cosmos_core::terminal::list_shells();
             Ok(to_json(r)?)
         }
+        Request::TerminalList => {
+            let ids = state.terminals.list();
+            Ok(to_json(ids)?)
+        }
         Request::TerminalSpawn {
             id,
             program,
@@ -348,23 +372,288 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
     }
 }
 
-#[tokio::main]
-async fn main() {
-    // Handle --version before anything else
-    if std::env::args().any(|a| a == "--version") {
-        println!("{}", env!("CARGO_PKG_VERSION"));
-        return;
+// ═══════════════════════════════════════════════════════════════
+//  DAEMON MODE
+//  Runs as a background process, listens on a Unix domain socket.
+//  Terminals and other state survive client disconnections.
+// ═══════════════════════════════════════════════════════════════
+
+/// Event sink that broadcasts JSON-serialized events to all connected clients
+/// via a tokio broadcast channel. Called from background threads (terminal
+/// reader, file watcher), so it must be non-blocking.
+struct BroadcastEventSink {
+    tx: broadcast::Sender<String>,
+}
+
+impl EventSink for BroadcastEventSink {
+    fn emit(&self, event: Event) {
+        if let Ok(json) = serde_json::to_string(&event) {
+            let _ = self.tx.send(json);
+        }
+    }
+}
+
+/// Handle a single client connection on the daemon's Unix socket.
+/// Reads requests, dispatches them, and forwards broadcast events.
+async fn handle_client(
+    stream: tokio::net::UnixStream,
+    state: Arc<AgentState>,
+    event_tx: broadcast::Sender<String>,
+) {
+    let (read_half, write_half) = stream.into_split();
+    let write = Arc::new(tokio::sync::Mutex::new(write_half));
+
+    // Forward broadcast events to this client's socket
+    let mut event_rx = event_tx.subscribe();
+    let write_for_events = write.clone();
+    let event_task = tokio::spawn(async move {
+        loop {
+            match event_rx.recv().await {
+                Ok(json) => {
+                    let mut w = write_for_events.lock().await;
+                    if async_write_message(&mut *w, &json).await.is_err() {
+                        break;
+                    }
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+
+    // Read requests from this client
+    let mut reader = tokio::io::BufReader::new(read_half);
+    loop {
+        let msg = match async_read_message(&mut reader).await {
+            Ok(m) => m,
+            Err(_) => break, // Client disconnected
+        };
+
+        let req_msg: RequestMessage = match serde_json::from_str(&msg) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("[cosmos-daemon] parse error: {e}");
+                continue;
+            }
+        };
+
+        let state = state.clone();
+        let write = write.clone();
+        tokio::spawn(async move {
+            let response = match dispatch(&state, req_msg.request).await {
+                Ok(result) => ResponseMessage::ok(req_msg.id, result),
+                Err(error) => ResponseMessage::err(req_msg.id, error),
+            };
+            if let Ok(json) = serde_json::to_string(&response) {
+                let mut w = write.lock().await;
+                let _ = async_write_message(&mut *w, &json).await;
+            }
+        });
+    }
+
+    event_task.abort();
+    eprintln!("[cosmos-daemon] client disconnected");
+}
+
+async fn daemon_main() {
+    // Detach from the controlling terminal so the daemon survives when
+    // the SSH/WSL session ends.
+    #[cfg(unix)]
+    unsafe {
+        libc::setsid();
     }
 
     let data_dir = agent_data_dir();
+    let sock_path = data_dir.join("agent.sock");
 
-    // If `node` isn't on PATH but `bun` is, create a shim so npm-installed
-    // scripts (which use #!/usr/bin/env node shebangs) can run.
+    // Remove stale socket from a previous daemon
+    let _ = std::fs::remove_file(&sock_path);
+
+    // Bind the socket FIRST so the relay client can connect immediately
+    // while we finish the heavier initialization below. Connections queue
+    // in the kernel until we call accept().
+    let listener = match tokio::net::UnixListener::bind(&sock_path) {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("[cosmos-daemon] failed to bind socket: {e}");
+            return;
+        }
+    };
+
+    // Now do the heavier setup — relay is already able to connect.
     ensure_node_runtime(&data_dir);
     let servers_dir = data_dir.join("servers");
     std::fs::create_dir_all(&servers_dir).ok();
 
-    // Single shared stdout writer for both events and responses
+    let (event_tx, _) = broadcast::channel::<String>(8192);
+
+    let events: Arc<dyn EventSink> = Arc::new(BroadcastEventSink {
+        tx: event_tx.clone(),
+    });
+
+    let state = Arc::new(AgentState {
+        watcher: cosmos_core::watcher::WatcherManager::new(events.clone()),
+        terminals: cosmos_core::terminal::TerminalManager::new(events.clone()),
+        lsp: cosmos_core::lsp::LspManager::new(events, servers_dir, None),
+    });
+
+    eprintln!("[cosmos-daemon] listening on {}", sock_path.display());
+
+    // Clean up socket on exit
+    struct SocketCleanup(PathBuf);
+    impl Drop for SocketCleanup {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(&self.0);
+        }
+    }
+    let _guard = SocketCleanup(sock_path.clone());
+
+    loop {
+        match listener.accept().await {
+            Ok((stream, _)) => {
+                eprintln!("[cosmos-daemon] client connected");
+                let state = state.clone();
+                let event_tx = event_tx.clone();
+                tokio::spawn(async move {
+                    handle_client(stream, state, event_tx).await;
+                });
+            }
+            Err(e) => {
+                eprintln!("[cosmos-daemon] accept error: {e}");
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CLIENT / RELAY MODE (default)
+//  Ensures the daemon is running, then relays stdin/stdout ↔ UDS.
+//  Dies when the SSH/WSL connection drops — daemon survives.
+// ═══════════════════════════════════════════════════════════════
+
+fn is_daemon_running(sock_path: &Path) -> bool {
+    std::os::unix::net::UnixStream::connect(sock_path).is_ok()
+}
+
+fn ensure_daemon(data_dir: &Path) {
+    let sock_path = data_dir.join("agent.sock");
+    if is_daemon_running(&sock_path) {
+        return;
+    }
+
+    // Remove stale socket
+    let _ = std::fs::remove_file(&sock_path);
+
+    let exe = match std::env::current_exe() {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("[cosmos-agent] failed to get current exe: {e}");
+            std::process::exit(1);
+        }
+    };
+
+    // Open a log file for the daemon's stderr
+    let log_path = data_dir.join("daemon.log");
+    let stderr_target = std::fs::File::create(&log_path)
+        .map(std::process::Stdio::from)
+        .unwrap_or_else(|_| std::process::Stdio::null());
+
+    if let Err(e) = std::process::Command::new(exe)
+        .arg("--daemon")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(stderr_target)
+        .spawn()
+    {
+        eprintln!("[cosmos-agent] failed to start daemon: {e}");
+        std::process::exit(1);
+    }
+
+    // Wait for the daemon socket to appear. Use fast polling initially
+    // (the socket binds early in daemon startup), then back off.
+    for i in 0..100 {
+        let delay = if i < 20 { 10 } else { 50 };
+        std::thread::sleep(std::time::Duration::from_millis(delay));
+        if is_daemon_running(&sock_path) {
+            return;
+        }
+    }
+
+    eprintln!("[cosmos-agent] daemon did not start within 5s");
+    std::process::exit(1);
+}
+
+async fn client_main() {
+    let data_dir = agent_data_dir();
+    std::fs::create_dir_all(&data_dir).ok();
+    ensure_daemon(&data_dir);
+
+    let sock_path = data_dir.join("agent.sock");
+    let stream = match tokio::net::UnixStream::connect(&sock_path).await {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[cosmos-agent] failed to connect to daemon: {e}");
+            std::process::exit(1);
+        }
+    };
+
+    let (mut sock_read, mut sock_write) = stream.into_split();
+
+    // stdin → daemon socket
+    let write_task = tokio::spawn(async move {
+        let mut stdin = tokio::io::stdin();
+        let _ = tokio::io::copy(&mut stdin, &mut sock_write).await;
+    });
+
+    // daemon socket → stdout
+    let read_task = tokio::spawn(async move {
+        let mut stdout = tokio::io::stdout();
+        let _ = tokio::io::copy(&mut sock_read, &mut stdout).await;
+    });
+
+    // Exit when either direction closes (SSH died or daemon closed socket)
+    tokio::select! {
+        _ = write_task => {},
+        _ = read_task => {},
+    }
+}
+
+// ── Inline mode (no daemon, for backwards compat / non-Unix) ──
+
+#[cfg(not(unix))]
+async fn inline_main() {
+    use std::io::Stdout;
+    use std::sync::Mutex;
+
+    type SharedWriter = Arc<Mutex<Stdout>>;
+
+    struct StdoutEventSink {
+        writer: SharedWriter,
+    }
+
+    impl EventSink for StdoutEventSink {
+        fn emit(&self, event: Event) {
+            if let Ok(json) = serde_json::to_string(&event) {
+                if let Ok(mut w) = self.writer.lock() {
+                    let _ = framing::write_message(&mut *w, &json);
+                }
+            }
+        }
+    }
+
+    fn send_response(writer: &SharedWriter, response: &ResponseMessage) {
+        if let Ok(json) = serde_json::to_string(response) {
+            if let Ok(mut w) = writer.lock() {
+                let _ = framing::write_message(&mut *w, &json);
+            }
+        }
+    }
+
+    let data_dir = agent_data_dir();
+    ensure_node_runtime(&data_dir);
+    let servers_dir = data_dir.join("servers");
+    std::fs::create_dir_all(&servers_dir).ok();
+
     let stdout_writer: SharedWriter = Arc::new(Mutex::new(io::stdout()));
 
     let events: Arc<dyn EventSink> = Arc::new(StdoutEventSink {
@@ -380,11 +669,9 @@ async fn main() {
     let writer = stdout_writer.clone();
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<(u64, Request)>();
 
-    // Stdin reader thread — reads framed messages and sends to the channel
     tokio::task::spawn_blocking(move || {
         let stdin = io::stdin();
         let mut reader = stdin.lock();
-
         loop {
             let msg = match framing::read_message(&mut reader) {
                 Ok(msg) => msg,
@@ -394,7 +681,6 @@ async fn main() {
                     break;
                 }
             };
-
             let req_msg: RequestMessage = match serde_json::from_str(&msg) {
                 Ok(r) => r,
                 Err(e) => {
@@ -402,15 +688,12 @@ async fn main() {
                     continue;
                 }
             };
-
             if tx.send((req_msg.id, req_msg.request)).is_err() {
                 break;
             }
         }
     });
 
-    // Dispatch loop — spawns each request concurrently so slow operations
-    // (like recursive file watching) don't block other requests.
     while let Some((id, request)) = rx.recv().await {
         let state = state.clone();
         let writer = writer.clone();
@@ -421,5 +704,29 @@ async fn main() {
             };
             send_response(&writer, &response);
         });
+    }
+}
+
+// ── Entry point ──
+
+#[tokio::main]
+async fn main() {
+    if std::env::args().any(|a| a == "--version") {
+        println!("{}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+
+    #[cfg(unix)]
+    {
+        if std::env::args().any(|a| a == "--daemon") {
+            daemon_main().await;
+        } else {
+            client_main().await;
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        inline_main().await;
     }
 }

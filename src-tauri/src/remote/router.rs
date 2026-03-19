@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use cosmos_protocol::events::Event;
+use cosmos_protocol::requests::Request;
 
 use super::agent::RemoteAgent;
 use super::connection::ConnectionType;
@@ -90,13 +91,26 @@ impl BackendRouter {
 
         // Spawn without holding the lock — this can take seconds for WSL startup.
         let callback = self.make_event_callback(workspace_path);
-        let agent = RemoteAgent::spawn(conn.clone(), callback).await?;
+        let agent = Arc::new(RemoteAgent::spawn(conn.clone(), callback).await?);
+
+        // Re-register existing terminals from the daemon. On first connect this
+        // returns an empty list; on reconnect it returns terminals that survived
+        // the connection drop, enabling seamless session resumption.
+        if let Ok(val) = agent.request(Request::TerminalList).await {
+            if let Ok(ids) = serde_json::from_value::<Vec<String>>(val) {
+                let mut terminals = self.remote_terminals.lock().await;
+                for id in ids {
+                    agent.register_terminal(id.clone()).await;
+                    terminals.insert(id, agent.clone());
+                }
+            }
+        }
 
         // Re-acquire lock and insert.
         self.agents.lock().await.insert(
             workspace_path.to_string(),
             AgentEntry {
-                agent: Arc::new(agent),
+                agent,
                 connection: conn,
             },
         );

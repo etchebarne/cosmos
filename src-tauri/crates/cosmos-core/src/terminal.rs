@@ -28,6 +28,16 @@ impl TerminalManager {
         }
     }
 
+    /// List IDs of terminals whose child process is still running.
+    pub fn list(&self) -> Vec<String> {
+        let mut terminals = match self.terminals.lock() {
+            Ok(t) => t,
+            Err(_) => return vec![],
+        };
+        terminals.retain(|_, inst| matches!(inst.child.try_wait(), Ok(None)));
+        terminals.keys().cloned().collect()
+    }
+
     pub fn spawn(
         &self,
         id: String,
@@ -37,6 +47,20 @@ impl TerminalManager {
         cols: u16,
         rows: u16,
     ) -> Result<(), String> {
+        // If this terminal already exists and is alive, return success (idempotent).
+        // This enables seamless reconnection: the daemon keeps the PTY alive and
+        // the reconnecting client reuses it.
+        {
+            let mut terminals = self.terminals.lock().map_err(|e| e.to_string())?;
+            if let Some(inst) = terminals.get_mut(&id) {
+                if matches!(inst.child.try_wait(), Ok(None)) {
+                    return Ok(()); // Still alive — reattach
+                }
+                // Child exited, remove stale entry and re-spawn below
+                terminals.remove(&id);
+            }
+        }
+
         let pty_system = native_pty_system();
 
         let pair = pty_system

@@ -151,6 +151,8 @@ pub enum Request {
 
     // ── Terminal ──
     TerminalListShells,
+    /// List running terminal IDs (used for reconnection to daemon).
+    TerminalList,
     TerminalSpawn {
         id: String,
         program: String,

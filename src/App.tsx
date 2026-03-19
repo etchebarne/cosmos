@@ -36,7 +36,15 @@ function WorkspacePane({
     <WorkspaceProvider value={contextValue}>
       <PanePortalProvider layout={layout}>
         <div className={isActive ? "flex w-full h-full min-w-0 min-h-0" : "hidden"}>
-          {!connecting && <PaneContainer node={layout} />}
+          {connecting ? (
+            <div className="flex items-center justify-center w-full h-full">
+              <p className="text-xs text-[var(--color-text-secondary)] animate-pulse">
+                Connecting to remote workspace...
+              </p>
+            </div>
+          ) : (
+            <PaneContainer node={layout} />
+          )}
         </div>
       </PanePortalProvider>
     </WorkspaceProvider>
