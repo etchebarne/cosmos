@@ -50,13 +50,14 @@ impl RemoteAgent {
                 // Use -lic so bash sources .bashrc/.profile fully (including
                 // nvm/fnm/volta setup that lives behind the interactive guard).
                 // exec replaces the shell so no stray bash process lingers.
+                let remote_dir = super::deploy::REMOTE_DIR;
                 cmd.args([
                     "-d",
                     distro,
                     "--",
                     "bash",
                     "-lic",
-                    "exec ~/.cosmos-agent/cosmos-agent",
+                    &format!("exec ~/{remote_dir}/cosmos-agent"),
                 ]);
                 cmd.stdin(std::process::Stdio::piped())
                     .stdout(std::process::Stdio::piped())
@@ -73,12 +74,13 @@ impl RemoteAgent {
                     Some(u) => format!("{u}@{host}"),
                     None => host.clone(),
                 };
+                let remote_dir = super::deploy::REMOTE_DIR;
                 let mut cmd = tokio::process::Command::new("ssh");
                 cmd.args([
                     "-o", "ServerAliveInterval=15",
                     "-o", "ServerAliveCountMax=3",
                     &target,
-                    "~/.cosmos-agent/cosmos-agent",
+                    &format!("~/{remote_dir}/cosmos-agent"),
                 ]);
                 cmd.stdin(std::process::Stdio::piped())
                     .stdout(std::process::Stdio::piped())

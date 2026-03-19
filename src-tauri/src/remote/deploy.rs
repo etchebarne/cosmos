@@ -5,6 +5,14 @@ use tauri::{AppHandle, Manager};
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+/// Remote directory name — dev builds use a separate directory so they don't
+/// kill the production daemon (pkill) or overwrite the production binary.
+pub const REMOTE_DIR: &str = if cfg!(debug_assertions) {
+    ".cosmos-agent-dev"
+} else {
+    ".cosmos-agent"
+};
+
 /// Locate the agent binary bundled with the app.
 /// In development: src-tauri/resources/cosmos-agent
 /// In production: bundled via Tauri resources
@@ -36,7 +44,8 @@ fn bundled_agent_path(app: &AppHandle) -> Result<PathBuf, String> {
 
 /// Check the version of the installed agent in a WSL distro.
 pub async fn check_remote_version(distro: &str) -> Option<String> {
-    let output = run_wsl(distro, &["~/.cosmos-agent/cosmos-agent", "--version"])
+    let bin = format!("~/{REMOTE_DIR}/cosmos-agent");
+    let output = run_wsl(distro, &[&bin, "--version"])
         .await
         .ok()?;
     let trimmed = output.trim().to_string();
@@ -57,25 +66,19 @@ pub async fn ensure_wsl_running(distro: &str) -> Result<(), String> {
 /// Deploy the cosmos-agent binary into a WSL distro.
 /// Copies the pre-built Linux binary from the app bundle.
 pub async fn deploy_to_wsl(app: &AppHandle, distro: &str) -> Result<(), String> {
-    run_wsl(distro, &["mkdir", "-p", "~/.cosmos-agent"]).await?;
+    let dir = format!("~/{REMOTE_DIR}");
+    let bin = format!("~/{REMOTE_DIR}/cosmos-agent");
 
-    // Kill any running agent so we can overwrite the binary
-    let _ = run_wsl(distro, &["pkill", "-f", "cosmos-agent"]).await;
+    run_wsl(distro, &["mkdir", "-p", &dir]).await?;
+
+    // Kill only agents in THIS directory so dev/prod don't interfere
+    let _ = run_wsl(distro, &["pkill", "-f", &bin]).await;
 
     let agent_src = bundled_agent_path(app)?;
     let wsl_path = windows_to_wsl_path(&agent_src.to_string_lossy());
 
-    run_wsl(
-        distro,
-        &["cp", &wsl_path, "~/.cosmos-agent/cosmos-agent"],
-    )
-    .await?;
-
-    run_wsl(
-        distro,
-        &["chmod", "+x", "~/.cosmos-agent/cosmos-agent"],
-    )
-    .await?;
+    run_wsl(distro, &["cp", &wsl_path, &bin]).await?;
+    run_wsl(distro, &["chmod", "+x", &bin]).await?;
 
     Ok(())
 }
@@ -92,8 +95,11 @@ pub async fn deploy_to_ssh(
         None => host.to_string(),
     };
 
+    let dir = format!("~/{REMOTE_DIR}");
+    let bin = format!("~/{REMOTE_DIR}/cosmos-agent");
+
     let output = tokio::process::Command::new("ssh")
-        .args([&target, "mkdir", "-p", "~/.cosmos-agent"])
+        .args([&target, "mkdir", "-p", &dir])
         .output()
         .await
         .map_err(|e| format!("SSH failed: {e}"))?;
@@ -106,7 +112,7 @@ pub async fn deploy_to_ssh(
     }
 
     let agent_src = bundled_agent_path(app)?;
-    let scp_dest = format!("{target}:~/.cosmos-agent/cosmos-agent");
+    let scp_dest = format!("{target}:{bin}");
 
     let output = tokio::process::Command::new("scp")
         .args([&agent_src.to_string_lossy().to_string(), &scp_dest])
@@ -122,7 +128,7 @@ pub async fn deploy_to_ssh(
     }
 
     let output = tokio::process::Command::new("ssh")
-        .args([&target, "chmod", "+x", "~/.cosmos-agent/cosmos-agent"])
+        .args([&target, "chmod", "+x", &bin])
         .output()
         .await
         .map_err(|e| format!("SSH chmod failed: {e}"))?;
