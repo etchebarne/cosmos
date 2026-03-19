@@ -118,22 +118,16 @@ impl RemoteAgent {
 
         let pending_clone = pending.clone();
         let alive_clone = alive.clone();
-        let terminal_ids_clone = terminal_ids.clone();
         tokio::spawn(async move {
-            read_agent_stdout(stdout, pending_clone.clone(), on_event.clone()).await;
+            read_agent_stdout(stdout, pending_clone.clone(), on_event).await;
 
-            // Agent died — mark dead and fail all pending requests
+            // Agent died — mark dead and fail all pending requests.
+            // Terminal reconnection is handled by the frontend on next write.
             alive_clone.store(false, Ordering::SeqCst);
             eprintln!("[cosmos-remote] Agent process exited");
             let mut p = pending_clone.lock().await;
             for (_, tx) in p.drain() {
                 let _ = tx.send(ResponseMessage::err(0, "Agent connection lost".into()));
-            }
-
-            // Emit TerminalExit for every terminal that was on this agent
-            let ids = terminal_ids_clone.lock().await;
-            for id in ids.iter() {
-                on_event(Event::TerminalExit { id: id.clone() });
             }
         });
 

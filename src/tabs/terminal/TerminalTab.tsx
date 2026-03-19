@@ -162,7 +162,38 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
 
     let disposed = false;
     let spawned = false;
+    let reconnecting = false;
     const cleanups: (() => void)[] = [];
+
+    const spawnTerminal = () =>
+      invoke("terminal_spawn", {
+        id: terminalId,
+        program: shell.program,
+        args: shell.args,
+        cwd,
+        cols: terminal.cols,
+        rows: terminal.rows,
+      });
+
+    const attemptReconnect = async () => {
+      if (reconnecting || disposed) return;
+      reconnecting = true;
+      terminal.write("\r\n\x1b[33m[Reconnecting...]\x1b[0m\r\n");
+      try {
+        await spawnTerminal();
+        if (disposed) {
+          invoke("terminal_close", { id: terminalId });
+          return;
+        }
+        terminal.write("\x1b[32m[Connected]\x1b[0m\r\n");
+      } catch {
+        if (!disposed) {
+          terminal.write("\x1b[31m[Failed to reconnect]\x1b[0m\r\n");
+        }
+      } finally {
+        reconnecting = false;
+      }
+    };
 
     // Resize handling — registered immediately so no resize is missed
     let resizeTimeout: ReturnType<typeof setTimeout>;
@@ -230,14 +261,7 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
         fitAddon.fit();
 
         try {
-          await invoke("terminal_spawn", {
-            id: terminalId,
-            program: shell.program,
-            args: shell.args,
-            cwd,
-            cols: terminal.cols,
-            rows: terminal.rows,
-          });
+          await spawnTerminal();
         } catch (e) {
           terminal.write(`\x1b[31mFailed to start shell: ${e}\x1b[0m\r\n`);
           return;
@@ -261,10 +285,11 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
         });
         cleanups.push(unlistenExit);
 
-        // Keyboard input → PTY
+        // Keyboard input → PTY. On failure (dead agent), auto-reconnect.
         const onData = terminal.onData((data) => {
+          if (reconnecting) return;
           invoke("terminal_write", { id: terminalId, data }).catch(() => {
-            terminal.write("\r\n\x1b[31m[Connection lost]\x1b[0m\r\n");
+            attemptReconnect();
           });
         });
         cleanups.push(() => onData.dispose());
