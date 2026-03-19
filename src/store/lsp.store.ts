@@ -266,7 +266,16 @@ export const useLspStore = create<LspState>()(
 
         transport.onServerStopped((error) => handleServerStopped(workspacePath, serverLang, error));
 
-        await client.initialize(projectRoot);
+        try {
+          await client.initialize(projectRoot);
+        } catch (err) {
+          // Server died during initialization — re-throw with server name
+          // so the caller can identify which server failed and offer install
+          await invoke("lsp_stop", { serverId: result.serverId }).catch(() => {});
+          throw new Error(
+            `Failed to start ${result.serverName}: ${err instanceof Error ? err.message : err}`,
+          );
+        }
 
         // Track work-done progress (indexing, loading, etc.)
         client.onProgress((token, value) => {
@@ -415,18 +424,26 @@ export const useLspStore = create<LspState>()(
             return null;
           }
 
-          // Detect "not found" errors (binary not on PATH)
+          // Detect "not found" errors (binary not on PATH or shim can't resolve)
           const isNotFound =
             errorStr.includes("not found") ||
             errorStr.includes("No such file") ||
             errorStr.includes("program not found") ||
             errorStr.includes("os error 2") ||
-            errorStr.includes("The system cannot find");
+            errorStr.includes("The system cannot find") ||
+            errorStr.includes("Unknown binary");
 
-          const nameMatch = errorStr.match(/Failed to start ([^:]+):/);
+          // Server binary existed but crashed immediately during init
+          // (e.g. rustup proxy when component isn't installed)
+          const isStartupCrash = !isNotFound && errorStr.includes("Language server stopped");
+
+          const nameMatch =
+            errorStr.match(/Failed to start ([^:]+):/) ??
+            errorStr.match(/Unknown binary '([^']+)'/);
           const displayName = nameMatch?.[1] ?? serverLang;
 
-          const status: ServerStatus = isNotFound ? "unavailable" : "error";
+          const canInstall = isNotFound || isStartupCrash;
+          const status: ServerStatus = canInstall ? "unavailable" : "error";
           const errorMessage = isNotFound
             ? `${displayName} is not installed`
             : `${displayName} failed to start`;
@@ -454,10 +471,10 @@ export const useLspStore = create<LspState>()(
             };
           });
 
-          if (isNotFound) {
+          if (canInstall) {
             const { installServer } = get();
             useToastStore.getState().addToast({
-              message: `${displayName} is not installed`,
+              message: errorMessage,
               type: "warning",
               action: {
                 label: "Install",

@@ -148,9 +148,13 @@ impl LspManager {
         let stdin = child.stdin.take().ok_or("Failed to take stdin")?;
         let stdout = child.stdout.take().ok_or("Failed to take stdout")?;
 
-        // Log stderr
+        // Buffer stderr so early-exit errors can be reported to the frontend
+        let stderr_buffer = Arc::new(std::sync::Mutex::new(String::new()));
+
+        // Log stderr AND buffer it
         if let Some(stderr) = stderr {
             let server_name = config.server_name.clone();
+            let buffer = stderr_buffer.clone();
             tokio::spawn(async move {
                 use tokio::io::AsyncBufReadExt;
                 let mut reader = BufReader::new(stderr);
@@ -163,6 +167,14 @@ impl LspManager {
                             let trimmed = line.trim();
                             if !trimmed.is_empty() {
                                 eprintln!("[LSP stderr][{server_name}] {trimmed}");
+                                if let Ok(mut buf) = buffer.lock() {
+                                    if buf.len() < 2048 {
+                                        if !buf.is_empty() {
+                                            buf.push('\n');
+                                        }
+                                        buf.push_str(trimmed);
+                                    }
+                                }
                             }
                         }
                         Err(_) => break,
@@ -175,6 +187,7 @@ impl LspManager {
         let events = self.events.clone();
         let sid = server_id.clone();
         let servers_ref = self.servers.clone();
+        let stderr_buf = stderr_buffer;
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout);
             loop {
@@ -187,9 +200,19 @@ impl LspManager {
                     }
                     Err(e) => {
                         servers_ref.lock().await.remove(&sid);
+                        let error = if e == "EOF" {
+                            // Give stderr a moment to flush before reading the buffer
+                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            match stderr_buf.lock() {
+                                Ok(buf) if !buf.is_empty() => Some(buf.clone()),
+                                _ => None,
+                            }
+                        } else {
+                            Some(e)
+                        };
                         events.emit(Event::LspStopped {
                             server_id: sid.clone(),
-                            error: if e == "EOF" { None } else { Some(e) },
+                            error,
                         });
                         break;
                     }

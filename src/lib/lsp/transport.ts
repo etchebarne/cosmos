@@ -251,9 +251,10 @@ export class TauriLspTransport {
   }
 
   private handleServerStopped(error?: string | null): void {
+    const message = error ? `Language server stopped: ${error}` : "Language server stopped";
     for (const [, pending] of this.pendingRequests) {
       clearTimeout(pending.timer);
-      pending.reject(new Error("Language server stopped"));
+      pending.reject(new Error(message));
     }
     this.pendingRequests.clear();
 
