@@ -15,6 +15,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 notify-debouncer-mini = "0.5"
 notify = "7"
+ignore = "0.4"
 tokio = { version = "1", features = ["process", "io-util", "sync", "rt"] }
 which = "7"
 portable-pty = "0.9"

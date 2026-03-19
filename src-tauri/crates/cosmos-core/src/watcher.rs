@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use notify_debouncer_mini::new_debouncer;
 
 use cosmos_protocol::events::Event;
@@ -42,6 +43,20 @@ impl WatcherManager {
         let events = self.events.clone();
         let watch_path = PathBuf::from(path);
 
+        // Build gitignore matcher so we skip events for ignored paths
+        let gitignore = {
+            let mut builder = GitignoreBuilder::new(&watch_path);
+            let gitignore_path = watch_path.join(".gitignore");
+            if gitignore_path.exists() {
+                let _ = builder.add(gitignore_path);
+            }
+            Arc::new(
+                builder
+                    .build()
+                    .unwrap_or_else(|_| Gitignore::empty()),
+            )
+        };
+
         let mut debouncer = new_debouncer(
             Duration::from_millis(500),
             move |result: Result<
@@ -49,7 +64,16 @@ impl WatcherManager {
                 notify::Error,
             >| {
                 if let Ok(fs_events) = result {
-                    events.emit(Event::GitChanged);
+                    // Only trigger git refresh if at least one non-ignored file changed
+                    let has_trackable = fs_events.iter().any(|e| {
+                        !gitignore
+                            .matched_path_or_any_parents(&e.path, e.path.is_dir())
+                            .is_ignore()
+                    });
+
+                    if has_trackable {
+                        events.emit(Event::GitChanged);
+                    }
 
                     let mut dirs: Vec<String> = fs_events
                         .iter()
