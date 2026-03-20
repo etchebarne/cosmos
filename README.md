@@ -8,19 +8,19 @@ Most editors dictate where things go. Kosmos lets you treat every view as a tab 
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
+- [Bun](https://bun.sh/)
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)
 
 ## Development
 
 ```bash
-npm install
-npm run tauri dev
+bun install
+bun run tauri dev
 ```
 
 ## Build
 
 ```bash
-npm run tauri build
+bun run tauri build
 ```
