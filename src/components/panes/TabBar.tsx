@@ -9,6 +9,18 @@ import { ContextMenu } from "../shared/ContextMenu";
 import type { ContextMenuItem } from "../shared/ContextMenu";
 import type { Tab } from "../../types";
 
+/** Per-tab dirty indicator — subscribes only to its own tab's dirty state. */
+const DirtyDot = memo(function DirtyDot({ tabId }: { tabId: string }) {
+  const isDirty = useLayoutStore((s) => s.dirtyTabs.has(tabId));
+  if (!isDirty) return null;
+  return (
+    <span
+      className="absolute w-2 h-2 bg-[var(--color-text-primary)] group-hover:opacity-0 transition-opacity duration-100"
+      style={{ borderRadius: "50%" }}
+    />
+  );
+});
+
 interface TabBarProps {
   paneId: string;
   tabs: Tab[];
@@ -25,7 +37,6 @@ export const TabBar = memo(function TabBar({ paneId, tabs, activeTabId }: TabBar
   const closeTabsToRight = useLayoutStore((s) => s.closeTabsToRight);
   const closeAllTabs = useLayoutStore((s) => s.closeAllTabs);
   const addTab = useLayoutStore((s) => s.addTab);
-  const dirtyTabs = useLayoutStore((s) => s.dirtyTabs);
   const setDragState = useDragStore((s) => s.setDragState);
   const isDraggingRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: Tab } | null>(null);
@@ -131,12 +142,7 @@ export const TabBar = memo(function TabBar({ paneId, tabs, activeTabId }: TabBar
               {tab.title}
             </span>
             <div className="relative flex items-center justify-center w-4 h-4">
-              {dirtyTabs.has(tab.id) && (
-                <span
-                  className="absolute w-2 h-2 bg-[var(--color-text-primary)] group-hover:opacity-0 transition-opacity duration-100"
-                  style={{ borderRadius: "50%" }}
-                />
-              )}
+              <DirtyDot tabId={tab.id} />
               <button
                 aria-label={`Close ${tab.title}`}
                 className="flex items-center justify-center p-0.5 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity duration-100 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border-secondary)]"

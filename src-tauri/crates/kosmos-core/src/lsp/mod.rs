@@ -17,7 +17,7 @@ use kosmos_protocol::types::{
     DetectedProject, InstalledServer, LspStartResult, RegistryEntry, ServerAvailability,
 };
 
-use crate::EventSink;
+use crate::{CoreError, EventSink};
 
 use detection::{
     check_availability, find_project_root, resolve_command, resolve_server_for_language,
@@ -113,11 +113,12 @@ impl LspManager {
         }
     }
 
+    #[tracing::instrument(skip(self), fields(server_id))]
     pub async fn start(
         &self,
         workspace_path: &str,
         language_id: &str,
-    ) -> Result<LspStartResult, String> {
+    ) -> Result<LspStartResult, CoreError> {
         let group = server_language_group(language_id);
         let server_id = make_server_id(workspace_path, group);
 
@@ -137,16 +138,16 @@ impl LspManager {
         }
 
         let config = resolve_server_for_language(language_id)
-            .ok_or_else(|| format!("No language server configured for {language_id}"))?;
+            .ok_or_else(|| CoreError::Lsp(format!("No language server configured for {language_id}")))?;
 
         let resolved_command = resolve_command(&self.servers_dir, &config.command);
 
         let (mut child, stderr) =
             spawn_server(&resolved_command, &config.args, workspace_path)
-                .map_err(|e| format!("Failed to start {}: {e}", config.command))?;
+                .map_err(|e| CoreError::Lsp(format!("Failed to start {}: {e}", config.command)))?;
 
-        let stdin = child.stdin.take().ok_or("Failed to take stdin")?;
-        let stdout = child.stdout.take().ok_or("Failed to take stdout")?;
+        let stdin = child.stdin.take().ok_or_else(|| CoreError::Lsp("Failed to take stdin".into()))?;
+        let stdout = child.stdout.take().ok_or_else(|| CoreError::Lsp("Failed to take stdout".into()))?;
 
         // Buffer stderr so early-exit errors can be reported to the frontend
         let stderr_buffer = Arc::new(std::sync::Mutex::new(String::new()));
@@ -166,7 +167,7 @@ impl LspManager {
                         Ok(_) => {
                             let trimmed = line.trim();
                             if !trimmed.is_empty() {
-                                eprintln!("[LSP stderr][{server_name}] {trimmed}");
+                                tracing::warn!(server = %server_name, "{trimmed}");
                                 if let Ok(mut buf) = buffer.lock() {
                                     if buf.len() < 2048 {
                                         if !buf.is_empty() {
@@ -238,32 +239,36 @@ impl LspManager {
         })
     }
 
-    pub async fn send(&self, server_id: &str, message: &str) -> Result<(), String> {
+    #[tracing::instrument(skip(self, message))]
+    pub async fn send(&self, server_id: &str, message: &str) -> Result<(), CoreError> {
         let server_arc = {
             let servers = self.servers.lock().await;
             servers
                 .get(server_id)
                 .cloned()
-                .ok_or_else(|| format!("Server {server_id} not found"))?
+                .ok_or_else(|| CoreError::NotFound(format!("Server {server_id}")))?
         };
 
         let result = {
             let mut server = server_arc.lock().await;
-            framing::write_message(&mut server.stdin, message).await
+            framing::write_message(&mut server.stdin, message)
+                .await
+                .map_err(|e| CoreError::Lsp(e))
         };
 
         if let Err(ref e) = result {
             self.servers.lock().await.remove(server_id);
             self.events.emit(Event::LspStopped {
                 server_id: server_id.to_string(),
-                error: Some(e.clone()),
+                error: Some(e.to_string()),
             });
         }
 
         result
     }
 
-    pub async fn stop(&self, server_id: &str) -> Result<(), String> {
+    #[tracing::instrument(skip(self))]
+    pub async fn stop(&self, server_id: &str) -> Result<(), CoreError> {
         let server_arc = {
             let mut servers = self.servers.lock().await;
             servers.remove(server_id)
@@ -275,7 +280,7 @@ impl LspManager {
         Ok(())
     }
 
-    pub async fn stop_workspace(&self, workspace_path: &str) -> Result<(), String> {
+    pub async fn stop_workspace(&self, workspace_path: &str) -> Result<(), CoreError> {
         let safe_path = workspace_path.replace('\\', "/");
 
         let removed: Vec<Arc<Mutex<LspServer>>> = {

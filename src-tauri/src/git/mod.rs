@@ -15,7 +15,7 @@ macro_rules! git_route {
         } else if BackendRouter::is_remote_path(&$path) {
             Err(format!("Remote agent not connected for path: {}", $path))
         } else {
-            $local(&$path)
+            $local(&$path).await.map_err(|e| e.to_string())
         }
     };
 }
@@ -30,7 +30,7 @@ macro_rules! git_route_void {
         } else if BackendRouter::is_remote_path(&$path) {
             Err(format!("Remote agent not connected for path: {}", $path))
         } else {
-            $local(&$path)
+            $local(&$path).await.map_err(|e| e.to_string())
         }
     };
 }
@@ -78,7 +78,7 @@ pub async fn git_stage(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_stage(&path, files)
+        kosmos_core::git::git_stage(&path, files).await.map_err(|e| e.to_string())
     }
 }
 
@@ -99,7 +99,7 @@ pub async fn git_unstage(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_unstage(&path, files)
+        kosmos_core::git::git_unstage(&path, files).await.map_err(|e| e.to_string())
     }
 }
 
@@ -133,7 +133,7 @@ pub async fn git_commit(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_commit(&path, &message)
+        kosmos_core::git::git_commit(&path, &message).await.map_err(|e| e.to_string())
     }
 }
 
@@ -167,7 +167,7 @@ pub async fn git_checkout(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_checkout(&path, &branch)
+        kosmos_core::git::git_checkout(&path, &branch).await.map_err(|e| e.to_string())
     }
 }
 
@@ -188,7 +188,7 @@ pub async fn git_delete_branch(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_delete_branch(&path, &branch)
+        kosmos_core::git::git_delete_branch(&path, &branch).await.map_err(|e| e.to_string())
     }
 }
 
@@ -209,7 +209,7 @@ pub async fn git_discard(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_discard(&path, files)
+        kosmos_core::git::git_discard(&path, files).await.map_err(|e| e.to_string())
     }
 }
 
@@ -230,7 +230,7 @@ pub async fn git_trash_untracked(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_trash_untracked(&path, files)
+        kosmos_core::git::git_trash_untracked(&path, files).map_err(|e| e.to_string())
     }
 }
 
@@ -264,7 +264,7 @@ pub async fn git_stash_files(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_stash_files(&path, files)
+        kosmos_core::git::git_stash_files(&path, files).await.map_err(|e| e.to_string())
     }
 }
 
@@ -298,7 +298,7 @@ pub async fn git_stash_show(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_stash_show(&path, index)
+        kosmos_core::git::git_stash_show(&path, index).await.map_err(|e| e.to_string())
     }
 }
 
@@ -319,7 +319,7 @@ pub async fn git_stash_pop(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_stash_pop(&path, index)
+        kosmos_core::git::git_stash_pop(&path, index).await.map_err(|e| e.to_string())
     }
 }
 
@@ -340,7 +340,7 @@ pub async fn git_stash_drop(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_stash_drop(&path, index)
+        kosmos_core::git::git_stash_drop(&path, index).await.map_err(|e| e.to_string())
     }
 }
 
@@ -387,7 +387,7 @@ pub async fn git_diff(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_diff(&path, &file)
+        kosmos_core::git::git_diff(&path, &file).await.map_err(|e| e.to_string())
     }
 }
 
@@ -408,7 +408,7 @@ pub async fn git_diff_untracked(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::git::git_diff_untracked(&path, &file)
+        kosmos_core::git::git_diff_untracked(&path, &file).await.map_err(|e| e.to_string())
     }
 }
 
@@ -504,7 +504,7 @@ pub async fn watch_workspace(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        watcher.watch(&path)
+        watcher.watch(&path).map_err(|e| e.to_string())
     }
 }
 
@@ -521,5 +521,5 @@ pub async fn unwatch_workspace(
             return Ok(());
         }
     }
-    watcher.unwatch()
+    watcher.unwatch().map_err(|e| e.to_string())
 }

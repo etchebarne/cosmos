@@ -1,23 +1,22 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::process::Command;
 
 use kosmos_protocol::types::*;
 
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
+use crate::CoreError;
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>, String> {
-    let mut cmd = Command::new("git");
+#[tracing::instrument(level = "debug")]
+async fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>, CoreError> {
+    let mut cmd = tokio::process::Command::new("git");
     cmd.args(args)
         .current_dir(path)
         .env("GIT_OPTIONAL_LOCKS", "0");
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
-    let output = cmd.output().map_err(|e| e.to_string())?;
+    let output = cmd.output().await?;
 
     if !output.status.success() {
         return Ok(None);
@@ -33,18 +32,19 @@ fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>, String> {
     }
 }
 
-fn run_git_strict(path: &Path, args: &[&str]) -> Result<(), String> {
-    let mut cmd = Command::new("git");
+#[tracing::instrument(level = "debug")]
+async fn run_git_strict(path: &Path, args: &[&str]) -> Result<(), CoreError> {
+    let mut cmd = tokio::process::Command::new("git");
     cmd.args(args).current_dir(path);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
-    let output = cmd.output().map_err(|e| e.to_string())?;
+    let output = cmd.output().await?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr)
             .trim()
             .to_string();
-        return Err(stderr);
+        return Err(CoreError::Git { message: stderr });
     }
     Ok(())
 }
@@ -63,22 +63,22 @@ fn parse_numstat(output: &str) -> HashMap<String, (i32, i32)> {
     map
 }
 
-pub fn get_git_branch(path: &str) -> Result<Option<String>, String> {
+pub async fn get_git_branch(path: &str) -> Result<Option<String>, CoreError> {
     let dir = Path::new(path);
     if !dir.exists() {
         return Ok(None);
     }
-    run_git(dir, &["rev-parse", "--abbrev-ref", "HEAD"])
+    run_git(dir, &["rev-parse", "--abbrev-ref", "HEAD"]).await
 }
 
-pub fn get_git_status(path: &str) -> Result<GitStatusInfo, String> {
+pub async fn get_git_status(path: &str) -> Result<GitStatusInfo, CoreError> {
     let dir = Path::new(path);
     if !dir.exists() {
-        return Err("Directory does not exist".to_string());
+        return Err(CoreError::NotFound("Directory does not exist".to_string()));
     }
 
     let is_repo =
-        run_git(dir, &["rev-parse", "--is-inside-work-tree"])?.is_some_and(|s| s.trim() == "true");
+        run_git(dir, &["rev-parse", "--is-inside-work-tree"]).await?.is_some_and(|s| s.trim() == "true");
 
     if !is_repo {
         return Ok(GitStatusInfo {
@@ -91,18 +91,18 @@ pub fn get_git_status(path: &str) -> Result<GitStatusInfo, String> {
         });
     }
 
-    let branch = run_git(dir, &["rev-parse", "--abbrev-ref", "HEAD"])?;
-    let remote_branch = run_git(dir, &["rev-parse", "--abbrev-ref", "@{upstream}"])?;
-    let last_commit_message = run_git(dir, &["log", "-1", "--pretty=%s"])?;
-    let has_remote = run_git(dir, &["remote"])?.is_some_and(|s| !s.trim().is_empty());
+    let branch = run_git(dir, &["rev-parse", "--abbrev-ref", "HEAD"]).await?;
+    let remote_branch = run_git(dir, &["rev-parse", "--abbrev-ref", "@{upstream}"]).await?;
+    let last_commit_message = run_git(dir, &["log", "-1", "--pretty=%s"]).await?;
+    let has_remote = run_git(dir, &["remote"]).await?.is_some_and(|s| !s.trim().is_empty());
 
-    let status_output = run_git(dir, &["status", "--porcelain", "-uall"])?;
+    let status_output = run_git(dir, &["status", "--porcelain", "-uall"]).await?;
 
-    let staged_stats = run_git(dir, &["diff", "--cached", "--numstat"])?
+    let staged_stats = run_git(dir, &["diff", "--cached", "--numstat"]).await?
         .map(|s| parse_numstat(&s))
         .unwrap_or_default();
 
-    let unstaged_stats = run_git(dir, &["diff", "--numstat"])?
+    let unstaged_stats = run_git(dir, &["diff", "--numstat"]).await?
         .map(|s| parse_numstat(&s))
         .unwrap_or_default();
 
@@ -179,39 +179,41 @@ pub fn get_git_status(path: &str) -> Result<GitStatusInfo, String> {
     })
 }
 
-pub fn git_stage(path: &str, files: Vec<String>) -> Result<(), String> {
+pub async fn git_stage(path: &str, files: Vec<String>) -> Result<(), CoreError> {
     let dir = Path::new(path);
     let mut args: Vec<&str> = vec!["add", "--"];
     let refs: Vec<&str> = files.iter().map(|s| s.as_str()).collect();
     args.extend(refs);
-    run_git_strict(dir, &args)
+    run_git_strict(dir, &args).await
 }
 
-pub fn git_unstage(path: &str, files: Vec<String>) -> Result<(), String> {
+pub async fn git_unstage(path: &str, files: Vec<String>) -> Result<(), CoreError> {
     let dir = Path::new(path);
     let mut args: Vec<&str> = vec!["reset", "HEAD", "--"];
     let refs: Vec<&str> = files.iter().map(|s| s.as_str()).collect();
     args.extend(refs);
-    run_git_strict(dir, &args)
+    run_git_strict(dir, &args).await
 }
 
-pub fn git_stage_all(path: &str) -> Result<(), String> {
+pub async fn git_stage_all(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["add", "-A"])
+    run_git_strict(dir, &["add", "-A"]).await
 }
 
-pub fn git_commit(path: &str, message: &str) -> Result<(), String> {
+pub async fn git_commit(path: &str, message: &str) -> Result<(), CoreError> {
     if message.trim().is_empty() {
-        return Err("Commit message cannot be empty".to_string());
+        return Err(CoreError::Git {
+            message: "Commit message cannot be empty".to_string(),
+        });
     }
     let dir = Path::new(path);
-    run_git_strict(dir, &["commit", "-m", message])
+    run_git_strict(dir, &["commit", "-m", message]).await
 }
 
-pub fn git_list_branches(path: &str) -> Result<Vec<GitBranchInfo>, String> {
+pub async fn git_list_branches(path: &str) -> Result<Vec<GitBranchInfo>, CoreError> {
     let dir = Path::new(path);
     if !dir.exists() {
-        return Err("Directory does not exist".to_string());
+        return Err(CoreError::NotFound("Directory does not exist".to_string()));
     }
 
     let output = run_git(
@@ -222,7 +224,7 @@ pub fn git_list_branches(path: &str) -> Result<Vec<GitBranchInfo>, String> {
             "--sort=-committerdate",
             "--format=%(HEAD)|%(refname:short)|%(committerdate:relative)",
         ],
-    )?;
+    ).await?;
 
     let mut branches = Vec::new();
     if let Some(output) = output {
@@ -253,53 +255,53 @@ pub fn git_list_branches(path: &str) -> Result<Vec<GitBranchInfo>, String> {
     Ok(branches)
 }
 
-pub fn git_checkout(path: &str, branch: &str) -> Result<(), String> {
+pub async fn git_checkout(path: &str, branch: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["checkout", branch])
+    run_git_strict(dir, &["checkout", branch]).await
 }
 
-pub fn git_delete_branch(path: &str, branch: &str) -> Result<(), String> {
+pub async fn git_delete_branch(path: &str, branch: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["branch", "-D", branch])
+    run_git_strict(dir, &["branch", "-D", branch]).await
 }
 
-pub fn git_discard(path: &str, files: Vec<String>) -> Result<(), String> {
+pub async fn git_discard(path: &str, files: Vec<String>) -> Result<(), CoreError> {
     let dir = Path::new(path);
     let mut args: Vec<&str> = vec!["checkout", "--"];
     let refs: Vec<&str> = files.iter().map(|s| s.as_str()).collect();
     args.extend(refs);
-    run_git_strict(dir, &args)
+    run_git_strict(dir, &args).await
 }
 
-pub fn git_trash_untracked(path: &str, files: Vec<String>) -> Result<(), String> {
+pub fn git_trash_untracked(path: &str, files: Vec<String>) -> Result<(), CoreError> {
     let dir = Path::new(path);
     for file in &files {
         let full_path = dir.join(file);
         if full_path.is_dir() {
-            std::fs::remove_dir_all(&full_path).map_err(|e| e.to_string())?;
+            std::fs::remove_dir_all(&full_path)?;
         } else {
-            std::fs::remove_file(&full_path).map_err(|e| e.to_string())?;
+            std::fs::remove_file(&full_path)?;
         }
     }
     Ok(())
 }
 
-pub fn git_stash_all(path: &str) -> Result<(), String> {
+pub async fn git_stash_all(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["stash", "--include-untracked"])
+    run_git_strict(dir, &["stash", "--include-untracked"]).await
 }
 
-pub fn git_stash_files(path: &str, files: Vec<String>) -> Result<(), String> {
+pub async fn git_stash_files(path: &str, files: Vec<String>) -> Result<(), CoreError> {
     let dir = Path::new(path);
     let mut args: Vec<&str> = vec!["stash", "push", "--"];
     let refs: Vec<&str> = files.iter().map(|s| s.as_str()).collect();
     args.extend(refs);
-    run_git_strict(dir, &args)
+    run_git_strict(dir, &args).await
 }
 
-pub fn git_stash_list(path: &str) -> Result<Vec<GitStashEntry>, String> {
+pub async fn git_stash_list(path: &str) -> Result<Vec<GitStashEntry>, CoreError> {
     let dir = Path::new(path);
-    let output = run_git(dir, &["stash", "list", "--format=%gs"])?;
+    let output = run_git(dir, &["stash", "list", "--format=%gs"]).await?;
     let mut entries = Vec::new();
     if let Some(text) = output {
         for (i, line) in text.lines().enumerate() {
@@ -312,16 +314,16 @@ pub fn git_stash_list(path: &str) -> Result<Vec<GitStashEntry>, String> {
     Ok(entries)
 }
 
-pub fn git_stash_pop(path: &str, index: usize) -> Result<(), String> {
+pub async fn git_stash_pop(path: &str, index: usize) -> Result<(), CoreError> {
     let dir = Path::new(path);
     let ref_str = format!("stash@{{{}}}", index);
-    run_git_strict(dir, &["stash", "pop", &ref_str])
+    run_git_strict(dir, &["stash", "pop", &ref_str]).await
 }
 
-pub fn git_stash_show(path: &str, index: usize) -> Result<Vec<GitStashFile>, String> {
+pub async fn git_stash_show(path: &str, index: usize) -> Result<Vec<GitStashFile>, CoreError> {
     let dir = Path::new(path);
     let ref_str = format!("stash@{{{}}}", index);
-    let output = run_git(dir, &["stash", "show", "--name-status", &ref_str])?;
+    let output = run_git(dir, &["stash", "show", "--name-status", &ref_str]).await?;
     let mut files = Vec::new();
     if let Some(text) = output {
         for line in text.lines() {
@@ -344,38 +346,38 @@ pub fn git_stash_show(path: &str, index: usize) -> Result<Vec<GitStashFile>, Str
     Ok(files)
 }
 
-pub fn git_stash_drop(path: &str, index: usize) -> Result<(), String> {
+pub async fn git_stash_drop(path: &str, index: usize) -> Result<(), CoreError> {
     let dir = Path::new(path);
     let ref_str = format!("stash@{{{}}}", index);
-    run_git_strict(dir, &["stash", "drop", &ref_str])
+    run_git_strict(dir, &["stash", "drop", &ref_str]).await
 }
 
-pub fn git_discard_all_tracked(path: &str) -> Result<(), String> {
+pub async fn git_discard_all_tracked(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["checkout", "--", "."])
+    run_git_strict(dir, &["checkout", "--", "."]).await
 }
 
-pub fn git_trash_all_untracked(path: &str) -> Result<(), String> {
+pub async fn git_trash_all_untracked(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["clean", "-fd"])
+    run_git_strict(dir, &["clean", "-fd"]).await
 }
 
-pub fn git_diff(path: &str, file: &str) -> Result<String, String> {
+pub async fn git_diff(path: &str, file: &str) -> Result<String, CoreError> {
     let dir = Path::new(path);
-    let unstaged = run_git(dir, &["diff", "--", file])?;
+    let unstaged = run_git(dir, &["diff", "--", file]).await?;
     if let Some(ref s) = unstaged {
         if !s.is_empty() {
             return Ok(s.clone());
         }
     }
-    let staged = run_git(dir, &["diff", "--cached", "--", file])?;
+    let staged = run_git(dir, &["diff", "--cached", "--", file]).await?;
     Ok(staged.unwrap_or_default())
 }
 
-pub fn git_diff_untracked(path: &str, file: &str) -> Result<String, String> {
+pub async fn git_diff_untracked(path: &str, file: &str) -> Result<String, CoreError> {
     let dir = Path::new(path);
     let full_path = dir.join(file);
-    let contents = std::fs::read_to_string(&full_path).map_err(|e| e.to_string())?;
+    let contents = tokio::fs::read_to_string(&full_path).await?;
 
     let lines: Vec<&str> = contents.lines().collect();
     let line_count = lines.len();
@@ -391,32 +393,78 @@ pub fn git_diff_untracked(path: &str, file: &str) -> Result<String, String> {
     Ok(diff)
 }
 
-pub fn git_init(path: &str) -> Result<(), String> {
+pub async fn git_init(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["init", "-b", "main"])
+    run_git_strict(dir, &["init", "-b", "main"]).await
 }
 
-pub fn git_fetch(path: &str) -> Result<(), String> {
+pub async fn git_fetch(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["fetch"])
+    run_git_strict(dir, &["fetch"]).await
 }
 
-pub fn git_pull(path: &str) -> Result<(), String> {
+pub async fn git_pull(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["pull"])
+    run_git_strict(dir, &["pull"]).await
 }
 
-pub fn git_pull_rebase(path: &str) -> Result<(), String> {
+pub async fn git_pull_rebase(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["pull", "--rebase"])
+    run_git_strict(dir, &["pull", "--rebase"]).await
 }
 
-pub fn git_push(path: &str) -> Result<(), String> {
+pub async fn git_push(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["push"])
+    run_git_strict(dir, &["push"]).await
 }
 
-pub fn git_force_push(path: &str) -> Result<(), String> {
+pub async fn git_force_push(path: &str) -> Result<(), CoreError> {
     let dir = Path::new(path);
-    run_git_strict(dir, &["push", "--force-with-lease"])
+    run_git_strict(dir, &["push", "--force-with-lease"]).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_numstat_normal_input() {
+        let input = "10\t5\tsrc/main.rs\n3\t1\tREADME.md";
+        let result = parse_numstat(input);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result.get("src/main.rs"), Some(&(10, 5)));
+        assert_eq!(result.get("README.md"), Some(&(3, 1)));
+    }
+
+    #[test]
+    fn parse_numstat_binary_files() {
+        let input = "-\t-\timage.png";
+        let result = parse_numstat(input);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result.get("image.png"), Some(&(0, 0)));
+    }
+
+    #[test]
+    fn parse_numstat_empty_input() {
+        let result = parse_numstat("");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn parse_numstat_malformed_lines_skipped() {
+        let input = "10\t5\tsrc/main.rs\nmalformed line\n\n3\t1\tREADME.md\nonly_one_part";
+        let result = parse_numstat(input);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result.get("src/main.rs"), Some(&(10, 5)));
+        assert_eq!(result.get("README.md"), Some(&(3, 1)));
+    }
+
+    #[test]
+    fn parse_numstat_path_with_tabs() {
+        // If a path contains a tab, parts[2..] should be rejoined
+        let input = "4\t2\tpath\twith\ttab";
+        let result = parse_numstat(input);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result.get("path\twith\ttab"), Some(&(4, 2)));
+    }
 }

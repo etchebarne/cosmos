@@ -53,7 +53,7 @@ pub async fn lsp_start(
     if BackendRouter::is_remote_path(&workspace_path) {
         return Err(format!("Remote agent not connected for path: {workspace_path}"));
     }
-    state.start(&workspace_path, &language_id).await
+    state.start(&workspace_path, &language_id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -78,7 +78,7 @@ pub async fn lsp_send(
             return Ok(());
         }
     }
-    state.send(&server_id, &message).await
+    state.send(&server_id, &message).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -95,7 +95,7 @@ pub async fn lsp_stop(
             return Ok(());
         }
     }
-    state.stop(&server_id).await
+    state.stop(&server_id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -120,7 +120,7 @@ pub async fn lsp_stop_workspace(
     if BackendRouter::is_remote_path(&workspace_path) {
         return Err(format!("Remote agent not connected for path: {workspace_path}"));
     }
-    state.stop_workspace(&workspace_path).await
+    state.stop_workspace(&workspace_path).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -263,7 +263,7 @@ pub async fn lsp_install_server(
             return serde_json::from_value(result).map_err(|e| e.to_string());
         }
     }
-    state.install_server(&name).await
+    state.install_server(&name).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -281,5 +281,5 @@ pub async fn lsp_uninstall_server(
             return Ok(());
         }
     }
-    state.uninstall_server(&name)
+    state.uninstall_server(&name).map_err(|e| e.to_string())
 }

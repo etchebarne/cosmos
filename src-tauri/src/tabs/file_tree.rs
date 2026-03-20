@@ -43,7 +43,7 @@ pub async fn read_dir(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        kosmos_core::file_tree::read_dir(&path)
+        kosmos_core::file_tree::read_dir(&path).map_err(|e| e.to_string())
     }
 }
 
@@ -71,7 +71,7 @@ pub async fn move_file(
     } else if BackendRouter::is_remote_path(&source) {
         Err(no_agent_error(&source))
     } else {
-        kosmos_core::file_tree::move_file(&source, &dest_dir)
+        kosmos_core::file_tree::move_file(&source, &dest_dir).map_err(|e| e.to_string())
     }
 }
 
@@ -88,7 +88,7 @@ pub async fn create_file(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        kosmos_core::file_tree::create_file(&path)
+        kosmos_core::file_tree::create_file(&path).map_err(|e| e.to_string())
     }
 }
 
@@ -105,7 +105,7 @@ pub async fn create_dir(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        kosmos_core::file_tree::create_dir(&path)
+        kosmos_core::file_tree::create_dir(&path).map_err(|e| e.to_string())
     }
 }
 
@@ -128,7 +128,7 @@ pub async fn rename_entry(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        kosmos_core::file_tree::rename_entry(&path, &new_name)
+        kosmos_core::file_tree::rename_entry(&path, &new_name).map_err(|e| e.to_string())
     }
 }
 
@@ -156,7 +156,7 @@ pub async fn copy_entry(
     } else if BackendRouter::is_remote_path(&source) {
         Err(no_agent_error(&source))
     } else {
-        kosmos_core::file_tree::copy_entry(&source, &dest_dir)
+        kosmos_core::file_tree::copy_entry(&source, &dest_dir).map_err(|e| e.to_string())
     }
 }
 
@@ -173,7 +173,7 @@ pub async fn trash_entry(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        kosmos_core::file_tree::trash_entry(&path)
+        kosmos_core::file_tree::trash_entry(&path).map_err(|e| e.to_string())
     }
 }
 
@@ -190,7 +190,7 @@ pub async fn delete_entry(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        kosmos_core::file_tree::delete_entry(&path)
+        kosmos_core::file_tree::delete_entry(&path).map_err(|e| e.to_string())
     }
 }
 

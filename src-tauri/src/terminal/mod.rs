@@ -54,7 +54,7 @@ pub async fn terminal_spawn(
     } else if BackendRouter::is_remote_path(&cwd) {
         Err(format!("Remote agent not connected for path: {cwd}"))
     } else {
-        state.spawn(id, &program, &args, &cwd, cols, rows)
+        state.spawn(id, &program, &args, &cwd, cols, rows).map_err(|e| e.to_string())
     }
 }
 
@@ -74,7 +74,7 @@ pub async fn terminal_write(
             .await?;
         Ok(())
     } else {
-        state.write(&id, &data)
+        state.write(&id, &data).map_err(|e| e.to_string())
     }
 }
 
@@ -96,7 +96,7 @@ pub async fn terminal_resize(
             .await?;
         Ok(())
     } else {
-        state.resize(&id, cols, rows)
+        state.resize(&id, cols, rows).map_err(|e| e.to_string())
     }
 }
 
@@ -113,6 +113,6 @@ pub async fn terminal_close(
         router.remove_remote_terminal(&id).await;
         Ok(())
     } else {
-        state.close(&id)
+        state.close(&id).map_err(|e| e.to_string())
     }
 }

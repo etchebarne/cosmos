@@ -14,7 +14,7 @@ pub async fn read_file(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::editor::read_file(&path)
+        kosmos_core::editor::read_file(&path).await.map_err(|e| e.to_string())
     }
 }
 
@@ -35,6 +35,6 @@ pub async fn write_file(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        kosmos_core::editor::write_file(&path, &content)
+        kosmos_core::editor::write_file(&path, &content).await.map_err(|e| e.to_string())
     }
 }

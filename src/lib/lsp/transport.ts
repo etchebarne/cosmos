@@ -134,7 +134,7 @@ export class TauriLspTransport {
       serverId: this.serverId,
       message: JSON.stringify(notification),
     }).catch((err) => {
-      console.warn(`[LSP] Notification '${method}' delivery failed:`, err);
+      console.warn(`[kosmos:lsp] Notification '${method}' delivery failed:`, err);
     });
   }
 

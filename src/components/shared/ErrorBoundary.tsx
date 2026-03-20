@@ -2,6 +2,7 @@ import { Component, type ReactNode, type ErrorInfo } from "react";
 
 interface Props {
   children: ReactNode;
+  name?: string;
   fallback?: (error: Error, reset: () => void) => ReactNode;
 }
 
@@ -17,7 +18,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[ErrorBoundary]", error, info.componentStack);
+    const name = this.props.name ?? "unknown";
+    console.error(`[kosmos:error-boundary:${name}]`, error, info.componentStack);
   }
 
   reset = () => {

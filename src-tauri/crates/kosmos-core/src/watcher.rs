@@ -7,7 +7,7 @@ use notify_debouncer_mini::new_debouncer;
 
 use kosmos_protocol::events::Event;
 
-use crate::EventSink;
+use crate::{CoreError, EventSink};
 
 pub struct WatcherManager {
     events: Arc<dyn EventSink>,
@@ -27,8 +27,11 @@ impl WatcherManager {
         }
     }
 
-    pub fn watch(&self, path: &str) -> Result<(), String> {
-        let mut guard = self.watcher.lock().map_err(|e| e.to_string())?;
+    pub fn watch(&self, path: &str) -> Result<(), CoreError> {
+        let mut guard = self
+            .watcher
+            .lock()
+            .map_err(|e| CoreError::Other(e.to_string()))?;
 
         // If already watching this path, do nothing
         if let Some((_, ref current)) = *guard {
@@ -98,19 +101,22 @@ impl WatcherManager {
                 }
             },
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| CoreError::Other(e.to_string()))?;
 
         debouncer
             .watcher()
             .watch(Path::new(path), notify::RecursiveMode::Recursive)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| CoreError::Other(e.to_string()))?;
 
         *guard = Some((debouncer, watch_path));
         Ok(())
     }
 
-    pub fn unwatch(&self) -> Result<(), String> {
-        let mut guard = self.watcher.lock().map_err(|e| e.to_string())?;
+    pub fn unwatch(&self) -> Result<(), CoreError> {
+        let mut guard = self
+            .watcher
+            .lock()
+            .map_err(|e| CoreError::Other(e.to_string()))?;
         *guard = None;
         Ok(())
     }

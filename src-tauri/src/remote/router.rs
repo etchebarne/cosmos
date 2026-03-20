@@ -14,6 +14,8 @@ use super::connection::ConnectionType;
 struct AgentEntry {
     agent: Arc<RemoteAgent>,
     connection: ConnectionType,
+    reconnect_attempts: u32,
+    last_reconnect: Option<std::time::Instant>,
 }
 
 /// Routes requests to the appropriate backend: local kosmos-core or remote agent.
@@ -112,6 +114,8 @@ impl BackendRouter {
             AgentEntry {
                 agent,
                 connection: conn,
+                reconnect_attempts: 0,
+                last_reconnect: None,
             },
         );
         Ok(())
@@ -174,12 +178,39 @@ impl BackendRouter {
             found
         };
 
-        // Agent is dead — attempt transparent reconnection.
+        // Agent is dead — attempt transparent reconnection with exponential backoff.
         if let Some((workspace_key, conn)) = reconnect_info {
-            eprintln!("[kosmos-remote] Agent dead for {workspace_key}, attempting reconnection...");
+            // Check backoff: skip if reconnecting too soon
+            let should_skip = {
+                let agents = self.agents.lock().await;
+                if let Some(entry) = agents.get(&workspace_key) {
+                    let backoff_secs = std::cmp::min(1u64 << entry.reconnect_attempts, 60);
+                    entry
+                        .last_reconnect
+                        .map(|t| t.elapsed().as_secs() < backoff_secs)
+                        .unwrap_or(false)
+                } else {
+                    false
+                }
+            };
+
+            if should_skip {
+                tracing::debug!(workspace = %workspace_key, "Skipping reconnect (backoff)");
+                return None;
+            }
+
+            tracing::warn!(workspace = %workspace_key, "Agent dead, reconnecting...");
             match self.connect(&workspace_key, conn).await {
                 Ok(()) => {
-                    eprintln!("[kosmos-remote] Reconnected to {workspace_key}");
+                    tracing::info!(workspace = %workspace_key, "Reconnected");
+                    // Reset backoff on success
+                    {
+                        let mut agents = self.agents.lock().await;
+                        if let Some(entry) = agents.get_mut(&workspace_key) {
+                            entry.reconnect_attempts = 0;
+                            entry.last_reconnect = None;
+                        }
+                    }
                     // Retry lookup with the new agent.
                     let agents = self.agents.lock().await;
                     if let Some(entry) = agents.get(&workspace_key) {
@@ -189,9 +220,15 @@ impl BackendRouter {
                     }
                 }
                 Err(e) => {
-                    eprintln!("[kosmos-remote] Reconnection failed for {workspace_key}: {e}");
-                    // Remove the dead entry so is_remote_path check triggers the right error
-                    self.agents.lock().await.remove(&workspace_key);
+                    tracing::warn!(workspace = %workspace_key, "Reconnection failed: {e}");
+                    // Increment backoff counter
+                    let mut agents = self.agents.lock().await;
+                    if let Some(entry) = agents.get_mut(&workspace_key) {
+                        entry.reconnect_attempts = entry.reconnect_attempts.saturating_add(1);
+                        entry.last_reconnect = Some(std::time::Instant::now());
+                    } else {
+                        agents.remove(&workspace_key);
+                    }
                 }
             }
         }

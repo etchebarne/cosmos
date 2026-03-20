@@ -104,7 +104,7 @@ impl RemoteAgent {
                         Ok(_) => {
                             let trimmed = line.trim();
                             if !trimmed.is_empty() {
-                                eprintln!("[kosmos-agent stderr] {trimmed}");
+                                tracing::debug!(target: "kosmos::agent", "{trimmed}");
                             }
                         }
                     }
@@ -126,7 +126,7 @@ impl RemoteAgent {
             // Agent died — mark dead and fail all pending requests.
             // Terminal reconnection is handled by the frontend on next write.
             alive_clone.store(false, Ordering::SeqCst);
-            eprintln!("[kosmos-remote] Agent process exited");
+            tracing::warn!("Agent process exited");
             let mut p = pending_clone.lock().await;
             for (_, tx) in p.drain() {
                 let _ = tx.send(ResponseMessage::err(0, "Agent connection lost".into()));

@@ -1,10 +1,12 @@
 pub mod editor;
+pub mod error;
 pub mod file_tree;
 pub mod git;
 pub mod lsp;
 pub mod terminal;
 pub mod watcher;
 
+pub use error::CoreError;
 pub use kosmos_protocol;
 
 /// Trait for delivering events from core modules to the host or agent.

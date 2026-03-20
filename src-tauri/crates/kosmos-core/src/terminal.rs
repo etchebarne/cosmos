@@ -7,7 +7,7 @@ use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use kosmos_protocol::events::Event;
 use kosmos_protocol::types::ShellInfo;
 
-use crate::EventSink;
+use crate::{CoreError, EventSink};
 
 struct TerminalInstance {
     writer: Box<dyn Write + Send>,
@@ -38,6 +38,7 @@ impl TerminalManager {
         terminals.keys().cloned().collect()
     }
 
+    #[tracing::instrument(skip(self))]
     pub fn spawn(
         &self,
         id: String,
@@ -46,14 +47,18 @@ impl TerminalManager {
         cwd: &str,
         cols: u16,
         rows: u16,
-    ) -> Result<(), String> {
+    ) -> Result<(), CoreError> {
         // If this terminal already exists and is alive, return success (idempotent).
         // This enables seamless reconnection: the daemon keeps the PTY alive and
         // the reconnecting client reuses it.
         {
-            let mut terminals = self.terminals.lock().map_err(|e| e.to_string())?;
+            let mut terminals = self
+                .terminals
+                .lock()
+                .map_err(|e| CoreError::Terminal(e.to_string()))?;
             if let Some(inst) = terminals.get_mut(&id) {
                 if matches!(inst.child.try_wait(), Ok(None)) {
+                    tracing::info!(id = %id, "Reattaching to existing terminal");
                     return Ok(()); // Still alive — reattach
                 }
                 // Child exited, remove stale entry and re-spawn below
@@ -70,7 +75,7 @@ impl TerminalManager {
                 pixel_width: 0,
                 pixel_height: 0,
             })
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| CoreError::Terminal(e.to_string()))?;
 
         let mut cmd = CommandBuilder::new(program);
         for arg in args {
@@ -78,14 +83,26 @@ impl TerminalManager {
         }
         cmd.cwd(cwd);
 
-        let child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
+        let child = pair
+            .slave
+            .spawn_command(cmd)
+            .map_err(|e| CoreError::Terminal(e.to_string()))?;
         drop(pair.slave);
 
-        let reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
-        let writer = pair.master.take_writer().map_err(|e| e.to_string())?;
+        let reader = pair
+            .master
+            .try_clone_reader()
+            .map_err(|e| CoreError::Terminal(e.to_string()))?;
+        let writer = pair
+            .master
+            .take_writer()
+            .map_err(|e| CoreError::Terminal(e.to_string()))?;
 
         {
-            let mut terminals = self.terminals.lock().map_err(|e| e.to_string())?;
+            let mut terminals = self
+                .terminals
+                .lock()
+                .map_err(|e| CoreError::Terminal(e.to_string()))?;
             terminals.insert(
                 id.clone(),
                 TerminalInstance {
@@ -115,26 +132,35 @@ impl TerminalManager {
                     Err(_) => break,
                 }
             }
+            tracing::debug!(id = %event_id, "Terminal reader loop ended");
             events.emit(Event::TerminalExit { id: event_id });
         });
 
         Ok(())
     }
 
-    pub fn write(&self, id: &str, data: &str) -> Result<(), String> {
-        let mut terminals = self.terminals.lock().map_err(|e| e.to_string())?;
-        let terminal = terminals.get_mut(id).ok_or("Terminal not found")?;
-        terminal
-            .writer
-            .write_all(data.as_bytes())
-            .map_err(|e| e.to_string())?;
-        terminal.writer.flush().map_err(|e| e.to_string())?;
+    #[tracing::instrument(skip(self, data))]
+    pub fn write(&self, id: &str, data: &str) -> Result<(), CoreError> {
+        let mut terminals = self
+            .terminals
+            .lock()
+            .map_err(|e| CoreError::Terminal(e.to_string()))?;
+        let terminal = terminals
+            .get_mut(id)
+            .ok_or_else(|| CoreError::NotFound(format!("Terminal {id}")))?;
+        terminal.writer.write_all(data.as_bytes())?;
+        terminal.writer.flush()?;
         Ok(())
     }
 
-    pub fn resize(&self, id: &str, cols: u16, rows: u16) -> Result<(), String> {
-        let terminals = self.terminals.lock().map_err(|e| e.to_string())?;
-        let terminal = terminals.get(id).ok_or("Terminal not found")?;
+    pub fn resize(&self, id: &str, cols: u16, rows: u16) -> Result<(), CoreError> {
+        let terminals = self
+            .terminals
+            .lock()
+            .map_err(|e| CoreError::Terminal(e.to_string()))?;
+        let terminal = terminals
+            .get(id)
+            .ok_or_else(|| CoreError::NotFound(format!("Terminal {id}")))?;
         terminal
             .master
             .resize(PtySize {
@@ -143,12 +169,16 @@ impl TerminalManager {
                 pixel_width: 0,
                 pixel_height: 0,
             })
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| CoreError::Terminal(e.to_string()))?;
         Ok(())
     }
 
-    pub fn close(&self, id: &str) -> Result<(), String> {
-        let mut terminals = self.terminals.lock().map_err(|e| e.to_string())?;
+    #[tracing::instrument(skip(self))]
+    pub fn close(&self, id: &str) -> Result<(), CoreError> {
+        let mut terminals = self
+            .terminals
+            .lock()
+            .map_err(|e| CoreError::Terminal(e.to_string()))?;
         if let Some(mut terminal) = terminals.remove(id) {
             let _ = terminal.child.kill();
         }

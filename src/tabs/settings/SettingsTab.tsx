@@ -103,7 +103,9 @@ function AccordionSection({
     <div className="mb-4 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-[2px_2px_0_rgba(0,0,0,0.15)]">
       <button
         className={`flex items-center gap-3 w-full px-4 py-3 text-left transition-colors border-b ${
-          expanded ? "bg-[var(--color-bg-surface)] border-[var(--color-border-primary)]" : "border-transparent hover:bg-[var(--color-bg-hover)]"
+          expanded
+            ? "bg-[var(--color-bg-surface)] border-[var(--color-border-primary)]"
+            : "border-transparent hover:bg-[var(--color-bg-hover)]"
         }`}
         onClick={onToggle}
       >
@@ -114,11 +116,9 @@ function AccordionSection({
             expanded ? "" : "-rotate-90"
           }`}
         />
-        <span className="text-xs font-bold text-[var(--color-text-primary)]">
-          {section.label}
-        </span>
+        <span className="text-xs font-bold text-[var(--color-text-primary)]">{section.label}</span>
       </button>
-      
+
       {expanded && (
         <div className="px-4 py-2 bg-[var(--color-bg-page)]">
           {section.groups.map((group, groupIdx) => (
@@ -181,8 +181,14 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3 animate-pulse">
-          <HugeiconsIcon icon={Settings02Icon} size={24} className="text-[var(--color-text-tertiary)] animate-spin-slow" />
-          <p className="text-xs font-mono text-[var(--color-text-secondary)]">LOADING_SETTINGS...</p>
+          <HugeiconsIcon
+            icon={Settings02Icon}
+            size={24}
+            className="text-[var(--color-text-tertiary)] animate-spin-slow"
+          />
+          <p className="text-xs font-mono text-[var(--color-text-secondary)]">
+            LOADING_SETTINGS...
+          </p>
         </div>
       </div>
     );

@@ -12,11 +12,13 @@ installer = ["dep:zip", "dep:flate2", "dep:tar"]
 [dependencies]
 kosmos-protocol = { path = "../kosmos-protocol" }
 serde = { version = "1", features = ["derive"] }
+tracing = "0.1"
+thiserror = "2"
 serde_json = "1"
 notify-debouncer-mini = "0.5"
 notify = "7"
 ignore = "0.4"
-tokio = { version = "1", features = ["process", "io-util", "sync", "rt", "time"] }
+tokio = { version = "1", features = ["process", "io-util", "sync", "rt", "time", "fs"] }
 which = "7"
 portable-pty = "0.9"
 trash = "5"
@@ -25,3 +27,7 @@ trash = "5"
 zip = { version = "2", optional = true, default-features = false, features = ["deflate"] }
 flate2 = { version = "1", optional = true, default-features = false, features = ["rust_backend"] }
 tar = { version = "0.4", optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["test-util", "macros", "rt-multi-thread"] }

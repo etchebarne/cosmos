@@ -74,7 +74,8 @@ async function ensureLanguageGroups(): Promise<void> {
   if (languageGroupMap) return;
   try {
     languageGroupMap = await invoke<Record<string, string>>("lsp_language_groups");
-  } catch {
+  } catch (err) {
+    console.warn("[kosmos:lsp] Failed to load language groups:", err);
     languageGroupMap = {};
   }
 }
@@ -98,9 +99,11 @@ function getMonacoLanguages(serverLanguage: string): string[] {
 const SHUTDOWN_TIMEOUT_MS = 5_000;
 
 /** Maximum restart attempts before giving up. */
-const MAX_RESTART_ATTEMPTS = 2;
-/** Delay between restart attempts in milliseconds. */
-const RESTART_DELAY_MS = 5_000;
+const MAX_RESTART_ATTEMPTS = 5;
+/** Base delay for exponential backoff in milliseconds. */
+const BASE_RESTART_DELAY_MS = 1_000;
+/** Maximum delay cap for exponential backoff in milliseconds. */
+const MAX_RESTART_DELAY_MS = 30_000;
 
 // Track active progress tokens across all servers.
 // Key: "workspacePath\0serverLang\0token"
@@ -114,8 +117,9 @@ function progressKey(workspacePath: string, serverLang: string, token: string | 
   return `${workspacePath}\0${serverLang}\0${token}`;
 }
 
-// Track restart attempts per server to implement backoff
+// Track restart attempts and start timestamps per server to implement backoff
 const restartAttempts = new Map<string, number>();
+const serverStartTimestamps = new Map<string, number>();
 
 export const useLspStore = create<LspState>()(
   immer((set, get) => {
@@ -147,17 +151,27 @@ export const useLspStore = create<LspState>()(
           }
         });
 
-        // Attempt automatic restart with backoff
+        // Attempt automatic restart with exponential backoff + jitter
         const key = `${workspacePath}:${serverLang}`;
-        const attempts = restartAttempts.get(key) ?? 0;
+        let attempts = restartAttempts.get(key) ?? 0;
+
+        // If server ran >60s before crashing, reset attempts (it was stable)
+        const startTs = serverStartTimestamps.get(key);
+        if (startTs && Date.now() - startTs > 60_000) {
+          attempts = 0;
+        }
 
         if (attempts < MAX_RESTART_ATTEMPTS && monacoRef) {
           restartAttempts.set(key, attempts + 1);
           const monaco = monacoRef;
 
+          // Exponential backoff with jitter
+          const baseDelay = Math.min(BASE_RESTART_DELAY_MS * 2 ** attempts, MAX_RESTART_DELAY_MS);
+          const delay = Math.round(baseDelay * (0.5 + Math.random() * 0.5));
+
           console.warn(
-            `[LSP] Server ${serverLang} stopped unexpectedly. ` +
-              `Restart attempt ${attempts + 1}/${MAX_RESTART_ATTEMPTS} in ${RESTART_DELAY_MS}ms...`,
+            `[kosmos:lsp] Server ${serverLang} stopped unexpectedly. ` +
+              `Restart attempt ${attempts + 1}/${MAX_RESTART_ATTEMPTS} in ${delay}ms...`,
           );
 
           setTimeout(() => {
@@ -173,18 +187,20 @@ export const useLspStore = create<LspState>()(
                 if (client) {
                   // Reset attempts on successful restart
                   restartAttempts.delete(key);
-                  console.info(`[LSP] Server ${serverLang} restarted successfully.`);
+                  serverStartTimestamps.set(key, Date.now());
+                  console.info(`[kosmos:lsp] Server ${serverLang} restarted successfully.`);
                 }
               })
               .catch((err) => {
-                console.error(`[LSP] Restart failed for ${serverLang}:`, err);
+                console.error(`[kosmos:lsp] Restart failed for ${serverLang}:`, err);
               });
-          }, RESTART_DELAY_MS);
+          }, delay);
         } else if (attempts >= MAX_RESTART_ATTEMPTS) {
           console.error(
-            `[LSP] Server ${serverLang} stopped. Max restart attempts (${MAX_RESTART_ATTEMPTS}) reached.`,
+            `[kosmos:lsp] Server ${serverLang} stopped. Max restart attempts (${MAX_RESTART_ATTEMPTS}) reached.`,
           );
           restartAttempts.delete(key);
+          serverStartTimestamps.delete(key);
         }
       }
     }
@@ -319,6 +335,9 @@ export const useLspStore = create<LspState>()(
         });
 
         // Store under the user's workspace path (for organization/cleanup)
+        const startKey = `${workspacePath}:${serverLang}`;
+        serverStartTimestamps.set(startKey, Date.now());
+
         set((state) => {
           if (!state.servers[workspacePath]) {
             state.servers[workspacePath] = {};
@@ -382,7 +401,7 @@ export const useLspStore = create<LspState>()(
           if (existing) continue;
 
           initializeServer(workspacePath, project.projectRoot, project.languageId).catch((err) => {
-            console.warn(`[LSP] Warmup failed for ${project.languageId}:`, err);
+            console.warn(`[kosmos:lsp] Warmup failed for ${project.languageId}:`, err);
           });
         }
       },
@@ -607,9 +626,12 @@ export const useLspStore = create<LspState>()(
           }
         }
 
-        // Clean up restart attempt tracking
+        // Clean up restart attempt and timestamp tracking
         for (const key of restartAttempts.keys()) {
           if (key.startsWith(workspacePath + ":")) restartAttempts.delete(key);
+        }
+        for (const key of serverStartTimestamps.keys()) {
+          if (key.startsWith(workspacePath + ":")) serverStartTimestamps.delete(key);
         }
 
         set((state) => {

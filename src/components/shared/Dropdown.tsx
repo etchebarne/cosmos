@@ -31,7 +31,9 @@ export function Dropdown({ value, options, onChange }: DropdownProps) {
         }`}
         onClick={() => setOpen(!open)}
       >
-        <span className="whitespace-nowrap overflow-hidden text-ellipsis">{selected?.label ?? value}</span>
+        <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+          {selected?.label ?? value}
+        </span>
         <HugeiconsIcon
           icon={ArrowDown01Icon}
           size={12}

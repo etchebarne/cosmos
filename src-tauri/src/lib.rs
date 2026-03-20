@@ -10,6 +10,7 @@ use std::sync::Arc;
 use kosmos_core::EventSink;
 use kosmos_protocol::events::Event;
 use tauri::{AppHandle, Emitter, Manager};
+use tracing_subscriber::{fmt, EnvFilter};
 
 struct TauriEventSink(AppHandle);
 
@@ -49,6 +50,11 @@ impl EventSink for TauriEventSink {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::new("kosmos=info,kosmos_core=info,kosmos_lib=info,warn")
+    });
+    fmt().with_env_filter(filter).with_writer(std::io::stderr).init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -60,9 +66,10 @@ pub fn run() {
             // Set high-res window icon to avoid blurry taskbar icon on Windows
             // (Tauri's codegen only reads the first ICO entry, which may be low-res)
             if let Some(window) = app.get_webview_window("main") {
-                let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/128x128@2x.png"))
-                    .expect("Failed to load window icon");
-                let _ = window.set_icon(icon);
+                match tauri::image::Image::from_bytes(include_bytes!("../icons/128x128@2x.png")) {
+                    Ok(icon) => { let _ = window.set_icon(icon); }
+                    Err(e) => tracing::warn!("Failed to load window icon: {e}"),
+                }
             }
 
             let events: Arc<dyn EventSink> = Arc::new(TauriEventSink(handle.clone()));
@@ -76,8 +83,7 @@ pub fn run() {
             // LSP
             let servers_dir = handle
                 .path()
-                .app_data_dir()
-                .expect("Failed to get app data dir")
+                .app_data_dir()?
                 .join("servers");
             let custom_registry = handle
                 .path()

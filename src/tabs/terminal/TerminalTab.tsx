@@ -287,8 +287,32 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
         });
         cleanups.push(unlisten);
 
-        const unlistenExit = await listen(`terminal-exit-${terminalId}`, () => {
-          terminal.write("\r\n\x1b[90m[Process exited]\x1b[0m\r\n");
+        const unlistenExit = await listen<number | null>(`terminal-exit-${terminalId}`, (event) => {
+          const code = event.payload;
+          const msg = code != null ? `Process exited (code ${code})` : "Process exited";
+          terminal.write(`\r\n\x1b[90m[${msg}]\x1b[0m\r\n`);
+          terminal.write("\x1b[90m[Press Enter to restart]\x1b[0m");
+          // Allow restarting with Enter key
+          const restartHandler = terminal.onData((data) => {
+            if (data === "\r" || data === "\n") {
+              restartHandler.dispose();
+              terminal.write("\r\n");
+              spawnTerminal()
+                .then(() => {
+                  terminal.write("\x1b[32m[Restarted]\x1b[0m\r\n");
+                  fitAddon.fit();
+                  invoke("terminal_resize", {
+                    id: terminalId,
+                    cols: terminal.cols,
+                    rows: terminal.rows,
+                  });
+                })
+                .catch((err) => {
+                  terminal.write(`\x1b[31m[Failed to restart: ${err}]\x1b[0m\r\n`);
+                });
+            }
+          });
+          cleanups.push(() => restartHandler.dispose());
         });
         cleanups.push(unlistenExit);
 
