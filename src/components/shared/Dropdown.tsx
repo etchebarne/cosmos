@@ -24,18 +24,18 @@ export function Dropdown({ value, options, onChange }: DropdownProps) {
   return (
     <div ref={ref} className="relative">
       <button
-        className={`flex items-center gap-2 text-xs px-2.5 py-1 border transition-colors bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] ${
+        className={`flex items-center justify-between gap-3 text-xs px-3 py-1.5 min-w-[120px] border transition-colors bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] ${
           open
             ? "border-[var(--color-accent-blue)]"
             : "border-[var(--color-border-secondary)] hover:border-[var(--color-border-primary)]"
         }`}
         onClick={() => setOpen(!open)}
       >
-        <span>{selected?.label ?? value}</span>
+        <span className="whitespace-nowrap overflow-hidden text-ellipsis">{selected?.label ?? value}</span>
         <HugeiconsIcon
           icon={ArrowDown01Icon}
           size={12}
-          className={`text-[var(--color-text-tertiary)] transition-transform ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 text-[var(--color-text-tertiary)] transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
 

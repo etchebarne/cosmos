@@ -4,7 +4,7 @@ interface SectionTitleProps {
 
 export function SectionTitle({ children }: SectionTitleProps) {
   return (
-    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)] mb-1 mt-4 first:mt-0">
+    <h4 className="text-xs font-bold text-[var(--color-text-secondary)] mb-1 mt-4 first:mt-0">
       {children}
     </h4>
   );

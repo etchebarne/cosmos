@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Settings02Icon } from "@hugeicons/core-free-icons";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { Setting } from "../../components/shared/Setting";
 import { SectionTitle } from "../../components/shared/SectionTitle";
@@ -57,13 +57,15 @@ function SettingControlRenderer({
     case "switch":
       return (
         <button
-          className={`relative w-8 h-[18px] transition-colors ${
-            value ? "bg-[var(--color-accent-blue)]" : "bg-[var(--color-bg-tertiary)]"
+          className={`relative flex items-center w-8 h-[18px] border transition-colors ${
+            value
+              ? "bg-[var(--color-accent-blue)] border-[var(--color-accent-blue)]"
+              : "bg-[var(--color-bg-surface)] border-[var(--color-border-primary)] hover:border-[var(--color-border-hover)]"
           }`}
           onClick={() => onChange(!value)}
         >
           <span
-            className={`absolute top-[2px] w-[14px] h-[14px] bg-white transition-transform ${
+            className={`absolute top-0.5 w-3.5 h-3.5 bg-white transition-transform ${
               value ? "left-[16px]" : "left-[2px]"
             }`}
           />
@@ -78,7 +80,7 @@ function SettingControlRenderer({
           max={control.max}
           step={control.step}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="text-xs w-16 bg-[var(--color-bg-surface)] border border-[var(--color-border-secondary)] text-[var(--color-text-primary)] px-2 py-1 outline-none hover:border-[var(--color-accent-blue)] transition-colors text-center"
+          className="text-xs w-16 bg-[var(--color-bg-surface)] border border-[var(--color-border-secondary)] text-[var(--color-text-primary)] px-2 py-1 outline-none hover:border-[var(--color-border-primary)] focus:border-[var(--color-accent-blue)] transition-colors text-center"
         />
       );
   }
@@ -98,34 +100,41 @@ function AccordionSection({
   onChange: (key: string, value: unknown) => void;
 }) {
   return (
-    <div className="border-b border-[var(--color-border-primary)]">
+    <div className="mb-4 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-[2px_2px_0_rgba(0,0,0,0.15)]">
       <button
-        className="flex items-center gap-2 w-full px-4 py-2.5 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+        className={`flex items-center gap-3 w-full px-4 py-3 text-left transition-colors border-b ${
+          expanded ? "bg-[var(--color-bg-surface)] border-[var(--color-border-primary)]" : "border-transparent hover:bg-[var(--color-bg-hover)]"
+        }`}
         onClick={onToggle}
       >
         <HugeiconsIcon
           icon={ArrowDown01Icon}
-          size={12}
-          className={`text-[var(--color-text-tertiary)] transition-transform ${expanded ? "" : "-rotate-90"}`}
+          size={14}
+          className={`text-[var(--color-text-tertiary)] transition-transform duration-200 ${
+            expanded ? "" : "-rotate-90"
+          }`}
         />
-        <span className="text-xs font-semibold text-[var(--color-text-primary)]">
+        <span className="text-xs font-bold text-[var(--color-text-primary)]">
           {section.label}
         </span>
       </button>
+      
       {expanded && (
-        <div className="px-4 pb-3">
-          {section.groups.map((group) => (
-            <div key={group.title} className="flex flex-col">
+        <div className="px-4 py-2 bg-[var(--color-bg-page)]">
+          {section.groups.map((group, groupIdx) => (
+            <div key={group.title} className={`flex flex-col ${groupIdx > 0 ? "mt-6" : "mt-2"}`}>
               <SectionTitle>{group.title}</SectionTitle>
-              {group.settings.map((entry) => (
-                <Setting key={entry.key} label={entry.label} description={entry.description}>
-                  <SettingControlRenderer
-                    control={entry.control}
-                    value={values[entry.key] ?? entry.defaultValue}
-                    onChange={(v) => onChange(entry.key, v)}
-                  />
-                </Setting>
-              ))}
+              <div className="mt-2 flex flex-col gap-1 border-l-2 border-[var(--color-border-secondary)] pl-3">
+                {group.settings.map((entry) => (
+                  <Setting key={entry.key} label={entry.label} description={entry.description}>
+                    <SettingControlRenderer
+                      control={entry.control}
+                      value={values[entry.key] ?? entry.defaultValue}
+                      onChange={(v) => onChange(entry.key, v)}
+                    />
+                  </Setting>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -136,6 +145,7 @@ function AccordionSection({
 
 export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [schema, setSchema] = useState<SettingsSchema | null>(null);
+  // Default to all sections expanded for a better "editor settings" feel
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const values = useSettingsStore((s) => s.values);
   const setSetting = useSettingsStore((s) => s.set);
@@ -143,6 +153,8 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   useEffect(() => {
     invoke<SettingsSchema>("get_settings_schema").then((s) => {
       setSchema(s);
+      // Auto-expand all sections on load
+      setExpandedSections(new Set(s.sections.map((sec) => sec.id)));
     });
   }, []);
 
@@ -168,24 +180,29 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   if (!schema) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-secondary)]">Loading settings...</p>
+        <div className="flex flex-col items-center gap-3 animate-pulse">
+          <HugeiconsIcon icon={Settings02Icon} size={24} className="text-[var(--color-text-tertiary)] animate-spin-slow" />
+          <p className="text-xs font-mono text-[var(--color-text-secondary)]">LOADING_SETTINGS...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <ScrollArea className="h-full">
-      <div className="max-w-2xl mx-auto py-2">
-        {schema.sections.map((section) => (
-          <AccordionSection
-            key={section.id}
-            section={section}
-            expanded={expandedSections.has(section.id)}
-            onToggle={() => toggleSection(section.id)}
-            values={values}
-            onChange={handleChange}
-          />
-        ))}
+    <ScrollArea className="h-full bg-[var(--color-bg-page)]">
+      <div className="max-w-3xl mx-auto py-8 px-6 @container">
+        <div className="flex flex-col gap-3">
+          {schema.sections.map((section) => (
+            <AccordionSection
+              key={section.id}
+              section={section}
+              expanded={expandedSections.has(section.id)}
+              onToggle={() => toggleSection(section.id)}
+              values={values}
+              onChange={handleChange}
+            />
+          ))}
+        </div>
       </div>
     </ScrollArea>
   );
