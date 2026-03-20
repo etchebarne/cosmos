@@ -228,6 +228,26 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
       observer.disconnect();
     });
 
+    // Refresh terminal rendering when the tab container is moved
+    // between panes. The DOM move can clear the canvas context,
+    // so we re-fit and repaint from the buffer.
+    const onPaneChanged = () => {
+      requestAnimationFrame(() => {
+        if (disposed) return;
+        fitAddon.fit();
+        terminal.refresh(0, terminal.rows - 1);
+        if (spawned) {
+          invoke("terminal_resize", {
+            id: terminalId,
+            cols: terminal.cols,
+            rows: terminal.rows,
+          });
+        }
+      });
+    };
+    el.addEventListener("pane-changed", onPaneChanged);
+    cleanups.push(() => el.removeEventListener("pane-changed", onPaneChanged));
+
     // Update xterm colors when the app theme changes
     const onThemeChanged = () => {
       const nt = getTheme().terminal;

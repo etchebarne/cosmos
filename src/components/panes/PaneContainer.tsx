@@ -98,7 +98,7 @@ function SplitView({ node }: { node: Extract<PaneNode, { type: "split" }> }) {
 
 function LeafPane({ node }: { node: Extract<PaneNode, { type: "leaf" }> }) {
   const contentRef = useRef<HTMLDivElement>(null);
-  usePaneContainer(node.id, contentRef);
+  usePaneContainer(node.id, node.tabs, node.activeTabId, contentRef);
 
   return (
     <div className="flex flex-col w-full h-full min-w-0 min-h-0">
