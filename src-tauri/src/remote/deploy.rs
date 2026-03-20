@@ -8,13 +8,13 @@ const CREATE_NO_WINDOW: u32 = 0x08000000;
 /// Remote directory name — dev builds use a separate directory so they don't
 /// kill the production daemon (pkill) or overwrite the production binary.
 pub const REMOTE_DIR: &str = if cfg!(debug_assertions) {
-    ".cosmos-agent-dev"
+    ".kosmos-agent-dev"
 } else {
-    ".cosmos-agent"
+    ".kosmos-agent"
 };
 
 /// Locate the agent binary bundled with the app.
-/// In development: src-tauri/resources/cosmos-agent
+/// In development: src-tauri/resources/kosmos-agent
 /// In production: bundled via Tauri resources
 fn bundled_agent_path(app: &AppHandle) -> Result<PathBuf, String> {
     let resource_dir = app
@@ -22,7 +22,7 @@ fn bundled_agent_path(app: &AppHandle) -> Result<PathBuf, String> {
         .resource_dir()
         .map_err(|e| format!("Failed to get resource dir: {e}"))?;
 
-    let path = resource_dir.join("resources").join("cosmos-agent");
+    let path = resource_dir.join("resources").join("kosmos-agent");
     if path.exists() {
         return Ok(path);
     }
@@ -31,7 +31,7 @@ fn bundled_agent_path(app: &AppHandle) -> Result<PathBuf, String> {
     let dev_path = resource_dir
         .parent()
         .and_then(|p| p.parent()) // target/debug -> target -> src-tauri
-        .map(|p| p.join("resources").join("cosmos-agent"));
+        .map(|p| p.join("resources").join("kosmos-agent"));
 
     if let Some(p) = dev_path {
         if p.exists() {
@@ -39,12 +39,12 @@ fn bundled_agent_path(app: &AppHandle) -> Result<PathBuf, String> {
         }
     }
 
-    Err("Agent binary not found. Run: cargo build -p cosmos-agent --target x86_64-unknown-linux-musl, then copy to src-tauri/resources/".into())
+    Err("Agent binary not found. Run: cargo build -p kosmos-agent --target x86_64-unknown-linux-musl, then copy to src-tauri/resources/".into())
 }
 
 /// Check the version of the installed agent in a WSL distro.
 pub async fn check_remote_version(distro: &str) -> Option<String> {
-    let bin = format!("~/{REMOTE_DIR}/cosmos-agent");
+    let bin = format!("~/{REMOTE_DIR}/kosmos-agent");
     let output = run_wsl(distro, &[&bin, "--version"])
         .await
         .ok()?;
@@ -84,12 +84,12 @@ async fn binaries_match(distro: &str, local_wsl_path: &str, remote_bin: &str) ->
     }
 }
 
-/// Deploy the cosmos-agent binary into a WSL distro.
+/// Deploy the kosmos-agent binary into a WSL distro.
 /// Copies the pre-built Linux binary from the app bundle.
 /// Skips the copy if the remote binary already matches (by SHA256).
 pub async fn deploy_to_wsl(app: &AppHandle, distro: &str) -> Result<(), String> {
     let dir = format!("~/{REMOTE_DIR}");
-    let bin = format!("~/{REMOTE_DIR}/cosmos-agent");
+    let bin = format!("~/{REMOTE_DIR}/kosmos-agent");
 
     run_wsl(distro, &["mkdir", "-p", &dir]).await?;
 
@@ -110,7 +110,7 @@ pub async fn deploy_to_wsl(app: &AppHandle, distro: &str) -> Result<(), String> 
     Ok(())
 }
 
-/// Deploy the cosmos-agent binary to an SSH host.
+/// Deploy the kosmos-agent binary to an SSH host.
 /// Copies the pre-built agent binary via scp.
 pub async fn deploy_to_ssh(
     app: &tauri::AppHandle,
@@ -123,7 +123,7 @@ pub async fn deploy_to_ssh(
     };
 
     let dir = format!("~/{REMOTE_DIR}");
-    let bin = format!("~/{REMOTE_DIR}/cosmos-agent");
+    let bin = format!("~/{REMOTE_DIR}/kosmos-agent");
 
     let output = tokio::process::Command::new("ssh")
         .args([&target, "mkdir", "-p", &dir])

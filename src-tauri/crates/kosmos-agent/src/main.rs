@@ -2,19 +2,19 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use cosmos_core::EventSink;
-use cosmos_protocol::events::Event;
-use cosmos_protocol::framing;
-use cosmos_protocol::requests::{Request, RequestMessage, ResponseMessage};
+use kosmos_core::EventSink;
+use kosmos_protocol::events::Event;
+use kosmos_protocol::framing;
+use kosmos_protocol::requests::{Request, RequestMessage, ResponseMessage};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::broadcast;
 
 // ── Shared types ──
 
 struct AgentState {
-    watcher: cosmos_core::watcher::WatcherManager,
-    terminals: cosmos_core::terminal::TerminalManager,
-    lsp: cosmos_core::lsp::LspManager,
+    watcher: kosmos_core::watcher::WatcherManager,
+    terminals: kosmos_core::terminal::TerminalManager,
+    lsp: kosmos_core::lsp::LspManager,
 }
 
 // ── Helpers ──
@@ -23,7 +23,7 @@ fn agent_data_dir() -> PathBuf {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
         .unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".cosmos-agent")
+    PathBuf::from(home).join(".kosmos-agent")
 }
 
 /// If `node` isn't available but an alternative JS runtime (bun) is,
@@ -113,155 +113,155 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
     match request {
         // ── File tree ──
         Request::ReadDir { path } => {
-            let r = cosmos_core::file_tree::read_dir(&path)?;
+            let r = kosmos_core::file_tree::read_dir(&path)?;
             Ok(to_json(r)?)
         }
         Request::MoveFile { source, dest_dir } => {
-            let r = cosmos_core::file_tree::move_file(&source, &dest_dir)?;
+            let r = kosmos_core::file_tree::move_file(&source, &dest_dir)?;
             Ok(to_json(r)?)
         }
         Request::CreateFile { path } => {
-            cosmos_core::file_tree::create_file(&path)?;
+            kosmos_core::file_tree::create_file(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::CreateDir { path } => {
-            cosmos_core::file_tree::create_dir(&path)?;
+            kosmos_core::file_tree::create_dir(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::RenameEntry { path, new_name } => {
-            let r = cosmos_core::file_tree::rename_entry(&path, &new_name)?;
+            let r = kosmos_core::file_tree::rename_entry(&path, &new_name)?;
             Ok(to_json(r)?)
         }
         Request::CopyEntry { source, dest_dir } => {
-            let r = cosmos_core::file_tree::copy_entry(&source, &dest_dir)?;
+            let r = kosmos_core::file_tree::copy_entry(&source, &dest_dir)?;
             Ok(to_json(r)?)
         }
         Request::TrashEntry { path } => {
-            cosmos_core::file_tree::trash_entry(&path)?;
+            kosmos_core::file_tree::trash_entry(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::DeleteEntry { path } => {
-            cosmos_core::file_tree::delete_entry(&path)?;
+            kosmos_core::file_tree::delete_entry(&path)?;
             Ok(serde_json::Value::Null)
         }
 
         // ── Editor ──
         Request::ReadFile { path } => {
-            let r = cosmos_core::editor::read_file(&path)?;
+            let r = kosmos_core::editor::read_file(&path)?;
             Ok(to_json(r)?)
         }
         Request::WriteFile { path, content } => {
-            cosmos_core::editor::write_file(&path, &content)?;
+            kosmos_core::editor::write_file(&path, &content)?;
             Ok(serde_json::Value::Null)
         }
 
         // ── Git ──
         Request::GetGitBranch { path } => {
-            let r = cosmos_core::git::get_git_branch(&path)?;
+            let r = kosmos_core::git::get_git_branch(&path)?;
             Ok(to_json(r)?)
         }
         Request::GetGitStatus { path } => {
-            let r = cosmos_core::git::get_git_status(&path)?;
+            let r = kosmos_core::git::get_git_status(&path)?;
             Ok(to_json(r)?)
         }
         Request::GitStage { path, files } => {
-            cosmos_core::git::git_stage(&path, files)?;
+            kosmos_core::git::git_stage(&path, files)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitUnstage { path, files } => {
-            cosmos_core::git::git_unstage(&path, files)?;
+            kosmos_core::git::git_unstage(&path, files)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitStageAll { path } => {
-            cosmos_core::git::git_stage_all(&path)?;
+            kosmos_core::git::git_stage_all(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitCommit { path, message } => {
-            cosmos_core::git::git_commit(&path, &message)?;
+            kosmos_core::git::git_commit(&path, &message)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitListBranches { path } => {
-            let r = cosmos_core::git::git_list_branches(&path)?;
+            let r = kosmos_core::git::git_list_branches(&path)?;
             Ok(to_json(r)?)
         }
         Request::GitCheckout { path, branch } => {
-            cosmos_core::git::git_checkout(&path, &branch)?;
+            kosmos_core::git::git_checkout(&path, &branch)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitDeleteBranch { path, branch } => {
-            cosmos_core::git::git_delete_branch(&path, &branch)?;
+            kosmos_core::git::git_delete_branch(&path, &branch)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitDiscard { path, files } => {
-            cosmos_core::git::git_discard(&path, files)?;
+            kosmos_core::git::git_discard(&path, files)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitTrashUntracked { path, files } => {
-            cosmos_core::git::git_trash_untracked(&path, files)?;
+            kosmos_core::git::git_trash_untracked(&path, files)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitStashAll { path } => {
-            cosmos_core::git::git_stash_all(&path)?;
+            kosmos_core::git::git_stash_all(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitStashFiles { path, files } => {
-            cosmos_core::git::git_stash_files(&path, files)?;
+            kosmos_core::git::git_stash_files(&path, files)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitStashList { path } => {
-            let r = cosmos_core::git::git_stash_list(&path)?;
+            let r = kosmos_core::git::git_stash_list(&path)?;
             Ok(to_json(r)?)
         }
         Request::GitStashShow { path, index } => {
-            let r = cosmos_core::git::git_stash_show(&path, index)?;
+            let r = kosmos_core::git::git_stash_show(&path, index)?;
             Ok(to_json(r)?)
         }
         Request::GitStashPop { path, index } => {
-            cosmos_core::git::git_stash_pop(&path, index)?;
+            kosmos_core::git::git_stash_pop(&path, index)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitStashDrop { path, index } => {
-            cosmos_core::git::git_stash_drop(&path, index)?;
+            kosmos_core::git::git_stash_drop(&path, index)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitDiscardAllTracked { path } => {
-            cosmos_core::git::git_discard_all_tracked(&path)?;
+            kosmos_core::git::git_discard_all_tracked(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitTrashAllUntracked { path } => {
-            cosmos_core::git::git_trash_all_untracked(&path)?;
+            kosmos_core::git::git_trash_all_untracked(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitDiff { path, file } => {
-            let r = cosmos_core::git::git_diff(&path, &file)?;
+            let r = kosmos_core::git::git_diff(&path, &file)?;
             Ok(to_json(r)?)
         }
         Request::GitDiffUntracked { path, file } => {
-            let r = cosmos_core::git::git_diff_untracked(&path, &file)?;
+            let r = kosmos_core::git::git_diff_untracked(&path, &file)?;
             Ok(to_json(r)?)
         }
         Request::GitInit { path } => {
-            cosmos_core::git::git_init(&path)?;
+            kosmos_core::git::git_init(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitFetch { path } => {
-            cosmos_core::git::git_fetch(&path)?;
+            kosmos_core::git::git_fetch(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitPull { path } => {
-            cosmos_core::git::git_pull(&path)?;
+            kosmos_core::git::git_pull(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitPullRebase { path } => {
-            cosmos_core::git::git_pull_rebase(&path)?;
+            kosmos_core::git::git_pull_rebase(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitPush { path } => {
-            cosmos_core::git::git_push(&path)?;
+            kosmos_core::git::git_push(&path)?;
             Ok(serde_json::Value::Null)
         }
         Request::GitForcePush { path } => {
-            cosmos_core::git::git_force_push(&path)?;
+            kosmos_core::git::git_force_push(&path)?;
             Ok(serde_json::Value::Null)
         }
 
@@ -277,7 +277,7 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
 
         // ── Terminal ──
         Request::TerminalListShells => {
-            let r = cosmos_core::terminal::list_shells();
+            let r = kosmos_core::terminal::list_shells();
             Ok(to_json(r)?)
         }
         Request::TerminalList => {
@@ -343,7 +343,7 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
             language_id,
             workspace_path,
         } => {
-            let r = cosmos_core::lsp::LspManager::resolve_root(
+            let r = kosmos_core::lsp::LspManager::resolve_root(
                 &file_path,
                 &language_id,
                 &workspace_path,
@@ -351,7 +351,7 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
             Ok(to_json(r)?)
         }
         Request::LspLanguageGroups => {
-            let r = cosmos_core::lsp::LspManager::language_groups();
+            let r = kosmos_core::lsp::LspManager::language_groups();
             Ok(to_json(r)?)
         }
         Request::LspInstalledList => {
@@ -432,7 +432,7 @@ async fn handle_client(
         let req_msg: RequestMessage = match serde_json::from_str(&msg) {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("[cosmos-daemon] parse error: {e}");
+                eprintln!("[kosmos-daemon] parse error: {e}");
                 continue;
             }
         };
@@ -460,7 +460,7 @@ async fn handle_client(
     }
 
     event_task.abort();
-    eprintln!("[cosmos-daemon] client disconnected");
+    eprintln!("[kosmos-daemon] client disconnected");
 }
 
 async fn daemon_main() {
@@ -483,7 +483,7 @@ async fn daemon_main() {
     let listener = match tokio::net::UnixListener::bind(&sock_path) {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("[cosmos-daemon] failed to bind socket: {e}");
+            eprintln!("[kosmos-daemon] failed to bind socket: {e}");
             return;
         }
     };
@@ -500,12 +500,12 @@ async fn daemon_main() {
     });
 
     let state = Arc::new(AgentState {
-        watcher: cosmos_core::watcher::WatcherManager::new(events.clone()),
-        terminals: cosmos_core::terminal::TerminalManager::new(events.clone()),
-        lsp: cosmos_core::lsp::LspManager::new(events, servers_dir, None),
+        watcher: kosmos_core::watcher::WatcherManager::new(events.clone()),
+        terminals: kosmos_core::terminal::TerminalManager::new(events.clone()),
+        lsp: kosmos_core::lsp::LspManager::new(events, servers_dir, None),
     });
 
-    eprintln!("[cosmos-daemon] listening on {}", sock_path.display());
+    eprintln!("[kosmos-daemon] listening on {}", sock_path.display());
 
     // Clean up socket on exit
     struct SocketCleanup(PathBuf);
@@ -519,7 +519,7 @@ async fn daemon_main() {
     loop {
         match listener.accept().await {
             Ok((stream, _)) => {
-                eprintln!("[cosmos-daemon] client connected");
+                eprintln!("[kosmos-daemon] client connected");
                 let state = state.clone();
                 let event_tx = event_tx.clone();
                 tokio::spawn(async move {
@@ -527,7 +527,7 @@ async fn daemon_main() {
                 });
             }
             Err(e) => {
-                eprintln!("[cosmos-daemon] accept error: {e}");
+                eprintln!("[kosmos-daemon] accept error: {e}");
             }
         }
     }
@@ -555,7 +555,7 @@ fn ensure_daemon(data_dir: &Path) {
     let exe = match std::env::current_exe() {
         Ok(e) => e,
         Err(e) => {
-            eprintln!("[cosmos-agent] failed to get current exe: {e}");
+            eprintln!("[kosmos-agent] failed to get current exe: {e}");
             std::process::exit(1);
         }
     };
@@ -573,7 +573,7 @@ fn ensure_daemon(data_dir: &Path) {
         .stderr(stderr_target)
         .spawn()
     {
-        eprintln!("[cosmos-agent] failed to start daemon: {e}");
+        eprintln!("[kosmos-agent] failed to start daemon: {e}");
         std::process::exit(1);
     }
 
@@ -587,7 +587,7 @@ fn ensure_daemon(data_dir: &Path) {
         }
     }
 
-    eprintln!("[cosmos-agent] daemon did not start within 5s");
+    eprintln!("[kosmos-agent] daemon did not start within 5s");
     std::process::exit(1);
 }
 
@@ -600,7 +600,7 @@ async fn client_main() {
     let stream = match tokio::net::UnixStream::connect(&sock_path).await {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("[cosmos-agent] failed to connect to daemon: {e}");
+            eprintln!("[kosmos-agent] failed to connect to daemon: {e}");
             std::process::exit(1);
         }
     };
@@ -669,9 +669,9 @@ async fn inline_main() {
     });
 
     let state = Arc::new(AgentState {
-        watcher: cosmos_core::watcher::WatcherManager::new(events.clone()),
-        terminals: cosmos_core::terminal::TerminalManager::new(events.clone()),
-        lsp: cosmos_core::lsp::LspManager::new(events, servers_dir, None),
+        watcher: kosmos_core::watcher::WatcherManager::new(events.clone()),
+        terminals: kosmos_core::terminal::TerminalManager::new(events.clone()),
+        lsp: kosmos_core::lsp::LspManager::new(events, servers_dir, None),
     });
 
     let writer = stdout_writer.clone();
@@ -685,14 +685,14 @@ async fn inline_main() {
                 Ok(msg) => msg,
                 Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
                 Err(e) => {
-                    eprintln!("[cosmos-agent] read error: {e}");
+                    eprintln!("[kosmos-agent] read error: {e}");
                     break;
                 }
             };
             let req_msg: RequestMessage = match serde_json::from_str(&msg) {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("[cosmos-agent] parse error: {e}");
+                    eprintln!("[kosmos-agent] parse error: {e}");
                     continue;
                 }
             };

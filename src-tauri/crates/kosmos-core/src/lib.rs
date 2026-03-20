@@ -5,11 +5,11 @@ pub mod lsp;
 pub mod terminal;
 pub mod watcher;
 
-pub use cosmos_protocol;
+pub use kosmos_protocol;
 
 /// Trait for delivering events from core modules to the host or agent.
 /// The Tauri host implements this to emit Tauri events.
 /// The remote agent implements this to write JSON-RPC notifications to stdout.
 pub trait EventSink: Send + Sync + 'static {
-    fn emit(&self, event: cosmos_protocol::events::Event);
+    fn emit(&self, event: kosmos_protocol::events::Event);
 }

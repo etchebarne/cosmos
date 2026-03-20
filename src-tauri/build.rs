@@ -10,16 +10,16 @@ fn build_agent() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let workspace_root = Path::new(&manifest_dir);
     let resources_dir = workspace_root.join("resources");
-    let agent_binary = resources_dir.join("cosmos-agent");
+    let agent_binary = resources_dir.join("kosmos-agent");
 
     // Always tell cargo when to re-run this script
-    println!("cargo:rerun-if-changed=crates/cosmos-agent/src");
-    println!("cargo:rerun-if-changed=crates/cosmos-agent/Cargo.toml");
-    println!("cargo:rerun-if-changed=crates/cosmos-core/src");
-    println!("cargo:rerun-if-changed=crates/cosmos-core/Cargo.toml");
-    println!("cargo:rerun-if-changed=crates/cosmos-protocol/src");
-    println!("cargo:rerun-if-changed=crates/cosmos-protocol/Cargo.toml");
-    println!("cargo:rerun-if-changed=resources/cosmos-agent");
+    println!("cargo:rerun-if-changed=crates/kosmos-agent/src");
+    println!("cargo:rerun-if-changed=crates/kosmos-agent/Cargo.toml");
+    println!("cargo:rerun-if-changed=crates/kosmos-core/src");
+    println!("cargo:rerun-if-changed=crates/kosmos-core/Cargo.toml");
+    println!("cargo:rerun-if-changed=crates/kosmos-protocol/src");
+    println!("cargo:rerun-if-changed=crates/kosmos-protocol/Cargo.toml");
+    println!("cargo:rerun-if-changed=resources/kosmos-agent");
 
     // Skip if agent binary is newer than all source files
     if agent_binary.exists() {
@@ -28,15 +28,15 @@ fn build_agent() {
             .ok();
 
         let source_dirs = [
-            workspace_root.join("crates/cosmos-agent/src"),
-            workspace_root.join("crates/cosmos-core/src"),
-            workspace_root.join("crates/cosmos-protocol/src"),
+            workspace_root.join("crates/kosmos-agent/src"),
+            workspace_root.join("crates/kosmos-core/src"),
+            workspace_root.join("crates/kosmos-protocol/src"),
         ];
 
         let cargo_tomls = [
-            workspace_root.join("crates/cosmos-agent/Cargo.toml"),
-            workspace_root.join("crates/cosmos-core/Cargo.toml"),
-            workspace_root.join("crates/cosmos-protocol/Cargo.toml"),
+            workspace_root.join("crates/kosmos-agent/Cargo.toml"),
+            workspace_root.join("crates/kosmos-core/Cargo.toml"),
+            workspace_root.join("crates/kosmos-protocol/Cargo.toml"),
         ];
 
         let newest_source = source_dirs
@@ -64,7 +64,7 @@ fn build_agent() {
         let installed = String::from_utf8_lossy(&output.stdout);
         if !installed.lines().any(|l| l.trim() == target) {
             println!("cargo:warning=Linux musl target not installed. Run: rustup target add {target}");
-            println!("cargo:warning=Skipping cosmos-agent cross-compilation.");
+            println!("cargo:warning=Skipping kosmos-agent cross-compilation.");
             return;
         }
     }
@@ -73,13 +73,13 @@ fn build_agent() {
 
     let target_dir = workspace_root.join("target").join("agent-linux");
 
-    println!("cargo:warning=Cross-compiling cosmos-agent for {target}...");
+    println!("cargo:warning=Cross-compiling kosmos-agent for {target}...");
 
     let status = Command::new("cargo")
         .args([
             "build",
             "-p",
-            "cosmos-agent",
+            "kosmos-agent",
             "--target",
             target,
             "--target-dir",
@@ -89,20 +89,20 @@ fn build_agent() {
 
     match status {
         Ok(s) if s.success() => {
-            let built = target_dir.join(target).join("debug").join("cosmos-agent");
+            let built = target_dir.join(target).join("debug").join("kosmos-agent");
             if built.exists() {
                 std::fs::copy(&built, &agent_binary).ok();
-                println!("cargo:warning=cosmos-agent built successfully.");
+                println!("cargo:warning=kosmos-agent built successfully.");
             }
         }
         Ok(s) => {
             println!(
-                "cargo:warning=cosmos-agent build failed (exit {:?}). Remote features won't work.",
+                "cargo:warning=kosmos-agent build failed (exit {:?}). Remote features won't work.",
                 s.code()
             );
         }
         Err(e) => {
-            println!("cargo:warning=Failed to run cargo for cosmos-agent: {e}");
+            println!("cargo:warning=Failed to run cargo for kosmos-agent: {e}");
         }
     }
 }

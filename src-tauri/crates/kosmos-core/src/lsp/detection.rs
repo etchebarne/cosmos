@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 
 use serde::Deserialize;
 
-use cosmos_protocol::types::{DetectedProject, ServerAvailability};
+use kosmos_protocol::types::{DetectedProject, ServerAvailability};
 
 #[cfg(feature = "installer")]
 use super::installer;

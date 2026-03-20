@@ -137,9 +137,9 @@ function registerEditorOpener(monaco: Monaco) {
   });
 }
 
-function defineCosmosTheme(monaco: Monaco) {
+function defineKosmosTheme(monaco: Monaco) {
   const t = getTheme();
-  monaco.editor.defineTheme("cosmos", {
+  monaco.editor.defineTheme("kosmos", {
     base: t.type === "dark" ? "vs-dark" : "vs",
     inherit: true,
     rules: [{ token: "tag", foreground: "569cd6" }],
@@ -253,8 +253,8 @@ export function EditorTab({ tab }: TabContentProps) {
     const handler = () => {
       const monaco = monacoRef.current;
       if (!monaco) return;
-      defineCosmosTheme(monaco);
-      monaco.editor.setTheme("cosmos");
+      defineKosmosTheme(monaco);
+      monaco.editor.setTheme("kosmos");
     };
     window.addEventListener("theme-changed", handler);
     return () => window.removeEventListener("theme-changed", handler);
@@ -467,7 +467,7 @@ export function EditorTab({ tab }: TabContentProps) {
 
   function handleBeforeMount(monaco: Monaco) {
     monacoRef.current = monaco;
-    defineCosmosTheme(monaco);
+    defineKosmosTheme(monaco);
     setupMonacoLanguages(monaco);
     registerEditorOpener(monaco);
 
@@ -524,7 +524,7 @@ export function EditorTab({ tab }: TabContentProps) {
         <Editor
           path={fileUri ?? undefined}
           defaultValue={content ?? ""}
-          theme="cosmos"
+          theme="kosmos"
           beforeMount={handleBeforeMount}
           onMount={handleEditorDidMount}
           options={{

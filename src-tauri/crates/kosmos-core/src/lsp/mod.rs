@@ -12,8 +12,8 @@ use tokio::io::BufReader;
 use tokio::process::{Child, ChildStdin};
 use tokio::sync::Mutex;
 
-use cosmos_protocol::events::Event;
-use cosmos_protocol::types::{
+use kosmos_protocol::events::Event;
+use kosmos_protocol::types::{
     DetectedProject, InstalledServer, LspStartResult, RegistryEntry, ServerAvailability,
 };
 

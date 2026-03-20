@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use cosmos_protocol::types::DirEntry;
+use kosmos_protocol::types::DirEntry;
 
 /// Validate that a path doesn't contain traversal components (`..`).
 /// This prevents escaping workspace boundaries on the remote agent.

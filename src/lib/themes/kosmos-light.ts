@@ -1,7 +1,7 @@
 import type { Theme } from "./types";
 
-export const cosmosLight: Theme = {
-  name: "cosmos-light",
+export const kosmosLight: Theme = {
+  name: "kosmos-light",
   type: "light",
 
   ui: {

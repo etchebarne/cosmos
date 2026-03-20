@@ -1,4 +1,4 @@
-use cosmos_protocol::requests::Request;
+use kosmos_protocol::requests::Request;
 use tauri::State;
 
 use crate::remote::router::BackendRouter;
@@ -14,7 +14,7 @@ pub async fn read_file(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::editor::read_file(&path)
+        kosmos_core::editor::read_file(&path)
     }
 }
 
@@ -35,6 +35,6 @@ pub async fn write_file(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::editor::write_file(&path, &content)
+        kosmos_core::editor::write_file(&path, &content)
     }
 }

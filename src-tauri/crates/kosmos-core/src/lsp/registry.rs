@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use cosmos_protocol::types::{PlatformAsset, RegistryEntry};
+use kosmos_protocol::types::{PlatformAsset, RegistryEntry};
 
 const REGISTRY_JSON: &str = include_str!("registry.json");
 

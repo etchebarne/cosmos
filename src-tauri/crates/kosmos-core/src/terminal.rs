@@ -4,8 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 
-use cosmos_protocol::events::Event;
-use cosmos_protocol::types::ShellInfo;
+use kosmos_protocol::events::Event;
+use kosmos_protocol::types::ShellInfo;
 
 use crate::EventSink;
 

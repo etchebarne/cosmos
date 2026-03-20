@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
 
-use cosmos_protocol::types::*;
+use kosmos_protocol::types::*;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;

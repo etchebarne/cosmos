@@ -1,21 +1,21 @@
 import type { Theme } from "./types";
 
-export const cosmosEmber: Theme = {
-  name: "cosmos-ember",
+export const kosmosDark: Theme = {
+  name: "kosmos-dark",
   type: "dark",
 
   ui: {
     bg: {
-      page: "#121212",
+      page: "#111111",
       surface: "#1a1a1a",
-      elevated: "#242424",
+      elevated: "#222222",
       input: "#2a2a2a",
-      hover: "#242424",
-      primary: "#121212",
+      hover: "#222222",
+      primary: "#111111",
       tertiary: "#2a2a2a",
       projectBar: "#0e0e0e",
       tabActive: "#1a1a1a",
-      tabInactive: "#121212",
+      tabInactive: "#111111",
     },
     text: {
       primary: "#e8e8e8",
@@ -29,9 +29,9 @@ export const cosmosEmber: Theme = {
       divider: "#3a3a3a",
     },
     accent: {
-      blue: "#f28c38",
-      blueHover: "#f5a05a",
-      blueMuted: "#f28c3820",
+      blue: "#4b8ef5",
+      blueHover: "#5e9df7",
+      blueMuted: "#4b8ef520",
     },
     status: {
       red: "#f87171",
@@ -46,16 +46,16 @@ export const cosmosEmber: Theme = {
   },
 
   terminal: {
-    background: "#121212",
+    background: "#111111",
     foreground: "#e8e8e8",
-    cursor: "#f28c38",
-    cursorAccent: "#121212",
+    cursor: "#e8e8e8",
+    cursorAccent: "#111111",
     selection: "rgba(255, 255, 255, 0.15)",
     black: "#000000",
     red: "#f87171",
     green: "#34d399",
     yellow: "#fbbf24",
-    blue: "#f28c38",
+    blue: "#4b8ef5",
     magenta: "#c678dd",
     cyan: "#56b6c2",
     white: "#e8e8e8",
@@ -63,28 +63,28 @@ export const cosmosEmber: Theme = {
     brightRed: "#f87171",
     brightGreen: "#34d399",
     brightYellow: "#fbbf24",
-    brightBlue: "#f5a05a",
+    brightBlue: "#5e9df7",
     brightMagenta: "#c678dd",
     brightCyan: "#56b6c2",
     brightWhite: "#ffffff",
   },
 
   editor: {
-    background: "#121212",
+    background: "#111111",
     foreground: "#e8e8e8",
     lineHighlight: "#1a1a1a80",
-    selection: "#f28c3840",
-    inactiveSelection: "#f28c3820",
+    selection: "#4b8ef540",
+    inactiveSelection: "#4b8ef520",
     lineNumber: "#4a4a4a",
     lineNumberActive: "#9d9d9d",
-    cursor: "#f28c38",
+    cursor: "#4b8ef5",
     indentGuide: "#2e2e2e",
     indentGuideActive: "#3a3a3a",
     widget: "#1a1a1a",
     widgetBorder: "#2e2e2e",
     suggestBackground: "#1a1a1a",
     suggestBorder: "#2e2e2e",
-    suggestSelected: "#242424",
+    suggestSelected: "#222222",
   },
 
   diff: {

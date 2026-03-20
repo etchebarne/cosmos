@@ -1,6 +1,6 @@
-use cosmos_core::watcher::WatcherManager;
-use cosmos_protocol::requests::Request;
-use cosmos_protocol::types::*;
+use kosmos_core::watcher::WatcherManager;
+use kosmos_protocol::requests::Request;
+use kosmos_protocol::types::*;
 use tauri::State;
 
 use crate::remote::router::BackendRouter;
@@ -44,7 +44,7 @@ pub async fn get_git_branch(
         router,
         path,
         |p: String| Request::GetGitBranch { path: p },
-        cosmos_core::git::get_git_branch
+        kosmos_core::git::get_git_branch
     )
 }
 
@@ -57,7 +57,7 @@ pub async fn get_git_status(
         router,
         path,
         |p: String| Request::GetGitStatus { path: p },
-        cosmos_core::git::get_git_status
+        kosmos_core::git::get_git_status
     )
 }
 
@@ -78,7 +78,7 @@ pub async fn git_stage(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_stage(&path, files)
+        kosmos_core::git::git_stage(&path, files)
     }
 }
 
@@ -99,7 +99,7 @@ pub async fn git_unstage(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_unstage(&path, files)
+        kosmos_core::git::git_unstage(&path, files)
     }
 }
 
@@ -112,7 +112,7 @@ pub async fn git_stage_all(
         router,
         path,
         |p: String| Request::GitStageAll { path: p },
-        cosmos_core::git::git_stage_all
+        kosmos_core::git::git_stage_all
     )
 }
 
@@ -133,7 +133,7 @@ pub async fn git_commit(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_commit(&path, &message)
+        kosmos_core::git::git_commit(&path, &message)
     }
 }
 
@@ -146,7 +146,7 @@ pub async fn git_list_branches(
         router,
         path,
         |p: String| Request::GitListBranches { path: p },
-        cosmos_core::git::git_list_branches
+        kosmos_core::git::git_list_branches
     )
 }
 
@@ -167,7 +167,7 @@ pub async fn git_checkout(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_checkout(&path, &branch)
+        kosmos_core::git::git_checkout(&path, &branch)
     }
 }
 
@@ -188,7 +188,7 @@ pub async fn git_delete_branch(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_delete_branch(&path, &branch)
+        kosmos_core::git::git_delete_branch(&path, &branch)
     }
 }
 
@@ -209,7 +209,7 @@ pub async fn git_discard(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_discard(&path, files)
+        kosmos_core::git::git_discard(&path, files)
     }
 }
 
@@ -230,7 +230,7 @@ pub async fn git_trash_untracked(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_trash_untracked(&path, files)
+        kosmos_core::git::git_trash_untracked(&path, files)
     }
 }
 
@@ -243,7 +243,7 @@ pub async fn git_stash_all(
         router,
         path,
         |p: String| Request::GitStashAll { path: p },
-        cosmos_core::git::git_stash_all
+        kosmos_core::git::git_stash_all
     )
 }
 
@@ -264,7 +264,7 @@ pub async fn git_stash_files(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_stash_files(&path, files)
+        kosmos_core::git::git_stash_files(&path, files)
     }
 }
 
@@ -277,7 +277,7 @@ pub async fn git_stash_list(
         router,
         path,
         |p: String| Request::GitStashList { path: p },
-        cosmos_core::git::git_stash_list
+        kosmos_core::git::git_stash_list
     )
 }
 
@@ -298,7 +298,7 @@ pub async fn git_stash_show(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_stash_show(&path, index)
+        kosmos_core::git::git_stash_show(&path, index)
     }
 }
 
@@ -319,7 +319,7 @@ pub async fn git_stash_pop(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_stash_pop(&path, index)
+        kosmos_core::git::git_stash_pop(&path, index)
     }
 }
 
@@ -340,7 +340,7 @@ pub async fn git_stash_drop(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_stash_drop(&path, index)
+        kosmos_core::git::git_stash_drop(&path, index)
     }
 }
 
@@ -353,7 +353,7 @@ pub async fn git_discard_all_tracked(
         router,
         path,
         |p: String| Request::GitDiscardAllTracked { path: p },
-        cosmos_core::git::git_discard_all_tracked
+        kosmos_core::git::git_discard_all_tracked
     )
 }
 
@@ -366,7 +366,7 @@ pub async fn git_trash_all_untracked(
         router,
         path,
         |p: String| Request::GitTrashAllUntracked { path: p },
-        cosmos_core::git::git_trash_all_untracked
+        kosmos_core::git::git_trash_all_untracked
     )
 }
 
@@ -387,7 +387,7 @@ pub async fn git_diff(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_diff(&path, &file)
+        kosmos_core::git::git_diff(&path, &file)
     }
 }
 
@@ -408,7 +408,7 @@ pub async fn git_diff_untracked(
     } else if BackendRouter::is_remote_path(&path) {
         Err(format!("Remote agent not connected for path: {path}"))
     } else {
-        cosmos_core::git::git_diff_untracked(&path, &file)
+        kosmos_core::git::git_diff_untracked(&path, &file)
     }
 }
 
@@ -421,7 +421,7 @@ pub async fn git_init(
         router,
         path,
         |p: String| Request::GitInit { path: p },
-        cosmos_core::git::git_init
+        kosmos_core::git::git_init
     )
 }
 
@@ -434,7 +434,7 @@ pub async fn git_fetch(
         router,
         path,
         |p: String| Request::GitFetch { path: p },
-        cosmos_core::git::git_fetch
+        kosmos_core::git::git_fetch
     )
 }
 
@@ -447,7 +447,7 @@ pub async fn git_pull(
         router,
         path,
         |p: String| Request::GitPull { path: p },
-        cosmos_core::git::git_pull
+        kosmos_core::git::git_pull
     )
 }
 
@@ -460,7 +460,7 @@ pub async fn git_pull_rebase(
         router,
         path,
         |p: String| Request::GitPullRebase { path: p },
-        cosmos_core::git::git_pull_rebase
+        kosmos_core::git::git_pull_rebase
     )
 }
 
@@ -473,7 +473,7 @@ pub async fn git_push(
         router,
         path,
         |p: String| Request::GitPush { path: p },
-        cosmos_core::git::git_push
+        kosmos_core::git::git_push
     )
 }
 
@@ -486,7 +486,7 @@ pub async fn git_force_push(
         router,
         path,
         |p: String| Request::GitForcePush { path: p },
-        cosmos_core::git::git_force_push
+        kosmos_core::git::git_force_push
     )
 }
 

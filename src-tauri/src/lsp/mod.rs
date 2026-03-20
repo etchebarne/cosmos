@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use cosmos_core::lsp::LspManager;
-use cosmos_protocol::requests::Request;
-use cosmos_protocol::types::*;
+use kosmos_core::lsp::LspManager;
+use kosmos_protocol::requests::Request;
+use kosmos_protocol::types::*;
 use tauri::State;
 use tokio::sync::Mutex;
 

@@ -18,7 +18,7 @@ import { applyTheme } from "./lib/themes";
 import "overlayscrollbars/overlayscrollbars.css";
 import "./styles/globals.css";
 
-applyTheme("cosmos-dark");
+applyTheme("kosmos-dark");
 
 function WorkspacePane({
   workspace,

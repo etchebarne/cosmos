@@ -1,9 +1,9 @@
 [workspace]
-members = [".", "crates/cosmos-protocol", "crates/cosmos-core", "crates/cosmos-agent"]
+members = [".", "crates/kosmos-protocol", "crates/kosmos-core", "crates/kosmos-agent"]
 resolver = "2"
 
 [package]
-name = "cosmos"
+name = "kosmos"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -15,7 +15,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "cosmos_lib"
+name = "kosmos_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -39,6 +39,6 @@ tar = "0.4"
 portable-pty = "0.9"
 tauri-plugin-clipboard-manager = "2.3.2"
 trash = "5"
-cosmos-protocol = { path = "crates/cosmos-protocol" }
-cosmos-core = { path = "crates/cosmos-core" }
+kosmos-protocol = { path = "crates/kosmos-protocol" }
+kosmos-core = { path = "crates/kosmos-core" }
 

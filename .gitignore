@@ -30,4 +30,4 @@ CLAUDE.md
 AGENTS.md
 
 # Cross-compiled agent binary (built during build process)
-src-tauri/resources/cosmos-agent
+src-tauri/resources/kosmos-agent

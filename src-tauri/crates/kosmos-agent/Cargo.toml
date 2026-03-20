@@ -1,15 +1,15 @@
 [package]
-name = "cosmos-agent"
+name = "kosmos-agent"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "cosmos-agent"
+name = "kosmos-agent"
 path = "src/main.rs"
 
 [dependencies]
-cosmos-protocol = { path = "../cosmos-protocol" }
-cosmos-core = { path = "../cosmos-core" }
+kosmos-protocol = { path = "../kosmos-protocol" }
+kosmos-core = { path = "../kosmos-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 which = "7"

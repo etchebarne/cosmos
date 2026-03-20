@@ -42,7 +42,7 @@ pub async fn wsl_list_dir(distro: String, path: String) -> Result<Vec<WslDirEntr
 }
 
 /// Connect a workspace to a remote backend (WSL or SSH).
-/// Spawns a cosmos-agent process in the remote environment.
+/// Spawns a kosmos-agent process in the remote environment.
 #[tauri::command]
 pub async fn remote_connect(
     router: State<'_, BackendRouter>,

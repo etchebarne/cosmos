@@ -1,6 +1,6 @@
-use cosmos_core::terminal::TerminalManager;
-use cosmos_protocol::requests::Request;
-use cosmos_protocol::types::ShellInfo;
+use kosmos_core::terminal::TerminalManager;
+use kosmos_protocol::requests::Request;
+use kosmos_protocol::types::ShellInfo;
 use tauri::State;
 
 use crate::remote::router::BackendRouter;
@@ -16,7 +16,7 @@ pub async fn terminal_list_shells(
             return serde_json::from_value(val).map_err(|e| e.to_string());
         }
     }
-    Ok(cosmos_core::terminal::list_shells())
+    Ok(kosmos_core::terminal::list_shells())
 }
 
 #[tauri::command]

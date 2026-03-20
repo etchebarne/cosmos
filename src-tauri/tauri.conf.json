@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "cosmos",
+  "productName": "kosmos",
   "version": "0.1.0",
-  "identifier": "cosmos.etchebarne.net",
+  "identifier": "kosmos.etchebarne.net",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "cosmos",
+        "title": "Kosmos",
         "width": 1024,
         "height": 768,
         "minWidth": 800,
@@ -26,7 +26,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": ["resources/cosmos-agent"],
+    "resources": ["resources/kosmos-agent"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

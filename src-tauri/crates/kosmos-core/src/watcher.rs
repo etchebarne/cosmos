@@ -5,7 +5,7 @@ use std::time::Duration;
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use notify_debouncer_mini::new_debouncer;
 
-use cosmos_protocol::events::Event;
+use kosmos_protocol::events::Event;
 
 use crate::EventSink;
 

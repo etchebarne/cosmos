@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use cosmos_protocol::events::Event;
-use cosmos_protocol::requests::{Request, RequestMessage, ResponseMessage};
+use kosmos_protocol::events::Event;
+use kosmos_protocol::requests::{Request, RequestMessage, ResponseMessage};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, ChildStdout};
 use tokio::sync::{oneshot, Mutex};
@@ -15,7 +15,7 @@ const MAX_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
 
-/// A connection to a remote cosmos-agent process.
+/// A connection to a remote kosmos-agent process.
 pub struct RemoteAgent {
     child: Arc<Mutex<Child>>,
     stdin: Arc<Mutex<ChildStdin>>,
@@ -57,7 +57,7 @@ impl RemoteAgent {
                     "--",
                     "bash",
                     "-lc",
-                    &format!("exec ~/{remote_dir}/cosmos-agent"),
+                    &format!("exec ~/{remote_dir}/kosmos-agent"),
                 ]);
                 cmd.stdin(std::process::Stdio::piped())
                     .stdout(std::process::Stdio::piped())
@@ -80,7 +80,7 @@ impl RemoteAgent {
                     "-o", "ServerAliveInterval=15",
                     "-o", "ServerAliveCountMax=3",
                     &target,
-                    &format!("~/{remote_dir}/cosmos-agent"),
+                    &format!("~/{remote_dir}/kosmos-agent"),
                 ]);
                 cmd.stdin(std::process::Stdio::piped())
                     .stdout(std::process::Stdio::piped())
@@ -104,7 +104,7 @@ impl RemoteAgent {
                         Ok(_) => {
                             let trimmed = line.trim();
                             if !trimmed.is_empty() {
-                                eprintln!("[cosmos-agent stderr] {trimmed}");
+                                eprintln!("[kosmos-agent stderr] {trimmed}");
                             }
                         }
                     }
@@ -126,7 +126,7 @@ impl RemoteAgent {
             // Agent died — mark dead and fail all pending requests.
             // Terminal reconnection is handled by the frontend on next write.
             alive_clone.store(false, Ordering::SeqCst);
-            eprintln!("[cosmos-remote] Agent process exited");
+            eprintln!("[kosmos-remote] Agent process exited");
             let mut p = pending_clone.lock().await;
             for (_, tx) in p.drain() {
                 let _ = tx.send(ResponseMessage::err(0, "Agent connection lost".into()));

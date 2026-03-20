@@ -15,7 +15,7 @@ let themeRegistered = false;
 function ensureTheme() {
   if (themeRegistered) return;
   themeRegistered = true;
-  registerCustomTheme("cosmos", async () => {
+  registerCustomTheme("kosmos", async () => {
     const t = getTheme();
     const m = (await import("@pierre/theme/themes/pierre-dark.json")) as {
       default: Record<string, unknown>;
@@ -23,7 +23,7 @@ function ensureTheme() {
     const base = m.default ?? m;
     return {
       ...base,
-      name: "cosmos",
+      name: "kosmos",
       colors: {
         ...(base.colors as Record<string, string>),
         "editor.background": t.editor.background,
@@ -158,7 +158,7 @@ export function ChangesTab({ tab }: TabContentProps) {
       <PatchDiff
         patch={patch}
         options={{
-          theme: "cosmos",
+          theme: "kosmos",
           themeType: getTheme().type,
           diffStyle: "unified",
           disableFileHeader: true,

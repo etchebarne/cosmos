@@ -1,17 +1,17 @@
 import type { Theme } from "./types";
-import { cosmosDark } from "./cosmos-dark";
-import { cosmosLight } from "./cosmos-light";
-import { cosmosEmber } from "./cosmos-ember";
+import { kosmosDark } from "./kosmos-dark";
+import { kosmosLight } from "./kosmos-light";
+import { kosmosEmber } from "./kosmos-ember";
 
 export type { Theme } from "./types";
 
 const themes: Record<string, Theme> = {
-  "cosmos-dark": cosmosDark,
-  "cosmos-light": cosmosLight,
-  "cosmos-ember": cosmosEmber,
+  "kosmos-dark": kosmosDark,
+  "kosmos-light": kosmosLight,
+  "kosmos-ember": kosmosEmber,
 };
 
-let activeTheme: Theme = cosmosDark;
+let activeTheme: Theme = kosmosDark;
 
 /** Apply a theme: sets CSS variables on :root and updates the active reference. */
 export function applyTheme(name: string) {

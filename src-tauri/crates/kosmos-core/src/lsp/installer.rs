@@ -1,11 +1,11 @@
 use std::path::{Path, PathBuf};
 
-use cosmos_protocol::types::{InstalledServer, RegistryEntry};
+use kosmos_protocol::types::{InstalledServer, RegistryEntry};
 
 use super::registry::{find_platform_asset, resolve_template, strip_exec_prefix, strip_subpath};
 
 fn meta_path(servers_dir: &Path, name: &str) -> PathBuf {
-    servers_dir.join(name).join(".cosmos-meta.json")
+    servers_dir.join(name).join(".kosmos-meta.json")
 }
 
 pub fn get_installed_meta(servers_dir: &Path, name: &str) -> Option<InstalledServer> {
@@ -38,7 +38,7 @@ pub fn find_installed_binary(servers_dir: &Path, command: &str) -> Option<PathBu
     }
 
     for entry in std::fs::read_dir(servers_dir).ok()?.flatten() {
-        let meta_file = entry.path().join(".cosmos-meta.json");
+        let meta_file = entry.path().join(".kosmos-meta.json");
         if let Ok(content) = std::fs::read_to_string(&meta_file) {
             if let Ok(meta) = serde_json::from_str::<InstalledServer>(&content) {
                 let bin = entry.path().join(&meta.bin_path);
@@ -130,7 +130,7 @@ async fn install_github(entry: &RegistryEntry, install_dir: &Path) -> Result<Str
     let url = format!("https://github.com/{repo_path}/releases/download/{version}/{file_name}");
 
     let temp_dir = std::env::temp_dir();
-    let temp_file = temp_dir.join(format!("cosmos-lsp-{}.tmp", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    let temp_file = temp_dir.join(format!("kosmos-lsp-{}.tmp", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
 
     let output = shell_command("curl")
         .args(["-sSL", "-o", temp_file.to_str().unwrap(), &url])

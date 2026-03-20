@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum ConnectionType {
-    /// Local filesystem — uses cosmos-core directly.
+    /// Local filesystem — uses kosmos-core directly.
     Local,
-    /// WSL distro — spawns cosmos-agent via `wsl.exe -d <distro>`.
+    /// WSL distro — spawns kosmos-agent via `wsl.exe -d <distro>`.
     Wsl { distro: String },
-    /// SSH host — spawns cosmos-agent via `ssh <host>`.
+    /// SSH host — spawns kosmos-agent via `ssh <host>`.
     Ssh { host: String, user: Option<String> },
 }

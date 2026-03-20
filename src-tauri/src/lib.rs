@@ -7,8 +7,8 @@ mod terminal;
 
 use std::sync::Arc;
 
-use cosmos_core::EventSink;
-use cosmos_protocol::events::Event;
+use kosmos_core::EventSink;
+use kosmos_protocol::events::Event;
 use tauri::{AppHandle, Emitter, Manager};
 
 struct TauriEventSink(AppHandle);
@@ -68,10 +68,10 @@ pub fn run() {
             let events: Arc<dyn EventSink> = Arc::new(TauriEventSink(handle.clone()));
 
             // Watcher
-            app.manage(cosmos_core::watcher::WatcherManager::new(events.clone()));
+            app.manage(kosmos_core::watcher::WatcherManager::new(events.clone()));
 
             // Terminal
-            app.manage(cosmos_core::terminal::TerminalManager::new(events.clone()));
+            app.manage(kosmos_core::terminal::TerminalManager::new(events.clone()));
 
             // LSP
             let servers_dir = handle
@@ -84,7 +84,7 @@ pub fn run() {
                 .app_config_dir()
                 .ok()
                 .map(|d| d.join("custom-registry.json"));
-            app.manage(std::sync::Arc::new(cosmos_core::lsp::LspManager::new(
+            app.manage(std::sync::Arc::new(kosmos_core::lsp::LspManager::new(
                 events.clone(),
                 servers_dir,
                 custom_registry,

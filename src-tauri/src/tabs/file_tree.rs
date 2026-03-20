@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use cosmos_protocol::requests::Request;
-use cosmos_protocol::types::DirEntry;
+use kosmos_protocol::requests::Request;
+use kosmos_protocol::types::DirEntry;
 use tauri::AppHandle;
 use tauri::State;
 use tauri_plugin_opener::OpenerExt;
@@ -43,7 +43,7 @@ pub async fn read_dir(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        cosmos_core::file_tree::read_dir(&path)
+        kosmos_core::file_tree::read_dir(&path)
     }
 }
 
@@ -71,7 +71,7 @@ pub async fn move_file(
     } else if BackendRouter::is_remote_path(&source) {
         Err(no_agent_error(&source))
     } else {
-        cosmos_core::file_tree::move_file(&source, &dest_dir)
+        kosmos_core::file_tree::move_file(&source, &dest_dir)
     }
 }
 
@@ -88,7 +88,7 @@ pub async fn create_file(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        cosmos_core::file_tree::create_file(&path)
+        kosmos_core::file_tree::create_file(&path)
     }
 }
 
@@ -105,7 +105,7 @@ pub async fn create_dir(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        cosmos_core::file_tree::create_dir(&path)
+        kosmos_core::file_tree::create_dir(&path)
     }
 }
 
@@ -128,7 +128,7 @@ pub async fn rename_entry(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        cosmos_core::file_tree::rename_entry(&path, &new_name)
+        kosmos_core::file_tree::rename_entry(&path, &new_name)
     }
 }
 
@@ -156,7 +156,7 @@ pub async fn copy_entry(
     } else if BackendRouter::is_remote_path(&source) {
         Err(no_agent_error(&source))
     } else {
-        cosmos_core::file_tree::copy_entry(&source, &dest_dir)
+        kosmos_core::file_tree::copy_entry(&source, &dest_dir)
     }
 }
 
@@ -173,7 +173,7 @@ pub async fn trash_entry(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        cosmos_core::file_tree::trash_entry(&path)
+        kosmos_core::file_tree::trash_entry(&path)
     }
 }
 
@@ -190,7 +190,7 @@ pub async fn delete_entry(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        cosmos_core::file_tree::delete_entry(&path)
+        kosmos_core::file_tree::delete_entry(&path)
     }
 }
 

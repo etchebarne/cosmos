@@ -13,20 +13,20 @@ pub fn section() -> SettingsSection {
                 control: SettingControl::Dropdown {
                     options: vec![
                         DropdownOption {
-                            value: "cosmos-dark".into(),
-                            label: "Cosmos Dark".into(),
+                            value: "kosmos-dark".into(),
+                            label: "Kosmos Dark".into(),
                         },
                         DropdownOption {
-                            value: "cosmos-light".into(),
-                            label: "Cosmos Light".into(),
+                            value: "kosmos-light".into(),
+                            label: "Kosmos Light".into(),
                         },
                         DropdownOption {
-                            value: "cosmos-ember".into(),
-                            label: "Cosmos Ember".into(),
+                            value: "kosmos-ember".into(),
+                            label: "Kosmos Ember".into(),
                         },
                     ],
                 },
-                default_value: serde_json::json!("cosmos-dark"),
+                default_value: serde_json::json!("kosmos-dark"),
             }],
         }],
     }

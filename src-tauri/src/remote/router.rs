@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use cosmos_protocol::events::Event;
-use cosmos_protocol::requests::Request;
+use kosmos_protocol::events::Event;
+use kosmos_protocol::requests::Request;
 
 use super::agent::RemoteAgent;
 use super::connection::ConnectionType;
@@ -16,10 +16,10 @@ struct AgentEntry {
     connection: ConnectionType,
 }
 
-/// Routes requests to the appropriate backend: local cosmos-core or remote agent.
+/// Routes requests to the appropriate backend: local kosmos-core or remote agent.
 ///
 /// Each remote workspace has a `RemoteAgent` connection. Local workspaces use
-/// cosmos-core directly. The router manages the lifecycle of agent connections
+/// kosmos-core directly. The router manages the lifecycle of agent connections
 /// and automatically reconnects dead agents.
 pub struct BackendRouter {
     /// Active remote agent connections, keyed by workspace path.
@@ -72,7 +72,7 @@ impl BackendRouter {
         }
     }
 
-    /// Connect to a remote workspace. Spawns a cosmos-agent process.
+    /// Connect to a remote workspace. Spawns a kosmos-agent process.
     /// If already connected to this workspace, skips.
     pub async fn connect(
         &self,
@@ -176,10 +176,10 @@ impl BackendRouter {
 
         // Agent is dead — attempt transparent reconnection.
         if let Some((workspace_key, conn)) = reconnect_info {
-            eprintln!("[cosmos-remote] Agent dead for {workspace_key}, attempting reconnection...");
+            eprintln!("[kosmos-remote] Agent dead for {workspace_key}, attempting reconnection...");
             match self.connect(&workspace_key, conn).await {
                 Ok(()) => {
-                    eprintln!("[cosmos-remote] Reconnected to {workspace_key}");
+                    eprintln!("[kosmos-remote] Reconnected to {workspace_key}");
                     // Retry lookup with the new agent.
                     let agents = self.agents.lock().await;
                     if let Some(entry) = agents.get(&workspace_key) {
@@ -189,7 +189,7 @@ impl BackendRouter {
                     }
                 }
                 Err(e) => {
-                    eprintln!("[cosmos-remote] Reconnection failed for {workspace_key}: {e}");
+                    eprintln!("[kosmos-remote] Reconnection failed for {workspace_key}: {e}");
                     // Remove the dead entry so is_remote_path check triggers the right error
                     self.agents.lock().await.remove(&workspace_key);
                 }
