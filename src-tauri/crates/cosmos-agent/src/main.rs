@@ -440,9 +440,17 @@ async fn handle_client(
         let state = state.clone();
         let write = write.clone();
         tokio::spawn(async move {
-            let response = match dispatch(&state, req_msg.request).await {
-                Ok(result) => ResponseMessage::ok(req_msg.id, result),
-                Err(error) => ResponseMessage::err(req_msg.id, error),
+            // Run dispatch on the blocking thread pool so synchronous
+            // operations (git, file I/O) don't starve the async runtime.
+            let handle = tokio::runtime::Handle::current();
+            let response = match tokio::task::spawn_blocking(move || {
+                handle.block_on(dispatch(&state, req_msg.request))
+            })
+            .await
+            {
+                Ok(Ok(result)) => ResponseMessage::ok(req_msg.id, result),
+                Ok(Err(error)) => ResponseMessage::err(req_msg.id, error),
+                Err(e) => ResponseMessage::err(req_msg.id, format!("Task panicked: {e}")),
             };
             if let Ok(json) = serde_json::to_string(&response) {
                 let mut w = write.lock().await;
@@ -698,9 +706,17 @@ async fn inline_main() {
         let state = state.clone();
         let writer = writer.clone();
         tokio::spawn(async move {
-            let response = match dispatch(&state, request).await {
-                Ok(result) => ResponseMessage::ok(id, result),
-                Err(error) => ResponseMessage::err(id, error),
+            // Run dispatch on the blocking thread pool so synchronous
+            // operations (git, file I/O) don't starve the async runtime.
+            let handle = tokio::runtime::Handle::current();
+            let response = match tokio::task::spawn_blocking(move || {
+                handle.block_on(dispatch(&state, request))
+            })
+            .await
+            {
+                Ok(Ok(result)) => ResponseMessage::ok(id, result),
+                Ok(Err(error)) => ResponseMessage::err(id, error),
+                Err(e) => ResponseMessage::err(id, format!("Task panicked: {e}")),
             };
             send_response(&writer, &response);
         });

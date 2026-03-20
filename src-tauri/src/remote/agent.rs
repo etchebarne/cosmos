@@ -12,7 +12,7 @@ use tokio::sync::{oneshot, Mutex};
 use super::connection::ConnectionType;
 
 const MAX_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
 
 /// A connection to a remote cosmos-agent process.
@@ -56,7 +56,7 @@ impl RemoteAgent {
                     distro,
                     "--",
                     "bash",
-                    "-lic",
+                    "-lc",
                     &format!("exec ~/{remote_dir}/cosmos-agent"),
                 ]);
                 cmd.stdin(std::process::Stdio::piped())

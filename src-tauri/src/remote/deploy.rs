@@ -63,20 +63,47 @@ pub async fn ensure_wsl_running(distro: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Check whether the local (bundled) and remote agent binaries are identical
+/// by comparing SHA256 checksums. Runs both sha256sum commands in parallel.
+async fn binaries_match(distro: &str, local_wsl_path: &str, remote_bin: &str) -> bool {
+    let local_args = ["sha256sum", local_wsl_path];
+    let remote_args = ["sha256sum", remote_bin];
+    let (local_result, remote_result) = tokio::join!(
+        run_wsl(distro, &local_args),
+        run_wsl(distro, &remote_args),
+    );
+
+    let extract_hash = |r: Result<String, String>| -> Option<String> {
+        r.ok()
+            .and_then(|s| s.split_whitespace().next().map(|h| h.to_string()))
+    };
+
+    match (extract_hash(local_result), extract_hash(remote_result)) {
+        (Some(local), Some(remote)) => local == remote,
+        _ => false, // If either fails (e.g. remote doesn't exist), assume mismatch
+    }
+}
+
 /// Deploy the cosmos-agent binary into a WSL distro.
 /// Copies the pre-built Linux binary from the app bundle.
+/// Skips the copy if the remote binary already matches (by SHA256).
 pub async fn deploy_to_wsl(app: &AppHandle, distro: &str) -> Result<(), String> {
     let dir = format!("~/{REMOTE_DIR}");
     let bin = format!("~/{REMOTE_DIR}/cosmos-agent");
 
     run_wsl(distro, &["mkdir", "-p", &dir]).await?;
 
-    // Kill only agents in THIS directory so dev/prod don't interfere
-    let _ = run_wsl(distro, &["pkill", "-f", &bin]).await;
-
     let agent_src = bundled_agent_path(app)?;
     let wsl_path = windows_to_wsl_path(&agent_src.to_string_lossy());
 
+    // Skip kill + copy if the remote binary is already identical
+    if binaries_match(distro, &wsl_path, &bin).await {
+        return Ok(());
+    }
+
+    // Binary differs (or doesn't exist) — full deploy
+    // Kill only agents in THIS directory so dev/prod don't interfere
+    let _ = run_wsl(distro, &["pkill", "-f", &bin]).await;
     run_wsl(distro, &["cp", &wsl_path, &bin]).await?;
     run_wsl(distro, &["chmod", "+x", &bin]).await?;
 
