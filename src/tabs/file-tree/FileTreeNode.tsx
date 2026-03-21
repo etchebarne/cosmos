@@ -1,28 +1,16 @@
 import { useState, useCallback, useRef, useEffect, useContext } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { Icon } from "@phosphor-icons/react";
-import {
-  CaretRight,
-  Folder,
-  FolderOpen,
-  File,
-  FileCode,
-  Code,
-  FileText,
-  FileImage,
-  TextAa,
-  FileLock,
-  Terminal,
-  Wrench,
-} from "@phosphor-icons/react";
+import { CaretRight, Folder, FolderOpen, File } from "@phosphor-icons/react";
 import { create } from "zustand";
 import { useLayoutStore } from "../../store/layout.store";
+import { useIsDarkTheme } from "../../lib/themes";
 import { useDragStore } from "../../store/drag.store";
 import { ContextMenu } from "../../components/shared/ContextMenu";
 import type { ContextMenuItem } from "../../components/shared/ContextMenu";
 import type { DirEntry } from "./FileTreeTab";
 import { GitFileTreeContext } from "./git-file-tree-context";
+import { FileIcon } from "./file-icons";
 
 // ── Selection store ──
 
@@ -95,89 +83,17 @@ function joinPath(dir: string, name: string): string {
   return dir.endsWith("/") || dir.endsWith("\\") ? dir + name : dir + sep + name;
 }
 
-function getFileIcon(name: string, extension: string | null): Icon {
-  switch (name) {
-    case "Cargo.toml":
-    case "package.json":
-    case "tsconfig.json":
-    case "vite.config.ts":
-    case "tailwind.config.ts":
-      return Wrench;
-    case "Cargo.lock":
-    case "bun.lockb":
-    case "package-lock.json":
-      return FileLock;
-    case "Dockerfile":
-    case "Makefile":
-      return Terminal;
-  }
-
-  switch (extension) {
-    case "ts":
-    case "tsx":
-    case "js":
-    case "jsx":
-    case "rs":
-    case "py":
-    case "go":
-    case "rb":
-    case "java":
-    case "c":
-    case "cpp":
-    case "h":
-    case "css":
-    case "scss":
-    case "html":
-    case "vue":
-    case "svelte":
-    case "php":
-    case "swift":
-    case "kt":
-    case "sh":
-    case "bash":
-    case "zsh":
-      return FileCode;
-    case "json":
-    case "toml":
-    case "yaml":
-    case "yml":
-    case "xml":
-      return Code;
-    case "md":
-    case "txt":
-    case "log":
-    case "csv":
-      return FileText;
-    case "png":
-    case "jpg":
-    case "jpeg":
-    case "gif":
-    case "svg":
-    case "ico":
-    case "webp":
-    case "bmp":
-      return FileImage;
-    case "ttf":
-    case "otf":
-    case "woff":
-    case "woff2":
-      return TextAa;
-    default:
-      return File;
-  }
-}
-
 // ── Inline input ──
 
 function InlineInput({
   depth,
-  icon: IconComp,
+  iconNode,
   defaultValue,
   onConfirm,
   onCancel,
 }: {
   depth: number;
-  icon: Icon;
+  iconNode: React.ReactNode;
   defaultValue: string;
   onConfirm: (value: string) => void;
   onCancel: () => void;
@@ -219,7 +135,7 @@ function InlineInput({
         />
       ))}
       <span className="w-4 h-4 shrink-0" />
-      <IconComp size={14} className="shrink-0 text-[var(--color-text-tertiary)]" />
+      {iconNode}
       <input
         ref={inputRef}
         className="flex-1 text-[13px] bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-focus)] outline-none px-1 min-w-0"
@@ -259,6 +175,7 @@ export function FileTreeNode({
   const isCut = clipboard?.mode === "cut" && clipboard.files.some((f) => f.path === entry.path);
   const getGitColor = useContext(GitFileTreeContext);
   const gitColor = getGitColor(entry.path, entry.isDir);
+  const isDark = useIsDarkTheme();
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -693,18 +610,30 @@ export function FileTreeNode({
         { label: "Delete", onClick: handleDelete, destructive: true },
       ];
 
-  const IconComp: Icon = entry.isDir
-    ? expanded
-      ? FolderOpen
-      : Folder
-    : getFileIcon(entry.name, entry.extension);
+  const dirIcon = entry.isDir ? (expanded ? FolderOpen : Folder) : null;
+
+  const renderIcon = (size: number, className?: string) => {
+    if (dirIcon) {
+      const DirComp = dirIcon;
+      return <DirComp size={size} className={className} />;
+    }
+    return (
+      <FileIcon
+        name={entry.name}
+        extension={entry.extension}
+        size={size}
+        className={className}
+        isDark={isDark}
+      />
+    );
+  };
 
   if (renaming) {
     return (
       <div>
         <InlineInput
           depth={depth}
-          icon={IconComp}
+          iconNode={renderIcon(14, "shrink-0 text-[var(--color-text-tertiary)]")}
           defaultValue={entry.name}
           onConfirm={handleRename}
           onCancel={() => setRenaming(false)}
@@ -760,10 +689,10 @@ export function FileTreeNode({
         )}
 
         {/* Icon */}
-        <IconComp
-          size={14}
-          className={`shrink-0 ${entry.isDir ? "text-[var(--color-accent-blue)]" : "text-[var(--color-text-tertiary)]"}`}
-        />
+        {renderIcon(
+          14,
+          `shrink-0 ${entry.isDir ? "text-[var(--color-accent-blue)]" : "text-[var(--color-text-tertiary)]"}`,
+        )}
 
         {/* Name */}
         <span
@@ -779,7 +708,13 @@ export function FileTreeNode({
           {creating && (
             <InlineInput
               depth={depth + 1}
-              icon={creating === "dir" ? Folder : File}
+              iconNode={
+                creating === "dir" ? (
+                  <Folder size={14} className="shrink-0 text-[var(--color-text-tertiary)]" />
+                ) : (
+                  <File size={14} className="shrink-0 text-[var(--color-text-tertiary)]" />
+                )
+              }
               defaultValue=""
               onConfirm={handleCreate}
               onCancel={() => setCreating(null)}

@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import type { Theme } from "./types";
 import { kosmosDark } from "./kosmos-dark";
 import { kosmosLight } from "./kosmos-light";
@@ -64,4 +65,15 @@ export function getTheme(): Theme {
 /** Get list of available theme names. */
 export function getThemeNames(): string[] {
   return Object.keys(themes);
+}
+
+/** React hook — returns true when the active theme is dark. Re-renders on theme change. */
+export function useIsDarkTheme(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener("theme-changed", cb);
+      return () => window.removeEventListener("theme-changed", cb);
+    },
+    () => activeTheme.type === "dark",
+  );
 }

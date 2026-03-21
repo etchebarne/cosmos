@@ -21,6 +21,7 @@
     "@monaco-editor/react": "^4.7.0",
     "@phosphor-icons/react": "^2.1.10",
     "@pierre/diffs": "^1.1.0",
+    "@ridemountainpig/svgl-react": "^1.0.16",
     "@tailwindcss/vite": "^4.2.1",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
