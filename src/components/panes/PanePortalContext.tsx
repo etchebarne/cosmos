@@ -108,8 +108,7 @@ export function usePaneContainer(
         tabContainer.className = "h-full";
         tabContainer.removeAttribute("inert");
       } else {
-        tabContainer.className =
-          "opacity-0 absolute inset-0 overflow-hidden pointer-events-none";
+        tabContainer.className = "opacity-0 absolute inset-0 overflow-hidden pointer-events-none";
         tabContainer.setAttribute("inert", "");
       }
     }

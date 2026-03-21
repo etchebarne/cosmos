@@ -19,10 +19,7 @@ const PRIORITY_COLOR: Record<number, string> = {
   1: "text-[var(--color-status-green)]",
 };
 
-export function buildGitColorLookup(
-  changes: GitFileChange[],
-  workspacePath: string,
-): GitColorFn {
+export function buildGitColorLookup(changes: GitFileChange[], workspacePath: string): GitColorFn {
   if (changes.length === 0) return () => null;
 
   const fileColorMap = new Map<string, string>();
@@ -42,8 +39,7 @@ export function buildGitColorLookup(
     }
   }
 
-  const wsPrefix =
-    workspacePath.replace(/\\/g, "/").replace(/\/$/, "").toLowerCase() + "/";
+  const wsPrefix = workspacePath.replace(/\\/g, "/").replace(/\/$/, "").toLowerCase() + "/";
 
   return (entryPath: string, isDir: boolean) => {
     const norm = entryPath.replace(/\\/g, "/").toLowerCase();
