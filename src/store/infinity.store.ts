@@ -8,6 +8,9 @@ import {
 import { genId } from "../lib/pane-tree";
 import { getTabDefinition } from "../tabs/registry";
 
+const GRID_SIZE = 20;
+const snap = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE;
+
 export interface InfinityNodeData {
   tabType: string;
   title: string;
@@ -52,7 +55,7 @@ export const useInfinityStore = create<InfinityStore>((set, get) => ({
       const node: InfinityNode = {
         id: genId(),
         type: "infinity-node",
-        position,
+        position: { x: snap(position.x), y: snap(position.y) },
         data: {
           tabType: type,
           title: title ?? def.title,
@@ -88,11 +91,31 @@ export const useInfinityStore = create<InfinityStore>((set, get) => ({
   onNodesChange: (tabId, changes) =>
     set((state) => {
       const nodes = state.canvases[tabId] ?? EMPTY_NODES;
+      let updated = applyNodeChanges(changes, nodes);
+
+      // Snap dimensions and position to grid during resize
+      const resizingIds = new Set<string>();
+      for (const c of changes) {
+        if (c.type === "dimensions" && c.resizing !== undefined) {
+          resizingIds.add(c.id);
+        }
+      }
+
+      if (resizingIds.size > 0) {
+        updated = updated.map((node) => {
+          if (!resizingIds.has(node.id)) return node;
+          const w = Number(node.style?.width ?? 400);
+          const h = Number(node.style?.height ?? 300);
+          return {
+            ...node,
+            position: { x: snap(node.position.x), y: snap(node.position.y) },
+            style: { ...node.style, width: snap(w), height: snap(h) },
+          };
+        });
+      }
+
       return {
-        canvases: {
-          ...state.canvases,
-          [tabId]: applyNodeChanges(changes, nodes),
-        },
+        canvases: { ...state.canvases, [tabId]: updated },
       };
     }),
 

@@ -93,7 +93,7 @@ export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
     <>
       <NodeResizer
         minWidth={200}
-        minHeight={150}
+        minHeight={160}
         handleStyle={{
           width: 8,
           height: 8,

@@ -6,5 +6,5 @@ export const fileTreeTab: TabDefinition = {
   title: "File Tree",
   icon: "folder-tree",
   component: FileTreeTab,
-  defaultSize: { width: 350, height: 500 },
+  defaultSize: { width: 360, height: 500 },
 };

@@ -69,6 +69,8 @@ function InfinityCanvas({ tab }: TabContentProps) {
         onPaneContextMenu={handleContextMenu}
         onNodeContextMenu={handleContextMenu}
         onPaneClick={handlePaneClick}
+        snapToGrid
+        snapGrid={[20, 20]}
         panOnScroll
         zoomOnScroll={false}
         deleteKeyCode={null}
