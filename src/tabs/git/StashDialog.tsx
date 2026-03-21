@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, ArrowRight01Icon, File01Icon } from "@hugeicons/core-free-icons";
+import { Trash, CaretRight, File } from "@phosphor-icons/react";
 import { Dialog } from "../../components/shared/Dialog";
 
 interface GitStashEntry {
@@ -94,7 +93,7 @@ function StashEntryRow({
           <span
             className={`flex items-center justify-center transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
           >
-            <HugeiconsIcon icon={ArrowRight01Icon} size={12} />
+            <CaretRight size={12} />
           </span>
         </button>
         <span
@@ -115,7 +114,7 @@ function StashEntryRow({
           onClick={() => onDrop(entry.index)}
           title="Delete this stash"
         >
-          <HugeiconsIcon icon={Delete02Icon} size={12} />
+          <Trash size={12} />
         </button>
       </div>
       {expanded && (
@@ -133,11 +132,7 @@ function StashEntryRow({
           {!filesLoading &&
             files.map((file) => (
               <div key={file.path} className="flex items-center gap-2 px-8 py-1.5">
-                <HugeiconsIcon
-                  icon={File01Icon}
-                  size={12}
-                  className={fileStatusColor(file.status)}
-                />
+                <File size={12} className={fileStatusColor(file.status)} />
                 <span className="text-[11px] text-[var(--color-text-secondary)] flex-1 truncate">
                   {file.path}
                 </span>

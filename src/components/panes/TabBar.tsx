@@ -1,7 +1,6 @@
 import { memo, useRef, useState, useCallback, useEffect } from "react";
 import autoAnimate from "@formkit/auto-animate";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Plus, X } from "@phosphor-icons/react";
 import { useLayoutStore } from "../../store/layout.store";
 import { useDragStore } from "../../store/drag.store";
 import { TabIcon } from "../shared/TabIcon";
@@ -152,7 +151,7 @@ export const TabBar = memo(function TabBar({ paneId, tabs, activeTabId }: TabBar
                   closeTab(paneId, tab.id);
                 }}
               >
-                <HugeiconsIcon icon={Cancel01Icon} size={12} />
+                <X size={12} />
               </button>
             </div>
           </div>
@@ -162,7 +161,7 @@ export const TabBar = memo(function TabBar({ paneId, tabs, activeTabId }: TabBar
         className="flex items-center justify-center w-7 h-7 mx-1 text-[var(--color-text-muted)] shrink-0 hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-border-primary)]"
         onClick={() => addTab(paneId)}
       >
-        <HugeiconsIcon icon={Add01Icon} size={14} />
+        <Plus size={14} />
       </button>
 
       {contextMenu &&

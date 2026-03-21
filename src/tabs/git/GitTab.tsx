@@ -1,14 +1,13 @@
 import { useState, useCallback, useRef, type MouseEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  GitBranchIcon,
-  ArrowDown01Icon,
-  ArrowReloadHorizontalIcon,
-  Tick02Icon,
-  Loading03Icon,
-  MoreHorizontalIcon,
-} from "@hugeicons/core-free-icons";
+  GitBranch,
+  CaretDown,
+  ArrowsClockwise,
+  Check,
+  CircleNotch,
+  DotsThree,
+} from "@phosphor-icons/react";
 import { useActiveWorkspace, useIsWorkspaceActive } from "../../contexts/WorkspaceContext";
 import { GitChangeNode } from "./GitChangeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
@@ -289,11 +288,11 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
             disabled={loading}
             title="Refresh"
           >
-            <HugeiconsIcon
-              icon={loading ? Loading03Icon : ArrowReloadHorizontalIcon}
-              size={14}
-              className={loading ? "animate-spin" : ""}
-            />
+            {loading ? (
+              <CircleNotch size={14} className="animate-spin" />
+            ) : (
+              <ArrowsClockwise size={14} />
+            )}
           </button>
           <span className="text-xs text-[var(--color-text-primary)]">
             {changes.length === 0
@@ -313,7 +312,7 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
               className="p-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
               onClick={() => setShowMoreMenu((v) => !v)}
             >
-              <HugeiconsIcon icon={MoreHorizontalIcon} size={14} />
+              <DotsThree size={14} />
             </button>
             {showMoreMenu && (
               <div className="absolute top-full right-0 mt-1 min-w-[180px] py-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border-primary)] shadow-lg z-50">
@@ -441,21 +440,13 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
             className="flex items-center gap-1.5 min-w-0 hover:bg-[var(--color-bg-elevated)] transition-colors cursor-pointer px-1.5 py-1 -mx-1.5 rounded-none group"
             onClick={() => setShowBranchPicker((v) => !v)}
           >
-            <HugeiconsIcon
-              icon={GitBranchIcon}
-              size={14}
-              className="text-[var(--color-status-green)] shrink-0"
-            />
+            <GitBranch size={14} className="text-[var(--color-status-green)] shrink-0" />
             <span className="text-xs text-[var(--color-text-primary)] truncate font-medium group-hover:text-[var(--color-accent-blue)] transition-colors">
               {status?.remoteBranch
                 ? status.remoteBranch.replace(/\//, " / ")
                 : (status?.branch ?? "\u2014")}
             </span>
-            <HugeiconsIcon
-              icon={ArrowDown01Icon}
-              size={12}
-              className="text-[var(--color-text-tertiary)] shrink-0"
-            />
+            <CaretDown size={12} className="text-[var(--color-text-tertiary)] shrink-0" />
           </button>
 
           <div className="relative flex items-center" ref={actionMenuRef}>
@@ -465,17 +456,13 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
                 onClick={() => handleRunAction()}
                 disabled={actionRunning || !status?.hasRemote}
               >
-                <HugeiconsIcon
-                  icon={
-                    actionDone
-                      ? Tick02Icon
-                      : actionRunning
-                        ? Loading03Icon
-                        : ArrowReloadHorizontalIcon
-                  }
-                  size={12}
-                  className={`${actionDone ? "text-[var(--color-status-green)]" : ""} ${actionRunning ? "animate-spin" : ""}`}
-                />
+                {actionDone ? (
+                  <Check size={12} className="text-[var(--color-status-green)]" />
+                ) : actionRunning ? (
+                  <CircleNotch size={12} className="animate-spin" />
+                ) : (
+                  <ArrowsClockwise size={12} />
+                )}
                 <span className="font-medium">{currentAction.label}</span>
               </button>
               <button
@@ -483,7 +470,7 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
                 onClick={() => setShowActionMenu((v) => !v)}
                 disabled={!status?.hasRemote}
               >
-                <HugeiconsIcon icon={ArrowDown01Icon} size={12} />
+                <CaretDown size={12} />
               </button>
             </div>
             {showActionMenu && (

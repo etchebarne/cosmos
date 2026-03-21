@@ -1,11 +1,6 @@
 import { useState, useCallback, useRef } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowRight01Icon,
-  Folder01Icon,
-  Folder02Icon,
-  File01Icon,
-} from "@hugeicons/core-free-icons";
+import type { Icon } from "@phosphor-icons/react";
+import { CaretRight, Folder, FolderOpen, File } from "@phosphor-icons/react";
 import { getNodeFiles } from "../../lib/git-tree";
 import type { TreeNode } from "../../lib/git-tree";
 import { useDragStore } from "../../store/drag.store";
@@ -118,7 +113,7 @@ export function GitChangeNode({
     [node, isUntracked, setDragState],
   );
 
-  const icon = node.isDir ? (expanded ? Folder02Icon : Folder01Icon) : File01Icon;
+  const IconComp: Icon = node.isDir ? (expanded ? FolderOpen : Folder) : File;
 
   return (
     <div>
@@ -148,7 +143,7 @@ export function GitChangeNode({
             <span
               className={`flex items-center justify-center transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
             >
-              <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
+              <CaretRight size={14} />
             </span>
           </span>
         ) : (
@@ -156,8 +151,7 @@ export function GitChangeNode({
         )}
 
         {/* Icon */}
-        <HugeiconsIcon
-          icon={icon}
+        <IconComp
           size={14}
           className={`shrink-0 ${node.isDir ? "text-[var(--color-accent-blue)]" : node.change ? getFileIconColor(node.change.status) : "text-[var(--color-text-tertiary)]"}`}
         />

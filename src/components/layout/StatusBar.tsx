@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { GitBranchIcon } from "@hugeicons/core-free-icons";
+import { GitBranch } from "@phosphor-icons/react";
 import { useWorkspaceStore } from "../../store/workspace.store";
 import {
   useLspStore,
@@ -237,7 +236,7 @@ export function StatusBar() {
   return (
     <div className="flex items-center gap-3 h-6 min-h-6 px-3 bg-[var(--color-accent-blue)] text-white text-[11px]">
       <div className="flex items-center gap-1">
-        <HugeiconsIcon icon={GitBranchIcon} size={12} />
+        <GitBranch size={12} />
         <span>{branch ?? "Not a git repo"}</span>
       </div>
       {activeProgress && <IndexingIndicator items={activeProgress} />}

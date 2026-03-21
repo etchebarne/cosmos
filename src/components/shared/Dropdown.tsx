@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { CaretDown } from "@phosphor-icons/react";
 import { useClickOutside } from "../../hooks/use-click-outside";
 
 interface DropdownOption {
@@ -34,8 +33,7 @@ export function Dropdown({ value, options, onChange }: DropdownProps) {
         <span className="whitespace-nowrap overflow-hidden text-ellipsis">
           {selected?.label ?? value}
         </span>
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
+        <CaretDown
           size={12}
           className={`shrink-0 text-[var(--color-text-tertiary)] transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />

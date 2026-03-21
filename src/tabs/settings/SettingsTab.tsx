@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Settings02Icon } from "@hugeicons/core-free-icons";
+import { CaretDown, GearSix } from "@phosphor-icons/react";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { Setting } from "../../components/shared/Setting";
 import { SectionTitle } from "../../components/shared/SectionTitle";
@@ -109,8 +108,7 @@ function AccordionSection({
         }`}
         onClick={onToggle}
       >
-        <HugeiconsIcon
-          icon={ArrowDown01Icon}
+        <CaretDown
           size={14}
           className={`text-[var(--color-text-tertiary)] transition-transform duration-200 ${
             expanded ? "" : "-rotate-90"
@@ -181,11 +179,7 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3 animate-pulse">
-          <HugeiconsIcon
-            icon={Settings02Icon}
-            size={24}
-            className="text-[var(--color-text-tertiary)] animate-spin-slow"
-          />
+          <GearSix size={24} className="text-[var(--color-text-tertiary)] animate-spin-slow" />
           <p className="text-xs font-mono text-[var(--color-text-secondary)]">
             LOADING_SETTINGS...
           </p>

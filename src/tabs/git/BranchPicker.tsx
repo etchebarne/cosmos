@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { GitBranchIcon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { GitBranch, Trash } from "@phosphor-icons/react";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { useClickOutside } from "../../hooks/use-click-outside";
 
@@ -140,8 +139,7 @@ export function BranchPicker({ workspacePath, onClose, onSwitch, anchorRef }: Br
                   onClick={() => handleCheckout(branch)}
                   disabled={switching !== null}
                 >
-                  <HugeiconsIcon
-                    icon={GitBranchIcon}
+                  <GitBranch
                     size={14}
                     className={`shrink-0 ${
                       branch.isCurrent
@@ -177,7 +175,7 @@ export function BranchPicker({ workspacePath, onClose, onSwitch, anchorRef }: Br
                     onClick={() => handleDelete(branch)}
                     title={`Delete ${branch.name}`}
                   >
-                    <HugeiconsIcon icon={Delete02Icon} size={14} />
+                    <Trash size={14} />
                   </button>
                 )}
               </div>

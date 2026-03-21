@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon, Add01Icon, ComputerIcon, CloudServerIcon } from "@hugeicons/core-free-icons";
+import { MagnifyingGlass, Plus, Desktop, Cloud } from "@phosphor-icons/react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { getTheme } from "../../lib/themes";
@@ -214,10 +213,7 @@ export function ProjectBar() {
               }
             >
               <div className="flex items-center justify-center text-[var(--color-accent-blue)]">
-                <HugeiconsIcon
-                  icon={active.connection.type === "wsl" ? ComputerIcon : CloudServerIcon}
-                  size={14}
-                />
+                {active.connection.type === "wsl" ? <Desktop size={14} /> : <Cloud size={14} />}
               </div>
             </Tooltip>
           )}
@@ -228,11 +224,7 @@ export function ProjectBar() {
       )}
       <div className="flex-1" />
       <div className="flex items-center gap-1.5 w-[220px] h-8 px-2.5 bg-[var(--color-bg-input)]">
-        <HugeiconsIcon
-          icon={Search01Icon}
-          size={13}
-          className="text-[var(--color-text-muted)] shrink-0"
-        />
+        <MagnifyingGlass size={13} className="text-[var(--color-text-muted)] shrink-0" />
         <span className="text-xs text-[var(--color-text-muted)]">Search files...</span>
         <div className="flex-1" />
       </div>
@@ -292,7 +284,7 @@ export function ProjectBar() {
         className="w-8 h-8 flex items-center justify-center border border-[var(--color-border-secondary)] text-[var(--color-text-muted)] shrink-0 hover:border-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]"
         onClick={handleAddClick}
       >
-        <HugeiconsIcon icon={Add01Icon} size={14} />
+        <Plus size={14} />
       </button>
 
       {contextMenu && (

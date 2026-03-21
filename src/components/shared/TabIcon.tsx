@@ -1,6 +1,14 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import type { IconSvgElement } from "@hugeicons/react";
-import * as Icons from "@hugeicons/core-free-icons";
+import type { Icon } from "@phosphor-icons/react";
+import {
+  File,
+  Code,
+  TreeStructure,
+  GitBranch,
+  GitDiff,
+  Terminal,
+  GearSix,
+  Infinity,
+} from "@phosphor-icons/react";
 
 interface TabIconProps {
   name: string;
@@ -8,20 +16,20 @@ interface TabIconProps {
   className?: string;
 }
 
-// Map tab icon keys to hugeicons exports
-const iconMap: Record<string, IconSvgElement> = {
-  file: Icons.File01Icon,
-  code: Icons.SourceCodeIcon,
-  "folder-tree": Icons.FolderTreeIcon,
-  "git-branch": Icons.GitBranchIcon,
-  "git-compare": Icons.GitCompareIcon,
-  terminal: Icons.CommandLineIcon,
-  settings: Icons.Settings01Icon,
-  infinity: Icons.InfinitySquareIcon,
+// Map tab icon keys to phosphor icon components
+const iconMap: Record<string, Icon> = {
+  file: File,
+  code: Code,
+  "folder-tree": TreeStructure,
+  "git-branch": GitBranch,
+  "git-compare": GitDiff,
+  terminal: Terminal,
+  settings: GearSix,
+  infinity: Infinity,
 };
 
 export function TabIcon({ name, size = 14, className }: TabIconProps) {
-  const icon = iconMap[name];
-  if (!icon) return null;
-  return <HugeiconsIcon icon={icon} size={size} className={className} />;
+  const IconComponent = iconMap[name];
+  if (!IconComponent) return null;
+  return <IconComponent size={size} className={className} />;
 }

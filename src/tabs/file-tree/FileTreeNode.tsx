@@ -1,22 +1,21 @@
 import { useState, useCallback, useRef, useEffect, useContext } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { HugeiconsIcon } from "@hugeicons/react";
-import type { IconSvgElement } from "@hugeicons/react";
+import type { Icon } from "@phosphor-icons/react";
 import {
-  ArrowRight01Icon,
-  Folder01Icon,
-  Folder02Icon,
-  File01Icon,
-  FileCodeIcon,
-  SourceCodeIcon,
-  FileAttachmentIcon,
-  FileImageIcon,
-  TextFontIcon,
-  FileLockIcon,
-  FileTerminalIcon,
-  Configuration01Icon,
-} from "@hugeicons/core-free-icons";
+  CaretRight,
+  Folder,
+  FolderOpen,
+  File,
+  FileCode,
+  Code,
+  FileText,
+  FileImage,
+  TextAa,
+  FileLock,
+  Terminal,
+  Wrench,
+} from "@phosphor-icons/react";
 import { create } from "zustand";
 import { useLayoutStore } from "../../store/layout.store";
 import { useDragStore } from "../../store/drag.store";
@@ -96,21 +95,21 @@ function joinPath(dir: string, name: string): string {
   return dir.endsWith("/") || dir.endsWith("\\") ? dir + name : dir + sep + name;
 }
 
-function getFileIcon(name: string, extension: string | null): IconSvgElement {
+function getFileIcon(name: string, extension: string | null): Icon {
   switch (name) {
     case "Cargo.toml":
     case "package.json":
     case "tsconfig.json":
     case "vite.config.ts":
     case "tailwind.config.ts":
-      return Configuration01Icon;
+      return Wrench;
     case "Cargo.lock":
     case "bun.lockb":
     case "package-lock.json":
-      return FileLockIcon;
+      return FileLock;
     case "Dockerfile":
     case "Makefile":
-      return FileTerminalIcon;
+      return Terminal;
   }
 
   switch (extension) {
@@ -137,18 +136,18 @@ function getFileIcon(name: string, extension: string | null): IconSvgElement {
     case "sh":
     case "bash":
     case "zsh":
-      return FileCodeIcon;
+      return FileCode;
     case "json":
     case "toml":
     case "yaml":
     case "yml":
     case "xml":
-      return SourceCodeIcon;
+      return Code;
     case "md":
     case "txt":
     case "log":
     case "csv":
-      return FileAttachmentIcon;
+      return FileText;
     case "png":
     case "jpg":
     case "jpeg":
@@ -157,14 +156,14 @@ function getFileIcon(name: string, extension: string | null): IconSvgElement {
     case "ico":
     case "webp":
     case "bmp":
-      return FileImageIcon;
+      return FileImage;
     case "ttf":
     case "otf":
     case "woff":
     case "woff2":
-      return TextFontIcon;
+      return TextAa;
     default:
-      return File01Icon;
+      return File;
   }
 }
 
@@ -172,13 +171,13 @@ function getFileIcon(name: string, extension: string | null): IconSvgElement {
 
 function InlineInput({
   depth,
-  icon,
+  icon: IconComp,
   defaultValue,
   onConfirm,
   onCancel,
 }: {
   depth: number;
-  icon: IconSvgElement;
+  icon: Icon;
   defaultValue: string;
   onConfirm: (value: string) => void;
   onCancel: () => void;
@@ -220,7 +219,7 @@ function InlineInput({
         />
       ))}
       <span className="w-4 h-4 shrink-0" />
-      <HugeiconsIcon icon={icon} size={14} className="shrink-0 text-[var(--color-text-tertiary)]" />
+      <IconComp size={14} className="shrink-0 text-[var(--color-text-tertiary)]" />
       <input
         ref={inputRef}
         className="flex-1 text-[13px] bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-focus)] outline-none px-1 min-w-0"
@@ -694,10 +693,10 @@ export function FileTreeNode({
         { label: "Delete", onClick: handleDelete, destructive: true },
       ];
 
-  const icon = entry.isDir
+  const IconComp: Icon = entry.isDir
     ? expanded
-      ? Folder02Icon
-      : Folder01Icon
+      ? FolderOpen
+      : Folder
     : getFileIcon(entry.name, entry.extension);
 
   if (renaming) {
@@ -705,7 +704,7 @@ export function FileTreeNode({
       <div>
         <InlineInput
           depth={depth}
-          icon={icon}
+          icon={IconComp}
           defaultValue={entry.name}
           onConfirm={handleRename}
           onCancel={() => setRenaming(false)}
@@ -752,7 +751,7 @@ export function FileTreeNode({
               <span
                 className={`flex items-center justify-center transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
               >
-                <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
+                <CaretRight size={14} />
               </span>
             )}
           </span>
@@ -761,8 +760,7 @@ export function FileTreeNode({
         )}
 
         {/* Icon */}
-        <HugeiconsIcon
-          icon={icon}
+        <IconComp
           size={14}
           className={`shrink-0 ${entry.isDir ? "text-[var(--color-accent-blue)]" : "text-[var(--color-text-tertiary)]"}`}
         />
@@ -781,7 +779,7 @@ export function FileTreeNode({
           {creating && (
             <InlineInput
               depth={depth + 1}
-              icon={creating === "dir" ? Folder01Icon : File01Icon}
+              icon={creating === "dir" ? Folder : File}
               defaultValue=""
               onConfirm={handleCreate}
               onCancel={() => setCreating(null)}
