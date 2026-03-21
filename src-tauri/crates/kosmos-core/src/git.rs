@@ -423,6 +423,30 @@ pub async fn git_force_push(path: &str) -> Result<(), CoreError> {
     run_git_strict(dir, &["push", "--force-with-lease"]).await
 }
 
+/// Extract the GitHub owner (user or org) from the remote origin URL, if any.
+pub async fn get_git_remote_owner(path: &str) -> Result<Option<String>, CoreError> {
+    let dir = Path::new(path);
+    let url = run_git(dir, &["config", "--get", "remote.origin.url"]).await?;
+    Ok(url.and_then(|u| parse_github_owner(&u)))
+}
+
+/// Parse a GitHub owner from an SSH or HTTPS remote URL.
+fn parse_github_owner(url: &str) -> Option<String> {
+    // SSH:   git@github.com:owner/repo.git
+    // HTTPS: https://github.com/owner/repo.git
+    let after = if let Some(rest) = url.strip_prefix("git@github.com:") {
+        rest
+    } else {
+        url.split("github.com/").nth(1)?
+    };
+    let owner = after.split('/').next()?;
+    if owner.is_empty() {
+        None
+    } else {
+        Some(owner.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -51,6 +51,9 @@ pub enum Request {
     GetGitBranch {
         path: String,
     },
+    GetGitRemoteOwner {
+        path: String,
+    },
     GetGitStatus {
         path: String,
     },

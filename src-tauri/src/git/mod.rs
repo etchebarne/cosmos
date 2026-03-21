@@ -491,6 +491,19 @@ pub async fn git_force_push(
 }
 
 #[tauri::command]
+pub async fn get_git_remote_owner(
+    router: State<'_, BackendRouter>,
+    path: String,
+) -> Result<Option<String>, String> {
+    git_route!(
+        router,
+        path,
+        |p: String| Request::GetGitRemoteOwner { path: p },
+        kosmos_core::git::get_git_remote_owner
+    )
+}
+
+#[tauri::command]
 pub async fn watch_workspace(
     router: State<'_, BackendRouter>,
     watcher: State<'_, WatcherManager>,

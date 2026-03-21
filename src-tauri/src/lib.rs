@@ -134,6 +134,7 @@ pub fn run() {
             lsp::lsp_install_server,
             lsp::lsp_uninstall_server,
             git::get_git_branch,
+            git::get_git_remote_owner,
             git::get_git_status,
             git::git_stage,
             git::git_unstage,

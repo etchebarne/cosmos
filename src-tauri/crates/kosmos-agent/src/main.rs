@@ -160,6 +160,10 @@ async fn dispatch(state: &AgentState, request: Request) -> Result<serde_json::Va
             let r = kosmos_core::git::get_git_branch(&path).await.map_err(|e| e.to_string())?;
             Ok(to_json(r)?)
         }
+        Request::GetGitRemoteOwner { path } => {
+            let r = kosmos_core::git::get_git_remote_owner(&path).await.map_err(|e| e.to_string())?;
+            Ok(to_json(r)?)
+        }
         Request::GetGitStatus { path } => {
             let r = kosmos_core::git::get_git_status(&path).await.map_err(|e| e.to_string())?;
             Ok(to_json(r)?)

@@ -25,6 +25,7 @@ export interface Workspace {
   name: string;
   color: string;
   connection: ConnectionType;
+  avatarUrl?: string | null;
 }
 
 interface WorkspaceStore {
@@ -38,6 +39,7 @@ interface WorkspaceStore {
   openWorkspace: (path: string, connection?: ConnectionType) => Promise<void>;
   switchWorkspace: (index: number) => Promise<void>;
   closeWorkspace: (index: number) => Promise<void>;
+  reorderWorkspace: (fromIndex: number, toIndex: number) => void;
   isConnecting: (path: string) => boolean;
 }
 
@@ -58,6 +60,35 @@ async function persist(workspaces: Workspace[], activeIndex: number | null) {
   const s = await getStore();
   await s.set("workspaces", workspaces);
   await s.set("activeIndex", activeIndex);
+}
+
+/** Try to resolve a GitHub avatar URL for a workspace. */
+async function fetchAvatarUrl(path: string): Promise<string | null> {
+  try {
+    const owner = await invoke<string | null>("get_git_remote_owner", { path });
+    if (owner) return `https://github.com/${owner}.png?size=64`;
+  } catch {
+    // Not a git repo or no remote — ignore
+  }
+  return null;
+}
+
+/** Resolve avatars for workspaces that don't have one yet, then persist. */
+function resolveAvatars() {
+  const state = useWorkspaceStore.getState();
+  for (let i = 0; i < state.workspaces.length; i++) {
+    const w = state.workspaces[i];
+    if (w.avatarUrl !== undefined) continue;
+    fetchAvatarUrl(w.path).then((avatarUrl) => {
+      const current = useWorkspaceStore.getState();
+      const idx = current.workspaces.findIndex((ws) => ws.path === w.path);
+      if (idx === -1) return;
+      const workspaces = [...current.workspaces];
+      workspaces[idx] = { ...workspaces[idx], avatarUrl };
+      persist(workspaces, current.activeIndex);
+      useWorkspaceStore.setState({ workspaces });
+    });
+  }
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
@@ -83,6 +114,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     );
 
     set({ workspaces, activeIndex, ready: true, connectingPaths: remotePaths });
+
+    // Resolve GitHub avatars for workspaces that don't have one yet
+    resolveAvatars();
 
     // Reconnect remote workspaces in the background
     for (const w of workspaces) {
@@ -119,6 +153,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const activeIndex = workspaces.length - 1;
     persist(workspaces, activeIndex);
     set({ workspaces, activeIndex });
+
+    // Resolve avatar in the background
+    resolveAvatars();
   },
 
   switchWorkspace: async (index: number) => {
@@ -126,6 +163,37 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (index < 0 || index >= state.workspaces.length) return;
     persist(state.workspaces, index);
     set({ activeIndex: index });
+  },
+
+  reorderWorkspace: (fromIndex: number, toIndex: number) => {
+    const state = get();
+    if (
+      fromIndex === toIndex ||
+      fromIndex < 0 ||
+      fromIndex >= state.workspaces.length ||
+      toIndex < 0 ||
+      toIndex >= state.workspaces.length
+    )
+      return;
+
+    const workspaces = [...state.workspaces];
+    const [moved] = workspaces.splice(fromIndex, 1);
+    workspaces.splice(toIndex, 0, moved);
+
+    // Update activeIndex to follow the active workspace
+    let activeIndex = state.activeIndex;
+    if (activeIndex !== null) {
+      if (activeIndex === fromIndex) {
+        activeIndex = toIndex;
+      } else if (fromIndex < activeIndex && toIndex >= activeIndex) {
+        activeIndex -= 1;
+      } else if (fromIndex > activeIndex && toIndex <= activeIndex) {
+        activeIndex += 1;
+      }
+    }
+
+    persist(workspaces, activeIndex);
+    set({ workspaces, activeIndex });
   },
 
   closeWorkspace: async (index: number) => {
