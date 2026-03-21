@@ -1,8 +1,10 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { FileTreeNode, useFileTreeSelection } from "./FileTreeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
+import { useGitStatus } from "../../hooks/use-git-status";
+import { GitFileTreeContext, buildGitColorLookup } from "./git-file-tree-context";
 import type { TabContentProps } from "../types";
 
 export interface DirEntry {
@@ -18,6 +20,12 @@ export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
   const [entries, setEntries] = useState<DirEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { status: gitStatus } = useGitStatus(activeWorkspace?.path ?? null);
+
+  const getGitColor = useMemo(() => {
+    if (!activeWorkspace || !gitStatus?.isRepo) return () => null;
+    return buildGitColorLookup(gitStatus.changes, activeWorkspace.path);
+  }, [activeWorkspace, gitStatus]);
 
   const loadRoot = useCallback(async () => {
     if (!activeWorkspace) return;
@@ -92,16 +100,18 @@ export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
   };
 
   return (
-    <ScrollArea className="h-full font-ui">
-      <div className="pt-1 pb-4 min-h-full" data-file-tree>
-        <FileTreeNode
-          entry={rootEntry}
-          depth={0}
-          paneId={paneId}
-          defaultExpanded
-          preloadedChildren={entries}
-        />
-      </div>
-    </ScrollArea>
+    <GitFileTreeContext.Provider value={getGitColor}>
+      <ScrollArea className="h-full font-ui">
+        <div className="pt-1 pb-4 min-h-full" data-file-tree>
+          <FileTreeNode
+            entry={rootEntry}
+            depth={0}
+            paneId={paneId}
+            defaultExpanded
+            preloadedChildren={entries}
+          />
+        </div>
+      </ScrollArea>
+    </GitFileTreeContext.Provider>
   );
 }

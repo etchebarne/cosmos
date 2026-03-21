@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useContext } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -23,6 +23,7 @@ import { useDragStore } from "../../store/drag.store";
 import { ContextMenu } from "../../components/shared/ContextMenu";
 import type { ContextMenuItem } from "../../components/shared/ContextMenu";
 import type { DirEntry } from "./FileTreeTab";
+import { GitFileTreeContext } from "./git-file-tree-context";
 
 // ── Selection store ──
 
@@ -257,6 +258,8 @@ export function FileTreeNode({
   const selectionSize = useFileTreeSelection((s) => s.selectedPaths.size);
   const dragOccurredRef = useRef(false);
   const isCut = clipboard?.mode === "cut" && clipboard.files.some((f) => f.path === entry.path);
+  const getGitColor = useContext(GitFileTreeContext);
+  const gitColor = getGitColor(entry.path, entry.isDir);
 
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -766,11 +769,7 @@ export function FileTreeNode({
 
         {/* Name */}
         <span
-          className={`text-[13px] truncate pb-[1px] ${
-            entry.name.startsWith(".")
-              ? "text-[var(--color-text-secondary)]"
-              : "text-[var(--color-text-primary)]"
-          }`}
+          className={`text-[13px] truncate pb-[1px] ${gitColor ?? "text-[var(--color-text-primary)]"}`}
         >
           {entry.name}
         </span>
