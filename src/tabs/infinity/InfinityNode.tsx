@@ -95,15 +95,15 @@ export function InfinityNode({ id, data }: NodeProps<InfinityNodeType>) {
         minWidth={200}
         minHeight={160}
         handleStyle={{
-          width: 8,
-          height: 8,
+          width: 12,
+          height: 12,
           borderRadius: 0,
-          backgroundColor: "var(--color-accent-blue)",
+          backgroundColor: "transparent",
           border: "none",
         }}
         lineStyle={{
-          borderColor: "var(--color-accent-blue)",
-          borderWidth: 1,
+          borderColor: "transparent",
+          borderWidth: 8,
         }}
       />
       <div className="flex flex-col h-full w-full bg-[var(--color-bg-page)] border border-[var(--color-border-primary)] shadow-lg">
