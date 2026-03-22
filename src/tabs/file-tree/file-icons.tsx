@@ -1,4 +1,4 @@
-import type { ComponentType, SVGProps } from "react";
+import { useId, useLayoutEffect, useRef, type ComponentType, type SVGProps } from "react";
 import type { Icon } from "@phosphor-icons/react";
 import {
   File,
@@ -67,6 +67,59 @@ import {
   PrismaLight,
   SQLite,
 } from "@ridemountainpig/svgl-react";
+
+/**
+ * Wraps an inline SVG and rewrites any `id` / `url(#id)` / `href="#id"`
+ * attributes with a React-unique prefix so that multiple instances of the
+ * same SVG never collide in the document-wide ID namespace.
+ *
+ * Uses `useLayoutEffect` so the rewrite happens before the browser paints,
+ * avoiding a flash of broken gradients.
+ */
+function ScopedSvg({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const prefix = useId().replace(/:/g, "");
+
+  useLayoutEffect(() => {
+    const svg = ref.current?.querySelector("svg");
+    if (!svg) return;
+
+    const idEls = svg.querySelectorAll("[id]");
+    if (idEls.length === 0) return;
+
+    // Already scoped from a previous render — nothing to do.
+    if (idEls[0].id.startsWith(prefix)) return;
+
+    const idMap = new Map<string, string>();
+    for (const el of idEls) {
+      const oldId = el.id;
+      const newId = `${prefix}${oldId}`;
+      idMap.set(oldId, newId);
+      el.id = newId;
+    }
+
+    for (const el of svg.querySelectorAll("*")) {
+      for (const attr of el.attributes) {
+        if (!attr.value.includes("#")) continue;
+        let v = attr.value;
+        let changed = false;
+        for (const [oldId, newId] of idMap) {
+          if (v.includes(`#${oldId}`)) {
+            v = v.split(`#${oldId}`).join(`#${newId}`);
+            changed = true;
+          }
+        }
+        if (changed) el.setAttribute(attr.name, v);
+      }
+    }
+  });
+
+  return (
+    <span ref={ref} style={{ display: "contents" }}>
+      {children}
+    </span>
+  );
+}
 
 // ── Types ──
 
@@ -269,7 +322,11 @@ export function FileIcon({
 
   if (def.brand) {
     const Brand = resolveBrand(def.brand, isDark);
-    return <Brand width={size} height={size} className={`shrink-0 ${className ?? ""}`} />;
+    return (
+      <ScopedSvg>
+        <Brand width={size} height={size} className={`shrink-0 ${className ?? ""}`} />
+      </ScopedSvg>
+    );
   }
 
   const Fallback = def.fallback;
