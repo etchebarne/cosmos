@@ -16,6 +16,15 @@
   --diffs-line-height: 20px;
 }
 
+/* Search preview match highlights */
+.search-match-line-highlight {
+  background: rgba(75, 142, 245, 0.12) !important;
+}
+.search-match-text-highlight {
+  background: rgba(75, 142, 245, 0.35) !important;
+  border-radius: 2px;
+}
+
 /* OverlayScrollbars custom theme */
 .os-theme-custom {
   --os-handle-bg: var(--color-scrollbar-track);

@@ -59,6 +59,7 @@ interface LayoutStore {
     isUntracked: boolean,
     sourcePaneId: string,
   ) => void;
+  openSearch: () => void;
   dirtyTabs: Set<string>;
   setTabDirty: (tabId: string, dirty: boolean) => void;
 }
@@ -402,6 +403,37 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
         }) ?? state.layout;
 
       return { layout, lastEditorPaneId: newLeaf.id, activePaneId: newLeaf.id };
+    }),
+
+  openSearch: () =>
+    set((state) => {
+      const leaves = findAllLeaves(state.layout);
+
+      // Find existing search tab
+      for (const leaf of leaves) {
+        const existing = leaf.tabs.find((t) => t.type === "search");
+        if (existing) {
+          const layout =
+            updateNode(state.layout, leaf.id, (l) => ({
+              ...l,
+              activeTabId: existing.id,
+            })) ?? state.layout;
+          return { layout, activePaneId: leaf.id };
+        }
+      }
+
+      // No existing search tab — add one to the first pane
+      const targetLeaf = leaves[0];
+      if (!targetLeaf) return state;
+
+      const tab = createTab("search", "Search");
+      const layout =
+        updateNode(state.layout, targetLeaf.id, (leaf) => ({
+          ...leaf,
+          tabs: [...leaf.tabs, tab],
+          activeTabId: tab.id,
+        })) ?? state.layout;
+      return { layout, activePaneId: targetLeaf.id };
     }),
 
   setTabDirty: (tabId, dirty) =>

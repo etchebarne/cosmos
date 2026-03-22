@@ -8,6 +8,7 @@ import {
   Terminal,
   GearSix,
   Infinity,
+  MagnifyingGlass,
 } from "@phosphor-icons/react";
 
 interface TabIconProps {
@@ -26,6 +27,7 @@ const iconMap: Record<string, Icon> = {
   terminal: Terminal,
   settings: GearSix,
   infinity: Infinity,
+  "magnifying-glass": MagnifyingGlass,
 };
 
 export function TabIcon({ name, size = 14, className }: TabIconProps) {

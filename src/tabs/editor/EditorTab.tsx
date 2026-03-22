@@ -72,6 +72,23 @@ export function cleanupEditorInstances(workspacePath: string) {
   }
 }
 
+/** Reveal a position in an already-open editor, or queue it for when the editor mounts. */
+export function revealPosition(filePath: string, position: { lineNumber: number; column: number }) {
+  pendingReveals.set(filePath, position);
+
+  // For already-mounted editors (handleEditorDidMount won't fire again),
+  // schedule a deferred reveal after layout settles.
+  setTimeout(() => {
+    if (pendingReveals.get(filePath) !== position) return; // consumed or replaced
+    const existing = editorInstances.get(filePath);
+    if (existing) {
+      pendingReveals.delete(filePath);
+      existing.setPosition(position);
+      existing.revealPositionInCenter(position);
+    }
+  }, 50);
+}
+
 /** Convert a file URI to an OS path with the drive letter uppercased to match OS convention. */
 function uriToNormalizedPath(uri: string): string {
   let p = fileUriToPath(uri);
@@ -122,14 +139,7 @@ function registerEditorOpener(monaco: Monaco) {
       store.openFile(filePath, fileName, store.activePaneId ?? "");
 
       if (position) {
-        const existing = editorInstances.get(filePath);
-        if (existing) {
-          existing.setPosition(position);
-          existing.revealPositionInCenter(position);
-          existing.focus();
-        } else {
-          pendingReveals.set(filePath, position);
-        }
+        revealPosition(filePath, position);
       }
 
       return true;
@@ -137,7 +147,7 @@ function registerEditorOpener(monaco: Monaco) {
   });
 }
 
-function defineKosmosTheme(monaco: Monaco) {
+export function defineKosmosTheme(monaco: Monaco) {
   const t = getTheme();
   monaco.editor.defineTheme("kosmos", {
     base: t.type === "dark" ? "vs-dark" : "vs",
@@ -387,8 +397,14 @@ export function EditorTab({ tab }: TabContentProps) {
       const pendingReveal = pendingReveals.get(filePath);
       if (pendingReveal) {
         pendingReveals.delete(filePath);
-        instance.setPosition(pendingReveal);
-        instance.revealPositionInCenter(pendingReveal);
+        // Defer reveal — @monaco-editor/react toggles the container from
+        // display:none to display:block after onMount, triggering a
+        // ResizeObserver → layout() that resets scroll. setTimeout runs
+        // after the ResizeObserver callback settles.
+        setTimeout(() => {
+          instance.setPosition(pendingReveal);
+          instance.revealPositionInCenter(pendingReveal);
+        }, 50);
       }
     }
 

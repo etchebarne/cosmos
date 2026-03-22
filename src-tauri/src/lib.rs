@@ -1,6 +1,7 @@
 mod git;
 mod lsp;
 mod remote;
+mod search;
 mod settings;
 mod tabs;
 mod terminal;
@@ -178,6 +179,8 @@ pub fn run() {
             remote::commands::remote_disconnect,
             remote::commands::remote_is_connected,
             remote::commands::remote_ensure_connected,
+            search::list_workspace_files,
+            search::search_in_files,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

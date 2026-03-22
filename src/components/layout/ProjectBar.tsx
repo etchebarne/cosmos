@@ -6,6 +6,7 @@ import { getTheme } from "../../lib/themes";
 import { useWorkspaceStore } from "../../store/workspace.store";
 import { ContextMenu, type ContextMenuItem } from "../shared/ContextMenu";
 import { Tooltip } from "../shared/Tooltip";
+import { useLayoutStore } from "../../store/layout.store";
 import { RemoteDialog } from "./RemoteDialog";
 
 const DRAG_THRESHOLD = 5;
@@ -67,6 +68,18 @@ export function ProjectBar() {
     invoke<string[]>("list_wsl_distros")
       .then(setWslDistros)
       .catch((e) => console.warn("Failed to list WSL distros:", e));
+  }, []);
+
+  // Global Ctrl+P shortcut to open search
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+        e.preventDefault();
+        useLayoutStore.getState().openSearch();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
@@ -223,11 +236,15 @@ export function ProjectBar() {
         </div>
       )}
       <div className="flex-1" />
-      <div className="flex items-center gap-1.5 w-[220px] h-8 px-2.5 bg-[var(--color-bg-input)]">
+      <button
+        className="flex items-center gap-1.5 w-[220px] h-8 px-2.5 bg-[var(--color-bg-input)] cursor-pointer hover:bg-[var(--color-bg-surface)] transition-colors"
+        onClick={() => useLayoutStore.getState().openSearch()}
+      >
         <MagnifyingGlass size={13} className="text-[var(--color-text-muted)] shrink-0" />
         <span className="text-xs text-[var(--color-text-muted)]">Search files...</span>
         <div className="flex-1" />
-      </div>
+        <span className="text-[10px] text-[var(--color-text-muted)] font-mono">Ctrl+P</span>
+      </button>
       <div className="flex items-center gap-2">
         {workspaces.map((w, i) => {
           const isActive = i === activeIndex;
