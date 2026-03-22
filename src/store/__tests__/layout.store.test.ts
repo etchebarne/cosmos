@@ -16,7 +16,6 @@ vi.mock("../../tabs", () => {
 });
 
 import { useLayoutStore } from "../layout.store";
-import { findLeaf, findAllLeaves } from "../../lib/pane-tree";
 
 describe("layout store", () => {
   beforeEach(() => {

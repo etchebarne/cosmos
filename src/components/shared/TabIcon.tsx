@@ -7,7 +7,7 @@ import {
   GitDiff,
   Terminal,
   GearSix,
-  Infinity,
+  Infinity as InfinityIcon,
   MagnifyingGlass,
 } from "@phosphor-icons/react";
 
@@ -26,7 +26,7 @@ const iconMap: Record<string, Icon> = {
   "git-compare": GitDiff,
   terminal: Terminal,
   settings: GearSix,
-  infinity: Infinity,
+  infinity: InfinityIcon,
   "magnifying-glass": MagnifyingGlass,
 };
 
