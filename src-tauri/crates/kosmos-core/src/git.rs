@@ -96,7 +96,7 @@ pub async fn get_git_status(path: &str) -> Result<GitStatusInfo, CoreError> {
     let last_commit_message = run_git(dir, &["log", "-1", "--pretty=%s"]).await?;
     let has_remote = run_git(dir, &["remote"]).await?.is_some_and(|s| !s.trim().is_empty());
 
-    let status_output = run_git(dir, &["status", "--porcelain", "-uall"]).await?;
+    let status_output = run_git(dir, &["status", "--porcelain", "-unormal"]).await?;
 
     let staged_stats = run_git(dir, &["diff", "--cached", "--numstat"]).await?
         .map(|s| parse_numstat(&s))

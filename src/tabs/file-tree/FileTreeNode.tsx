@@ -182,15 +182,21 @@ export function FileTreeNode({
     if (!entry.isDir || !loaded) return;
 
     const normalized = normalizePath(entry.path);
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     const unlisten = listen<string[]>("file-tree-changed", (event) => {
       if (event.payload.some((dir) => normalizePath(dir) === normalized)) {
-        invoke<DirEntry[]>("read_dir", { path: entry.path })
-          .then((result) => setChildren(result))
-          .catch((e) => console.warn("read_dir failed:", e));
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          invoke<DirEntry[]>("read_dir", { path: entry.path })
+            .then((result) => setChildren(result))
+            .catch((e) => console.warn("read_dir failed:", e));
+        }, 300);
       }
     });
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       unlisten.then((fn) => fn());
     };
   }, [entry.isDir, entry.path, loaded]);

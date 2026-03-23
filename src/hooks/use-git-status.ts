@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { GitStatusInfo } from "../lib/git-tree";
@@ -7,9 +7,19 @@ export function useGitStatus(workspacePath: string | null, active = true) {
   const [status, setStatus] = useState<GitStatusInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inflightRef = useRef(false);
+  const pendingRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!workspacePath) return;
+
+    // If already running, mark pending and return — avoids git process pileup
+    if (inflightRef.current) {
+      pendingRef.current = true;
+      return;
+    }
+
+    inflightRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -21,6 +31,13 @@ export function useGitStatus(workspacePath: string | null, active = true) {
       setError(String(e));
     } finally {
       setLoading(false);
+      inflightRef.current = false;
+
+      // If a refresh was requested while we were busy, do one more pass
+      if (pendingRef.current) {
+        pendingRef.current = false;
+        refresh();
+      }
     }
   }, [workspacePath]);
 

@@ -67,10 +67,11 @@ impl WatcherManager {
                 notify::Error,
             >| {
                 if let Ok(fs_events) = result {
-                    // Only trigger git refresh if at least one non-ignored file changed
+                    // Only trigger git refresh if at least one non-ignored file changed.
+                    // Use extension heuristic instead of is_dir() to avoid sync stat calls.
                     let has_trackable = fs_events.iter().any(|e| {
                         !gitignore
-                            .matched_path_or_any_parents(&e.path, e.path.is_dir())
+                            .matched_path_or_any_parents(&e.path, e.path.extension().is_none())
                             .is_ignore()
                     });
 
@@ -87,9 +88,9 @@ impl WatcherManager {
 
                     events.emit(Event::FileTreeChanged { dirs });
 
+                    // Skip is_file() stat — send all paths; the frontend filters by open-file match.
                     let mut files: Vec<String> = fs_events
                         .iter()
-                        .filter(|e| e.path.is_file())
                         .map(|e| e.path.to_string_lossy().to_string())
                         .collect();
                     files.sort();
