@@ -125,6 +125,16 @@ export const useLspStore = create<LspState>()(
   immer((set, get) => {
     // ── Shared helpers (use set/get from closure) ──
 
+    /** Create a new LspServerInfo entry and store it. */
+    function setServerInfo(workspacePath: string, serverLang: string, info: LspServerInfo) {
+      set((state) => {
+        if (!state.servers[workspacePath]) {
+          state.servers[workspacePath] = {};
+        }
+        state.servers[workspacePath][serverLang] = info;
+      });
+    }
+
     /** Recompute the indexProgress store slice for a workspace from the token map. */
     function syncProgressState(workspacePath: string) {
       const prefix = workspacePath + "\0";
@@ -338,19 +348,14 @@ export const useLspStore = create<LspState>()(
         const startKey = `${workspacePath}:${serverLang}`;
         serverStartTimestamps.set(startKey, Date.now());
 
-        set((state) => {
-          if (!state.servers[workspacePath]) {
-            state.servers[workspacePath] = {};
-          }
-          state.servers[workspacePath][serverLang] = {
-            serverId: result.serverId,
-            languageId: serverLang,
-            client,
-            status: "running",
-            serverName: result.serverName,
-            errorMessage: null,
-            providerDisposables: [],
-          };
+        setServerInfo(workspacePath, serverLang, {
+          serverId: result.serverId,
+          languageId: serverLang,
+          client,
+          status: "running",
+          serverName: result.serverName,
+          errorMessage: null,
+          providerDisposables: [],
         });
 
         return client;
@@ -488,19 +493,14 @@ export const useLspStore = create<LspState>()(
             return null;
           }
 
-          set((state) => {
-            if (!state.servers[workspacePath]) {
-              state.servers[workspacePath] = {};
-            }
-            state.servers[workspacePath][serverLang] = {
-              serverId: "",
-              languageId: serverLang,
-              client: null,
-              status,
-              serverName: displayName,
-              errorMessage,
-              providerDisposables: [],
-            };
+          setServerInfo(workspacePath, serverLang, {
+            serverId: "",
+            languageId: serverLang,
+            client: null,
+            status,
+            serverName: displayName,
+            errorMessage,
+            providerDisposables: [],
           });
 
           if (canInstall) {

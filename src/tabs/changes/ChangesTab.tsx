@@ -6,7 +6,9 @@ import { registerCustomTheme } from "@pierre/diffs";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { getTheme } from "../../lib/themes";
+import { useThemeListener } from "../../hooks/use-theme-listener";
 import { getChangesMeta } from "../../types";
+import { StateView } from "../../components/shared/StateView";
 import type { TabContentProps } from "../types";
 
 // Register a custom theme — the callback reads getTheme() at invocation time
@@ -113,34 +115,19 @@ export function ChangesTab({ tab }: TabContentProps) {
   }, [loadDiff]);
 
   // Re-build diff CSS when the app theme changes
-  useEffect(() => {
-    const handler = () => setThemeCss(buildThemeCss());
-    window.addEventListener("theme-changed", handler);
-    return () => window.removeEventListener("theme-changed", handler);
-  }, []);
+  const handleThemeChanged = useCallback(() => setThemeCss(buildThemeCss()), []);
+  useThemeListener(handleThemeChanged);
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-status-red)]">{error}</p>
-      </div>
-    );
+    return <StateView message={error} variant="error" />;
   }
 
   if (patch === null) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-secondary)]">Loading diff...</p>
-      </div>
-    );
+    return <StateView message="Loading diff..." variant="secondary" />;
   }
 
   if (patch === "") {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-muted)]">No changes</p>
-      </div>
-    );
+    return <StateView message="No changes" />;
   }
 
   return (

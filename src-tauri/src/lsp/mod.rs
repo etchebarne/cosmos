@@ -9,6 +9,10 @@ use tokio::sync::Mutex;
 
 use crate::remote::router::BackendRouter;
 
+fn no_agent_error(path: &str) -> String {
+    format!("Remote agent not connected for path: {path}")
+}
+
 /// Tracks which server IDs belong to remote agents, mapping server_id -> workspace_path.
 /// This allows lsp_send and lsp_stop (which only receive a server_id) to route correctly.
 pub struct RemoteServerMap(pub Mutex<HashMap<String, String>>);
@@ -51,7 +55,7 @@ pub async fn lsp_start(
         return Ok(start_result);
     }
     if BackendRouter::is_remote_path(&workspace_path) {
-        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+        return Err(no_agent_error(&workspace_path));
     }
     state.start(&workspace_path, &language_id).await.map_err(|e| e.to_string())
 }
@@ -118,7 +122,7 @@ pub async fn lsp_stop_workspace(
         return Ok(());
     }
     if BackendRouter::is_remote_path(&workspace_path) {
-        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+        return Err(no_agent_error(&workspace_path));
     }
     state.stop_workspace(&workspace_path).await.map_err(|e| e.to_string())
 }
@@ -138,7 +142,7 @@ pub async fn lsp_check_availability(
         return serde_json::from_value(result).map_err(|e| e.to_string());
     }
     if BackendRouter::is_remote_path(&workspace_path) {
-        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+        return Err(no_agent_error(&workspace_path));
     }
     let mgr = state.inner().clone();
     tokio::task::spawn_blocking(move || mgr.check_availability(&workspace_path))
@@ -174,7 +178,7 @@ pub async fn lsp_scan_projects(
         return Ok(projects);
     }
     if BackendRouter::is_remote_path(&workspace_path) {
-        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+        return Err(no_agent_error(&workspace_path));
     }
     let mgr = state.inner().clone();
     tokio::task::spawn_blocking(move || mgr.scan_projects(&workspace_path))
@@ -206,7 +210,7 @@ pub async fn lsp_resolve_root(
         return Ok(format!("{}{}", prefix, root));
     }
     if BackendRouter::is_remote_path(&workspace_path) {
-        return Err(format!("Remote agent not connected for path: {workspace_path}"));
+        return Err(no_agent_error(&workspace_path));
     }
     tokio::task::spawn_blocking(move || {
         LspManager::resolve_root(&file_path, &language_id, &workspace_path)

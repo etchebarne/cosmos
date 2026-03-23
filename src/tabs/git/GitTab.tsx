@@ -11,6 +11,7 @@ import {
 import { useActiveWorkspace, useIsWorkspaceActive } from "../../contexts/WorkspaceContext";
 import { GitChangeNode } from "./GitChangeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
+import { StateView } from "../../components/shared/StateView";
 import { ContextMenu } from "../../components/shared/ContextMenu";
 import type { ContextMenuItem } from "../../components/shared/ContextMenu";
 import { BranchPicker } from "./BranchPicker";
@@ -230,27 +231,15 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
   );
 
   if (!activeWorkspace) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-muted)]">No workspace open</p>
-      </div>
-    );
+    return <StateView message="No workspace open" />;
   }
 
   if (loading && !status) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-secondary)]">Loading...</p>
-      </div>
-    );
+    return <StateView message="Loading..." variant="secondary" />;
   }
 
   if (error && !status) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-status-red)]">{error}</p>
-      </div>
-    );
+    return <StateView message={error} variant="error" />;
   }
 
   if (status && !status.isRepo) {

@@ -1,16 +1,4 @@
-use std::path::Path;
-
-use crate::CoreError;
-
-/// Validate that a path doesn't contain traversal components (`..`).
-fn validate_no_traversal(path: &str) -> Result<(), CoreError> {
-    for component in Path::new(path).components() {
-        if matches!(component, std::path::Component::ParentDir) {
-            return Err(CoreError::PathTraversal(path.to_string()));
-        }
-    }
-    Ok(())
-}
+use crate::{CoreError, validate_no_traversal};
 
 /// Maximum file size we'll read into memory (50 MB).
 const MAX_FILE_SIZE: u64 = 50 * 1024 * 1024;

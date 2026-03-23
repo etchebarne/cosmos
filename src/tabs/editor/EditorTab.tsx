@@ -14,7 +14,10 @@ import { useLayoutStore } from "../../store/layout.store";
 import { useEditorStore } from "../../store/editor.store";
 import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
 import { getTheme } from "../../lib/themes";
+import { useThemeListener } from "../../hooks/use-theme-listener";
 import { getEditorMeta } from "../../types";
+import { StateView } from "../../components/shared/StateView";
+import { BASE_EDITOR_OPTIONS } from "../../lib/monaco-config";
 import type { TabContentProps } from "../types";
 
 // ── Language detection from file extension (for early LSP start) ──
@@ -259,16 +262,13 @@ export function EditorTab({ tab }: TabContentProps) {
   }, [editorFontSize]);
 
   // Re-apply Monaco theme when the app theme changes
-  useEffect(() => {
-    const handler = () => {
-      const monaco = monacoRef.current;
-      if (!monaco) return;
-      defineKosmosTheme(monaco);
-      monaco.editor.setTheme("kosmos");
-    };
-    window.addEventListener("theme-changed", handler);
-    return () => window.removeEventListener("theme-changed", handler);
+  const handleThemeChanged = useCallback(() => {
+    const monaco = monacoRef.current;
+    if (!monaco) return;
+    defineKosmosTheme(monaco);
+    monaco.editor.setTheme("kosmos");
   }, []);
+  useThemeListener(handleThemeChanged);
 
   // Start LSP when both editor and workspace are ready.
   // Handles the case where workspace loads after the editor mounts (release builds)
@@ -511,27 +511,15 @@ export function EditorTab({ tab }: TabContentProps) {
   }
 
   if (!filePath) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-muted)]">No file path</p>
-      </div>
-    );
+    return <StateView message="No file path" />;
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-secondary)]">Loading...</p>
-      </div>
-    );
+    return <StateView message="Loading..." variant="secondary" />;
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-status-red)]">{error}</p>
-      </div>
-    );
+    return <StateView message={error} variant="error" />;
   }
 
   return (
@@ -544,14 +532,9 @@ export function EditorTab({ tab }: TabContentProps) {
           beforeMount={handleBeforeMount}
           onMount={handleEditorDidMount}
           options={{
-            fontFamily: "'JetBrains Mono', monospace",
+            ...BASE_EDITOR_OPTIONS,
             fontSize: editorFontSize,
-            lineHeight: 1.6,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            padding: { top: 12 },
             renderLineHighlight: "line",
-            smoothScrolling: true,
             cursorBlinking: "smooth",
             cursorSmoothCaretAnimation: "on",
             bracketPairColorization: { enabled: true },
@@ -559,18 +542,7 @@ export function EditorTab({ tab }: TabContentProps) {
               indentation: true,
               bracketPairs: true,
             },
-            overviewRulerBorder: false,
-            hideCursorInOverviewRuler: true,
-            scrollbar: {
-              verticalScrollbarSize: 6,
-              horizontalScrollbarSize: 6,
-              useShadows: false,
-            },
             hover: { above: false },
-            wordWrap: "on",
-            roundedSelection: false,
-            contextmenu: false,
-            automaticLayout: true,
           }}
         />
       </div>

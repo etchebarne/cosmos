@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
 #[cfg(target_os = "windows")]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
+use kosmos_core::CREATE_NO_WINDOW;
 
 /// Remote directory name — dev builds use a separate directory so they don't
 /// kill the production daemon (pkill) or overwrite the production binary.

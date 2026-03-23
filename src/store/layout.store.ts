@@ -102,6 +102,73 @@ function resolveOpenTarget(
   return { kind: "new" as const, targetPaneId };
 }
 
+function makeSplit(
+  direction: "horizontal" | "vertical",
+  children: [PaneNode, PaneNode],
+): PaneSplit {
+  return { id: genId(), type: "split", direction, children, sizes: [50, 50] };
+}
+
+/**
+ * Shared logic for opening a tab in the best available pane.
+ * Used by both openFile and openChanges to avoid duplication.
+ */
+function openTabInBestPane(
+  state: { layout: PaneNode; lastEditorPaneId: string | null },
+  tabType: string,
+  filePath: string,
+  tabTitle: string,
+  metadata: Record<string, unknown>,
+  sourcePaneId: string,
+) {
+  const result = resolveOpenTarget(state.layout, state.lastEditorPaneId, tabType, filePath);
+
+  if (result.kind === "existing") {
+    const layout =
+      updateNode(state.layout, result.leaf.id, (l) => ({
+        ...l,
+        activeTabId: result.tab.id,
+      })) ?? state.layout;
+    return { layout, lastEditorPaneId: result.leaf.id, activePaneId: result.leaf.id };
+  }
+
+  const tab = createTab(tabType, tabTitle, metadata);
+  const { targetPaneId } = result;
+
+  if (targetPaneId) {
+    const layout =
+      updateNode(state.layout, targetPaneId, (leaf) => ({
+        ...leaf,
+        tabs: [...leaf.tabs, tab],
+        activeTabId: tab.id,
+      })) ?? state.layout;
+    return { layout, lastEditorPaneId: targetPaneId, activePaneId: targetPaneId };
+  }
+
+  const newLeaf = createLeaf([tab]);
+  const layout =
+    updateNode(state.layout, sourcePaneId, (leaf) => {
+      return makeSplit("horizontal", [leaf, newLeaf]);
+    }) ?? state.layout;
+
+  return { layout, lastEditorPaneId: newLeaf.id, activePaneId: newLeaf.id };
+}
+
+function closeTabsInDirection(
+  state: { layout: PaneNode },
+  paneId: string,
+  tabId: string,
+  direction: "left" | "right",
+) {
+  const layout = updateNode(state.layout, paneId, (leaf) => {
+    const idx = leaf.tabs.findIndex((t) => t.id === tabId);
+    const tabs = direction === "left" ? leaf.tabs.slice(idx) : leaf.tabs.slice(0, idx + 1);
+    const activeTabId = tabs.some((t) => t.id === leaf.activeTabId) ? leaf.activeTabId : tabId;
+    return { ...leaf, tabs, activeTabId };
+  });
+  return { layout: layout ?? createLeaf() };
+}
+
 export const useLayoutStore = create<LayoutStore>((set) => ({
   layout: createLeaf(),
   layouts: {},
@@ -179,26 +246,10 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
     }),
 
   closeTabsToLeft: (paneId, tabId) =>
-    set((state) => {
-      const layout = updateNode(state.layout, paneId, (leaf) => {
-        const idx = leaf.tabs.findIndex((t) => t.id === tabId);
-        const tabs = leaf.tabs.slice(idx);
-        const activeTabId = tabs.some((t) => t.id === leaf.activeTabId) ? leaf.activeTabId : tabId;
-        return { ...leaf, tabs, activeTabId };
-      });
-      return { layout: layout ?? createLeaf() };
-    }),
+    set((state) => closeTabsInDirection(state, paneId, tabId, "left")),
 
   closeTabsToRight: (paneId, tabId) =>
-    set((state) => {
-      const layout = updateNode(state.layout, paneId, (leaf) => {
-        const idx = leaf.tabs.findIndex((t) => t.id === tabId);
-        const tabs = leaf.tabs.slice(0, idx + 1);
-        const activeTabId = tabs.some((t) => t.id === leaf.activeTabId) ? leaf.activeTabId : tabId;
-        return { ...leaf, tabs, activeTabId };
-      });
-      return { layout: layout ?? createLeaf() };
-    }),
+    set((state) => closeTabsInDirection(state, paneId, tabId, "right")),
 
   closeAllTabs: (paneId) =>
     set((state) => {
@@ -278,15 +329,9 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       const newLeaf = createLeaf([tab]);
       layout =
         updateNode(layout, targetPaneId, (leaf) => {
-          const children = position === "before" ? [newLeaf, leaf] : [leaf, newLeaf];
-          const split: PaneSplit = {
-            id: genId(),
-            type: "split",
-            direction,
-            children,
-            sizes: [50, 50],
-          };
-          return split;
+          const children: [PaneNode, PaneNode] =
+            position === "before" ? [newLeaf, leaf] : [leaf, newLeaf];
+          return makeSplit(direction, children);
         }) ?? layout;
 
       return { layout };
@@ -308,102 +353,29 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       const newLeaf = createLeaf([tab]);
       const layout =
         updateNode(state.layout, targetPaneId, (leaf) => {
-          const children = position === "before" ? [newLeaf, leaf] : [leaf, newLeaf];
-          const split: PaneSplit = {
-            id: genId(),
-            type: "split",
-            direction,
-            children,
-            sizes: [50, 50],
-          };
-          return split;
+          const children: [PaneNode, PaneNode] =
+            position === "before" ? [newLeaf, leaf] : [leaf, newLeaf];
+          return makeSplit(direction, children);
         }) ?? state.layout;
       return { layout };
     }),
 
   openFile: (filePath, fileName, sourcePaneId) =>
-    set((state) => {
-      const result = resolveOpenTarget(state.layout, state.lastEditorPaneId, "editor", filePath);
-
-      if (result.kind === "existing") {
-        const layout =
-          updateNode(state.layout, result.leaf.id, (l) => ({
-            ...l,
-            activeTabId: result.tab.id,
-          })) ?? state.layout;
-        return { layout, lastEditorPaneId: result.leaf.id, activePaneId: result.leaf.id };
-      }
-
-      const tab = createTab("editor", fileName, { filePath });
-      const { targetPaneId } = result;
-
-      if (targetPaneId) {
-        const layout =
-          updateNode(state.layout, targetPaneId, (leaf) => ({
-            ...leaf,
-            tabs: [...leaf.tabs, tab],
-            activeTabId: tab.id,
-          })) ?? state.layout;
-        return { layout, lastEditorPaneId: targetPaneId, activePaneId: targetPaneId };
-      }
-
-      const newLeaf = createLeaf([tab]);
-      const layout =
-        updateNode(state.layout, sourcePaneId, (leaf) => {
-          const split: PaneSplit = {
-            id: genId(),
-            type: "split",
-            direction: "horizontal",
-            children: [leaf, newLeaf],
-            sizes: [50, 50],
-          };
-          return split;
-        }) ?? state.layout;
-
-      return { layout, lastEditorPaneId: newLeaf.id, activePaneId: newLeaf.id };
-    }),
+    set((state) =>
+      openTabInBestPane(state, "editor", filePath, fileName, { filePath }, sourcePaneId),
+    ),
 
   openChanges: (filePath, fileName, staged, isUntracked, sourcePaneId) =>
-    set((state) => {
-      const result = resolveOpenTarget(state.layout, state.lastEditorPaneId, "changes", filePath);
-
-      if (result.kind === "existing") {
-        const layout =
-          updateNode(state.layout, result.leaf.id, (l) => ({
-            ...l,
-            activeTabId: result.tab.id,
-          })) ?? state.layout;
-        return { layout, lastEditorPaneId: result.leaf.id, activePaneId: result.leaf.id };
-      }
-
-      const tab = createTab("changes", fileName, { filePath, staged, isUntracked });
-      const { targetPaneId } = result;
-
-      if (targetPaneId) {
-        const layout =
-          updateNode(state.layout, targetPaneId, (leaf) => ({
-            ...leaf,
-            tabs: [...leaf.tabs, tab],
-            activeTabId: tab.id,
-          })) ?? state.layout;
-        return { layout, lastEditorPaneId: targetPaneId, activePaneId: targetPaneId };
-      }
-
-      const newLeaf = createLeaf([tab]);
-      const layout =
-        updateNode(state.layout, sourcePaneId, (leaf) => {
-          const split: PaneSplit = {
-            id: genId(),
-            type: "split",
-            direction: "horizontal",
-            children: [leaf, newLeaf],
-            sizes: [50, 50],
-          };
-          return split;
-        }) ?? state.layout;
-
-      return { layout, lastEditorPaneId: newLeaf.id, activePaneId: newLeaf.id };
-    }),
+    set((state) =>
+      openTabInBestPane(
+        state,
+        "changes",
+        filePath,
+        fileName,
+        { filePath, staged, isUntracked },
+        sourcePaneId,
+      ),
+    ),
 
   openSearch: () =>
     set((state) => {

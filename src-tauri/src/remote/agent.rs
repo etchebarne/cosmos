@@ -11,6 +11,9 @@ use tokio::sync::{oneshot, Mutex};
 
 use super::connection::ConnectionType;
 
+#[cfg(target_os = "windows")]
+use kosmos_core::CREATE_NO_WINDOW;
+
 const MAX_MESSAGE_SIZE: usize = 64 * 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
@@ -64,7 +67,7 @@ impl RemoteAgent {
                     .stderr(std::process::Stdio::piped());
                 #[cfg(target_os = "windows")]
                 {
-                    cmd.creation_flags(0x08000000);
+                    cmd.creation_flags(CREATE_NO_WINDOW);
                 }
                 cmd.spawn()
                     .map_err(|e| format!("Failed to spawn agent: {e}"))?

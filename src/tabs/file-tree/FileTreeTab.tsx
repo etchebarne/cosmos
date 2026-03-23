@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { FileTreeNode, useFileTreeSelection } from "./FileTreeNode";
 import { ScrollArea } from "../../components/shared/ScrollArea";
+import { StateView } from "../../components/shared/StateView";
 import { useGitStatus } from "../../hooks/use-git-status";
 import { GitFileTreeContext, buildGitColorLookup } from "./git-file-tree-context";
 import type { TabContentProps } from "../types";
@@ -69,27 +70,15 @@ export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
   }, [activeWorkspace]);
 
   if (!activeWorkspace) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-muted)]">No workspace open</p>
-      </div>
-    );
+    return <StateView message="No workspace open" />;
   }
 
   if (loading && entries.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-secondary)]">Loading...</p>
-      </div>
-    );
+    return <StateView message="Loading..." variant="secondary" />;
   }
 
   if (error) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-status-red)]">{error}</p>
-      </div>
-    );
+    return <StateView message={error} variant="error" />;
   }
 
   const rootEntry: DirEntry = {

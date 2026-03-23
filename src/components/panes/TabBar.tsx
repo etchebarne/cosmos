@@ -3,6 +3,7 @@ import autoAnimate from "@formkit/auto-animate";
 import { Plus, X } from "@phosphor-icons/react";
 import { useLayoutStore } from "../../store/layout.store";
 import { useDragStore } from "../../store/drag.store";
+import { startDragThreshold } from "../../lib/drag-threshold";
 import { TabIcon } from "../shared/TabIcon";
 import { ContextMenu } from "../shared/ContextMenu";
 import type { ContextMenuItem } from "../shared/ContextMenu";
@@ -26,8 +27,6 @@ interface TabBarProps {
   activeTabId: string | null;
 }
 
-const DRAG_THRESHOLD = 5;
-
 export const TabBar = memo(function TabBar({ paneId, tabs, activeTabId }: TabBarProps) {
   const setActiveTab = useLayoutStore((s) => s.setActiveTab);
   const closeTab = useLayoutStore((s) => s.closeTab);
@@ -37,36 +36,18 @@ export const TabBar = memo(function TabBar({ paneId, tabs, activeTabId }: TabBar
   const closeAllTabs = useLayoutStore((s) => s.closeAllTabs);
   const addTab = useLayoutStore((s) => s.addTab);
   const setDragState = useDragStore((s) => s.setDragState);
-  const isDraggingRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tab: Tab } | null>(null);
 
   const handleTabMouseDown = useCallback(
     (e: React.MouseEvent, tab: Tab) => {
       if (e.button !== 0) return;
 
-      const startX = e.clientX;
-      const startY = e.clientY;
-      isDraggingRef.current = false;
-
-      const onMouseMove = (ev: MouseEvent) => {
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        if (!isDraggingRef.current && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
-          isDraggingRef.current = true;
-          setDragState({ type: "tab", tab, sourcePaneId: paneId });
-        }
-      };
-
-      const onMouseUp = () => {
-        if (!isDraggingRef.current) {
-          setActiveTab(paneId, tab.id);
-        }
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-      };
-
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
+      startDragThreshold(
+        e.clientX,
+        e.clientY,
+        () => setDragState({ type: "tab", tab, sourcePaneId: paneId }),
+        () => setActiveTab(paneId, tab.id),
+      );
     },
     [paneId, setDragState, setActiveTab],
   );

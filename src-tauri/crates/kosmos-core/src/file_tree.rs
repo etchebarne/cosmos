@@ -3,18 +3,7 @@ use std::path::Path;
 
 use kosmos_protocol::types::DirEntry;
 
-use crate::CoreError;
-
-/// Validate that a path doesn't contain traversal components (`..`).
-/// This prevents escaping workspace boundaries on the remote agent.
-fn validate_no_traversal(path: &str) -> Result<(), CoreError> {
-    for component in Path::new(path).components() {
-        if matches!(component, std::path::Component::ParentDir) {
-            return Err(CoreError::PathTraversal(path.to_string()));
-        }
-    }
-    Ok(())
-}
+use crate::{CoreError, validate_no_traversal};
 
 pub fn read_dir(path: &str) -> Result<Vec<DirEntry>, CoreError> {
     validate_no_traversal(path)?;

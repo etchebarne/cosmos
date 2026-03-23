@@ -25,7 +25,7 @@ use detection::{
 };
 
 #[cfg(target_os = "windows")]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
+use crate::CREATE_NO_WINDOW;
 
 struct LspServer {
     #[allow(dead_code)]

@@ -6,7 +6,7 @@ use kosmos_protocol::types::*;
 use crate::CoreError;
 
 #[cfg(target_os = "windows")]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
+use crate::CREATE_NO_WINDOW;
 
 #[tracing::instrument(level = "debug")]
 async fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>, CoreError> {

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import { load, type Store } from "@tauri-apps/plugin-store";
+import { getTauriStore } from "../lib/tauri-store";
 import { useLspStore } from "./lsp.store";
 import { cleanupEditorInstances } from "../tabs/editor/EditorTab";
 
@@ -47,17 +47,8 @@ function nameFromPath(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? "workspace";
 }
 
-let store: Store | null = null;
-
-async function getStore() {
-  if (!store) {
-    store = await load("workspace.json", { defaults: {}, autoSave: true });
-  }
-  return store;
-}
-
 async function persist(workspaces: Workspace[], activeIndex: number | null) {
-  const s = await getStore();
+  const s = await getTauriStore("workspace.json");
   await s.set("workspaces", workspaces);
   await s.set("activeIndex", activeIndex);
 }
@@ -100,7 +91,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   isConnecting: (path: string) => get().connectingPaths.has(path),
 
   init: async () => {
-    const s = await getStore();
+    const s = await getTauriStore("workspace.json");
     const raw = (await s.get<Workspace[]>("workspaces")) ?? [];
     // Migrate workspaces saved before the connection field existed
     const workspaces = raw.map((w) => ({

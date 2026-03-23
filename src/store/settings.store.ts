@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { load, type Store } from "@tauri-apps/plugin-store";
+import { getTauriStore } from "../lib/tauri-store";
 import { applyTheme } from "../lib/themes";
 
 interface SettingsStore {
@@ -11,17 +11,8 @@ interface SettingsStore {
   get: (key: string) => unknown;
 }
 
-let store: Store | null = null;
-
-async function getStore() {
-  if (!store) {
-    store = await load("settings.json", { defaults: {}, autoSave: true });
-  }
-  return store;
-}
-
 async function persist(values: Record<string, unknown>) {
-  const s = await getStore();
+  const s = await getTauriStore("settings.json");
   await s.set("values", values);
 }
 
@@ -36,7 +27,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   ready: false,
 
   init: async () => {
-    const s = await getStore();
+    const s = await getTauriStore("settings.json");
     const values = (await s.get<Record<string, unknown>>("values")) ?? {};
     set({ values, ready: true });
 

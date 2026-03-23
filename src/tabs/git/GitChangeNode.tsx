@@ -4,6 +4,7 @@ import { CaretRight, Folder, FolderOpen, File } from "@phosphor-icons/react";
 import { getNodeFiles } from "../../lib/git-tree";
 import type { TreeNode } from "../../lib/git-tree";
 import { useDragStore } from "../../store/drag.store";
+import { startDragThreshold } from "../../lib/drag-threshold";
 
 interface GitChangeNodeProps {
   node: TreeNode;
@@ -83,14 +84,12 @@ export function GitChangeNode({
     (e: React.MouseEvent) => {
       if (e.button !== 0 || node.isDir || !node.change) return;
 
-      const startX = e.clientX;
-      const startY = e.clientY;
       dragOccurredRef.current = false;
 
-      const onMouseMove = (ev: MouseEvent) => {
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
-        if (!dragOccurredRef.current && Math.sqrt(dx * dx + dy * dy) > 5) {
+      startDragThreshold(
+        e.clientX,
+        e.clientY,
+        () => {
           dragOccurredRef.current = true;
           setDragState({
             type: "changes",
@@ -99,16 +98,9 @@ export function GitChangeNode({
             staged: node.change!.staged,
             isUntracked,
           });
-        }
-      };
-
-      const onMouseUp = () => {
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-      };
-
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
+        },
+        () => {}, // click is handled by the onClick handler
+      );
     },
     [node, isUntracked, setDragState],
   );

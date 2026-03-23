@@ -10,6 +10,8 @@ import { useEditorStore } from "../../store/editor.store";
 import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
 import { pathToFileUri } from "../../lib/lsp/uri";
 import { ScrollArea } from "../../components/shared/ScrollArea";
+import { StateView } from "../../components/shared/StateView";
+import { BASE_EDITOR_OPTIONS } from "../../lib/monaco-config";
 import type { TabContentProps } from "../types";
 
 type SearchMode = "files" | "content";
@@ -206,26 +208,10 @@ function FilePreview({
       beforeMount={handleBeforeMount}
       onMount={handleMount}
       options={{
+        ...BASE_EDITOR_OPTIONS,
         readOnly: true,
-        fontFamily: "'JetBrains Mono', monospace",
         fontSize: editorFontSize,
-        lineHeight: 1.6,
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        padding: { top: 12 },
         renderLineHighlight: "none",
-        smoothScrolling: true,
-        overviewRulerBorder: false,
-        hideCursorInOverviewRuler: true,
-        scrollbar: {
-          verticalScrollbarSize: 6,
-          horizontalScrollbarSize: 6,
-          useShadows: false,
-        },
-        wordWrap: "on",
-        roundedSelection: false,
-        contextmenu: false,
-        automaticLayout: true,
         domReadOnly: true,
       }}
     />
@@ -388,11 +374,7 @@ export function SearchTab({ tab: _tab, paneId }: TabContentProps) {
   }, [selectedIndex]);
 
   if (!activeWorkspace) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-muted)]">No workspace open</p>
-      </div>
-    );
+    return <StateView message="No workspace open" />;
   }
 
   return (

@@ -6,6 +6,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { TabIcon } from "../../components/shared/TabIcon";
+import { StateView } from "../../components/shared/StateView";
 import { getTheme } from "../../lib/themes";
 import type { TabContentProps } from "../types";
 import "@xterm/xterm/css/xterm.css";
@@ -386,11 +387,7 @@ export function TerminalTab({ tab }: TabContentProps) {
   }, []);
 
   if (!workspace) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-xs text-[var(--color-text-muted)]">No workspace open</p>
-      </div>
-    );
+    return <StateView message="No workspace open" />;
   }
 
   if (!selectedShell) {
