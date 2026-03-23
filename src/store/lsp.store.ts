@@ -135,18 +135,39 @@ export const useLspStore = create<LspState>()(
       });
     }
 
-    /** Recompute the indexProgress store slice for a workspace from the token map. */
-    function syncProgressState(workspacePath: string) {
-      const prefix = workspacePath + "\0";
-      const entries: IndexProgress[] = [];
-      for (const [key, progress] of progressTokens) {
-        if (key.startsWith(prefix)) {
-          entries.push(progress);
-        }
-      }
+    /**
+     * Recompute the indexProgress store slice for a workspace from the token map.
+     * Throttled: during heavy indexing (e.g. rust-analyzer indexing 400+ crates),
+     * progress events fire hundreds of times per second. Each unthrottled call
+     * triggers an immer state update + React re-render of the StatusBar.
+     * We batch updates to fire at most every 200ms to prevent UI/system lag.
+     */
+    const pendingSyncWorkspaces = new Set<string>();
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function flushProgressSync() {
+      syncTimer = null;
+      const workspaces = [...pendingSyncWorkspaces];
+      pendingSyncWorkspaces.clear();
       set((state) => {
-        state.indexProgress[workspacePath] = entries;
+        for (const wp of workspaces) {
+          const prefix = wp + "\0";
+          const entries: IndexProgress[] = [];
+          for (const [key, progress] of progressTokens) {
+            if (key.startsWith(prefix)) {
+              entries.push(progress);
+            }
+          }
+          state.indexProgress[wp] = entries;
+        }
       });
+    }
+
+    function syncProgressState(workspacePath: string) {
+      pendingSyncWorkspaces.add(workspacePath);
+      if (!syncTimer) {
+        syncTimer = setTimeout(flushProgressSync, 200);
+      }
     }
 
     /** Update the store status when a server unexpectedly stops. */
@@ -327,6 +348,8 @@ export const useLspStore = create<LspState>()(
                 syncProgressState(workspacePath);
               }, PROGRESS_TIMEOUT_MS),
             );
+            // Flush immediately so the indicator appears right away
+            flushProgressSync();
           } else if (value.kind === "report") {
             const existing = progressTokens.get(key);
             if (existing) {
@@ -336,12 +359,15 @@ export const useLspStore = create<LspState>()(
                 percentage: value.percentage ?? existing.percentage,
               });
             }
+            // Throttled — syncProgressState batches report updates
+            syncProgressState(workspacePath);
           } else if (value.kind === "end") {
             progressTokens.delete(key);
             clearTimeout(progressTimers.get(key));
             progressTimers.delete(key);
+            // Flush immediately so the indicator disappears right away
+            flushProgressSync();
           }
-          syncProgressState(workspacePath);
         });
 
         // Store under the user's workspace path (for organization/cleanup)
@@ -614,7 +640,8 @@ export const useLspStore = create<LspState>()(
 
         await Promise.allSettled(shutdownPromises);
 
-        // Clean up progress tokens and timers for this workspace
+        // Clean up progress tokens, timers, and pending sync for this workspace
+        pendingSyncWorkspaces.delete(workspacePath);
         const prefix = workspacePath + "\0";
         for (const key of progressTokens.keys()) {
           if (key.startsWith(prefix)) progressTokens.delete(key);
