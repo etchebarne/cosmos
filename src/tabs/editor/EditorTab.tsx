@@ -12,6 +12,7 @@ import { useLspStore } from "../../store/lsp.store";
 import { pathToFileUri } from "../../lib/lsp/uri";
 import { useLayoutStore } from "../../store/layout.store";
 import { useEditorStore } from "../../store/editor.store";
+import { findLeaf } from "../../lib/pane-tree";
 import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
 import { useThemeListener } from "../../hooks/use-theme-listener";
 import { getEditorMeta } from "../../types";
@@ -31,7 +32,7 @@ function languageIdFromPath(filePath: string): string {
   return (ext && languageIdFromExt(ext)) ?? "plaintext";
 }
 
-export function EditorTab({ tab }: TabContentProps) {
+export function EditorTab({ tab, paneId }: TabContentProps) {
   const filePath = getEditorMeta(tab)?.filePath;
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -176,6 +177,21 @@ export function EditorTab({ tab }: TabContentProps) {
     };
   }, []);
 
+  // Focus the editor when this tab becomes the active tab in its pane.
+  // Without this, DOM focus stays on the previously-focused element (e.g. a file
+  // tree <button>), causing Space to re-trigger that button's click instead of
+  // typing in the editor.
+  const isActiveTab = useLayoutStore((s) => {
+    const leaf = findLeaf(s.layout, paneId);
+    return leaf?.activeTabId === tab.id;
+  });
+
+  useEffect(() => {
+    if (isActiveTab && editorRef.current) {
+      editorRef.current.focus();
+    }
+  }, [isActiveTab]);
+
   // Reload editor content when the file is modified externally and the editor is clean.
   // Uses refs for workspace/fileUri/getClient to keep the listener stable across store updates.
   useEffect(() => {
@@ -241,6 +257,9 @@ export function EditorTab({ tab }: TabContentProps) {
     // Signal that the editor is mounted — the LSP useEffect will handle
     // starting the server and sending didOpen when all conditions are met.
     setEditorReady(true);
+
+    // Grab keyboard focus so the user can type immediately
+    instance.focus();
 
     // Register editor instance for cross-file navigation
     if (filePath) {
