@@ -1,4 +1,4 @@
-const DRAG_THRESHOLD = 5;
+export const DRAG_THRESHOLD = 5;
 
 /**
  * Attach temporary mousemove/mouseup listeners that distinguish clicks from drags.

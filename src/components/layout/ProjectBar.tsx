@@ -7,9 +7,9 @@ import { useWorkspaceStore } from "../../store/workspace.store";
 import { ContextMenu } from "../shared/ContextMenu";
 import { Tooltip } from "../shared/Tooltip";
 import { useLayoutStore } from "../../store/layout.store";
+import { DRAG_THRESHOLD } from "../../lib/drag-threshold";
 import { RemoteDialog } from "./RemoteDialog";
 
-const DRAG_THRESHOLD = 5;
 const FLIP_DURATION = 150;
 
 export function ProjectBar() {

@@ -8,7 +8,7 @@ name = "kosmos-agent"
 path = "src/main.rs"
 
 [dependencies]
-kosmos-protocol = { path = "../kosmos-protocol" }
+kosmos-protocol = { path = "../kosmos-protocol", features = ["async"] }
 kosmos-core = { path = "../kosmos-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

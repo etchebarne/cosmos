@@ -8,6 +8,7 @@ import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { TabIcon } from "../../components/shared/TabIcon";
 import { StateView } from "../../components/shared/StateView";
 import { getTheme } from "../../lib/themes";
+import { DEFAULT_FONT_SIZE, MIN_FONT_SIZE, MAX_FONT_SIZE } from "../../store/editor.store";
 import type { TabContentProps } from "../types";
 import "@xterm/xterm/css/xterm.css";
 
@@ -75,10 +76,6 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
 
     // Unique ID per effect invocation to avoid Strict Mode race conditions
     const terminalId = `${tabId}-${++spawnCounter}`;
-
-    const DEFAULT_FONT_SIZE = 13;
-    const MIN_FONT_SIZE = 8;
-    const MAX_FONT_SIZE = 30;
 
     const t = getTheme().terminal;
     const terminal = new Terminal({

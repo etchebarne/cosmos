@@ -4,19 +4,11 @@ use std::sync::Arc;
 use kosmos_core::lsp::LspManager;
 use kosmos_protocol::requests::Request;
 use kosmos_protocol::types::*;
+use kosmos_protocol::ToStringErr;
 use tauri::State;
 use tokio::sync::Mutex;
 
 use crate::remote::router::BackendRouter;
-
-trait ToStringErr<T> {
-    fn str_err(self) -> Result<T, String>;
-}
-impl<T, E: std::fmt::Display> ToStringErr<T> for Result<T, E> {
-    fn str_err(self) -> Result<T, String> {
-        self.map_err(|e| e.to_string())
-    }
-}
 
 fn no_agent_error(path: &str) -> String {
     format!("Remote agent not connected for path: {path}")

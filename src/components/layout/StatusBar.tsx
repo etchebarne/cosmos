@@ -6,6 +6,7 @@ import { useLspStore, resolveServerLanguage, type ServerStatus } from "../../sto
 import { useLayoutStore } from "../../store/layout.store";
 import { findLeaf } from "../../lib/pane-tree";
 import { languageIdFromExt } from "../../lib/ext-to-lang";
+import { getFileExtension } from "../../lib/path-utils";
 import { Dialog } from "../shared/Dialog";
 
 const STATUS_COLORS: Record<ServerStatus, string> = {
@@ -27,7 +28,7 @@ const STATUS_LABELS: Record<ServerStatus, string> = {
 };
 
 function filePathToServerLang(filePath: string): string | null {
-  const ext = filePath.match(/\.([^./\\]+)$/)?.[1]?.toLowerCase();
+  const ext = getFileExtension(filePath);
   if (!ext) return null;
   const langId = languageIdFromExt(ext);
   if (!langId) return null;

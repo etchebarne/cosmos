@@ -19,12 +19,13 @@ import { getEditorMeta } from "../../types";
 import { StateView } from "../../components/shared/StateView";
 import { BASE_EDITOR_OPTIONS } from "../../lib/monaco-config";
 import { initExtMap, languageIdFromExt } from "../../lib/ext-to-lang";
+import { getFileName, normalizePath, getFileExtension } from "../../lib/path-utils";
 import type { TabContentProps } from "../types";
 
 // ── Language detection from file extension (for early LSP start) ──
 
 function languageIdFromPath(filePath: string): string {
-  const ext = filePath.match(/\.([^./\\]+)$/)?.[1]?.toLowerCase();
+  const ext = getFileExtension(filePath);
   return (ext && languageIdFromExt(ext)) ?? "plaintext";
 }
 
@@ -95,7 +96,7 @@ function registerEditorOpener(monaco: Monaco) {
       }
 
       const filePath = uriToNormalizedPath(resource.toString());
-      const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+      const fileName = getFileName(filePath);
 
       // Determine target position
       let position: { lineNumber: number; column: number } | undefined;
@@ -307,9 +308,8 @@ export function EditorTab({ tab }: TabContentProps) {
     const unlisten = listen<string[]>("file-content-changed", async (event) => {
       const changedFiles = event.payload;
       // Normalize both paths for comparison (backslash-insensitive)
-      const norm = (p: string) => p.replace(/\\/g, "/").toLowerCase();
-      const normFilePath = norm(filePath);
-      if (!changedFiles.some((f) => norm(f) === normFilePath)) return;
+      const normFilePath = normalizePath(filePath);
+      if (!changedFiles.some((f) => normalizePath(f) === normFilePath)) return;
 
       // Don't reload if the user has unsaved edits
       if (dirtyRef.current) return;

@@ -5,6 +5,7 @@ import MonacoEditor, { type Monaco } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { useLayoutStore } from "../../store/layout.store";
+import { getFileName, joinPath } from "../../lib/path-utils";
 import { revealPosition, defineKosmosTheme } from "../editor/EditorTab";
 import { useEditorStore } from "../../store/editor.store";
 import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
@@ -242,7 +243,7 @@ export function SearchTab({ tab: _tab, paneId }: TabContentProps) {
     if (mode !== "files" || !query.trim()) return [];
     const matches: FileResult[] = [];
     for (const path of allFiles) {
-      const fileName = path.split("/").pop() ?? path;
+      const fileName = getFileName(path);
       const m = fuzzyMatch(query, fileName);
       if (m) {
         const nameOffset = path.length - fileName.length;
@@ -305,15 +306,15 @@ export function SearchTab({ tab: _tab, paneId }: TabContentProps) {
   // Full path for preview
   const previewPath = useMemo(() => {
     if (!selectedContent || !activeWorkspace) return null;
-    return `${activeWorkspace.path}/${selectedContent.path}`.replace(/\//g, "\\");
+    return joinPath(activeWorkspace.path, selectedContent.path);
   }, [selectedContent, activeWorkspace]);
 
   // Open file handler
   const openFile = useCallback(
     (filePath: string) => {
       if (!activeWorkspace) return;
-      const fullPath = `${activeWorkspace.path}/${filePath}`.replace(/\//g, "\\");
-      const fileName = filePath.split("/").pop() ?? filePath;
+      const fullPath = joinPath(activeWorkspace.path, filePath);
+      const fileName = getFileName(filePath);
       useLayoutStore.getState().openFile(fullPath, fileName, paneId);
     },
     [activeWorkspace, paneId],
@@ -329,7 +330,7 @@ export function SearchTab({ tab: _tab, paneId }: TabContentProps) {
         if (r) {
           openFile(r.path);
           if (!activeWorkspace) return;
-          const fullPath = `${activeWorkspace.path}/${r.path}`.replace(/\//g, "\\");
+          const fullPath = joinPath(activeWorkspace.path, r.path);
           revealPosition(fullPath, { lineNumber: r.line, column: r.col });
         }
       }
@@ -455,7 +456,7 @@ export function SearchTab({ tab: _tab, paneId }: TabContentProps) {
                     <File size={14} className="text-[var(--color-text-muted)] shrink-0" />
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-[12px] text-[var(--color-text-primary)] font-medium truncate">
-                        {r.path.split("/").pop()}
+                        {getFileName(r.path)}
                       </span>
                       <span className="text-[10px] text-[var(--color-text-tertiary)] truncate">
                         {highlightedParts(r.path, r.indices).map((p, j) =>
@@ -518,7 +519,7 @@ export function SearchTab({ tab: _tab, paneId }: TabContentProps) {
                         <div className="flex flex-col min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[12px] text-[var(--color-text-primary)] font-medium truncate">
-                              {r.path.split("/").pop()}
+                              {getFileName(r.path)}
                             </span>
                             <span className="text-[10px] text-[var(--color-text-muted)]">
                               :{r.line}

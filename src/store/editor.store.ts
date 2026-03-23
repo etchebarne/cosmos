@@ -1,8 +1,8 @@
 import { create } from "zustand";
 
-const DEFAULT_FONT_SIZE = 13;
-const MIN_FONT_SIZE = 8;
-const MAX_FONT_SIZE = 30;
+export const DEFAULT_FONT_SIZE = 13;
+export const MIN_FONT_SIZE = 8;
+export const MAX_FONT_SIZE = 30;
 const FONT_SIZE_STEP = 1;
 
 interface EditorStore {

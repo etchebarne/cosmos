@@ -1,5 +1,6 @@
 import { createContext } from "react";
 import type { GitFileChange } from "../../lib/git-tree";
+import { normalizePath } from "../../lib/path-utils";
 
 export type GitColorFn = (entryPath: string, isDir: boolean) => string | null;
 
@@ -26,7 +27,7 @@ export function buildGitColorLookup(changes: GitFileChange[], workspacePath: str
   const dirPriorityMap = new Map<string, number>();
 
   for (const change of changes) {
-    const norm = change.path.replace(/\\/g, "/").toLowerCase();
+    const norm = normalizePath(change.path);
     const priority = STATUS_PRIORITY[change.status] ?? 1;
     fileColorMap.set(norm, PRIORITY_COLOR[priority]!);
 
@@ -39,10 +40,10 @@ export function buildGitColorLookup(changes: GitFileChange[], workspacePath: str
     }
   }
 
-  const wsPrefix = workspacePath.replace(/\\/g, "/").replace(/\/$/, "").toLowerCase() + "/";
+  const wsPrefix = normalizePath(workspacePath).replace(/\/$/, "") + "/";
 
   return (entryPath: string, isDir: boolean) => {
-    const norm = entryPath.replace(/\\/g, "/").toLowerCase();
+    const norm = normalizePath(entryPath);
     if (!norm.startsWith(wsPrefix)) return null;
     const rel = norm.slice(wsPrefix.length);
     if (!rel) return null;

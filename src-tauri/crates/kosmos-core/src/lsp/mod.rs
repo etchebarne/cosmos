@@ -43,10 +43,7 @@ pub struct LspManager {
 }
 
 fn make_server_id(workspace_path: &str, language_id: &str) -> String {
-    let safe_path: String = workspace_path
-        .chars()
-        .map(|c| if c == '\\' { '/' } else { c })
-        .collect();
+    let safe_path = workspace_path.replace('\\', "/");
     format!("{language_id}:{safe_path}")
 }
 

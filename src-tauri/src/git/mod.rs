@@ -1,21 +1,13 @@
 use kosmos_core::watcher::WatcherManager;
 use kosmos_protocol::requests::Request;
 use kosmos_protocol::types::*;
+use kosmos_protocol::ToStringErr;
 use tauri::State;
 
 use crate::remote::router::BackendRouter;
 
 fn no_agent_error(path: &str) -> String {
     format!("Remote agent not connected for path: {path}")
-}
-
-trait ToStringErr<T> {
-    fn str_err(self) -> Result<T, String>;
-}
-impl<T, E: std::fmt::Display> ToStringErr<T> for Result<T, E> {
-    fn str_err(self) -> Result<T, String> {
-        self.map_err(|e| e.to_string())
-    }
 }
 
 async fn route_val<T, E, F, Fut>(

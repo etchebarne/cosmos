@@ -2,55 +2,17 @@ import { useState, useCallback, useRef, useEffect, useContext } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { CaretRight, Folder, FolderOpen, File } from "@phosphor-icons/react";
-import { create } from "zustand";
 import { useLayoutStore } from "../../store/layout.store";
 import { useIsDarkTheme } from "../../lib/themes";
 import { useDragStore } from "../../store/drag.store";
 import { startDragThreshold } from "../../lib/drag-threshold";
+import { getFileName, getParentDir, normalizePath, joinPath } from "../../lib/path-utils";
 import { ContextMenu } from "../../components/shared/ContextMenu";
 import type { ContextMenuItem } from "../../components/shared/ContextMenu";
 import type { DirEntry } from "./FileTreeTab";
+import { useFileTreeSelection, useFileClipboard } from "./file-tree-stores";
 import { GitFileTreeContext } from "./git-file-tree-context";
 import { FileIcon } from "./file-icons";
-
-// ── Selection store ──
-
-interface FileTreeSelectionState {
-  selectedPaths: Set<string>;
-  anchorPath: string | null;
-  select: (path: string) => void;
-  rangeSelect: (paths: string[]) => void;
-  clear: () => void;
-}
-
-export const useFileTreeSelection = create<FileTreeSelectionState>((set) => ({
-  selectedPaths: new Set(),
-  anchorPath: null,
-  select: (path) => set({ selectedPaths: new Set([path]), anchorPath: path }),
-  rangeSelect: (paths) =>
-    set((state) => ({
-      selectedPaths: new Set(paths),
-      anchorPath: state.anchorPath,
-    })),
-  clear: () => set({ selectedPaths: new Set(), anchorPath: null }),
-}));
-
-// ── Clipboard store ──
-
-interface FileClipboardState {
-  clipboard: {
-    mode: "cut" | "copy";
-    files: Array<{ path: string; name: string }>;
-  } | null;
-  set: (clipboard: FileClipboardState["clipboard"]) => void;
-  clear: () => void;
-}
-
-const useFileClipboard = create<FileClipboardState>((set) => ({
-  clipboard: null,
-  set: (clipboard) => set({ clipboard }),
-  clear: () => set({ clipboard: null }),
-}));
 
 // ── Helpers ──
 
@@ -64,25 +26,6 @@ interface FileTreeNodeProps {
 
 const INDENT_SIZE = 16;
 const LEFT_PAD = 8;
-
-function getParentDir(filePath: string): string {
-  const lastSep = Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\"));
-  return lastSep > 0 ? filePath.substring(0, lastSep) : filePath;
-}
-
-function getFileName(filePath: string): string {
-  const lastSep = Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\"));
-  return lastSep >= 0 ? filePath.substring(lastSep + 1) : filePath;
-}
-
-function normalizePath(p: string): string {
-  return p.replace(/\\/g, "/").toLowerCase();
-}
-
-function joinPath(dir: string, name: string): string {
-  const sep = dir.startsWith("wsl://") || dir.includes("/") ? "/" : "\\";
-  return dir.endsWith("/") || dir.endsWith("\\") ? dir + name : dir + sep + name;
-}
 
 // ── Inline input ──
 

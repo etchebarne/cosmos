@@ -10,7 +10,7 @@ default = ["installer"]
 installer = ["dep:zip", "dep:flate2", "dep:tar"]
 
 [dependencies]
-kosmos-protocol = { path = "../kosmos-protocol" }
+kosmos-protocol = { path = "../kosmos-protocol", features = ["async"] }
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 thiserror = "2"

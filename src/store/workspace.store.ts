@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getTauriStore } from "../lib/tauri-store";
 import { useLspStore } from "./lsp.store";
 import { cleanupEditorInstances } from "../tabs/editor/EditorTab";
+import { getFileName } from "../lib/path-utils";
 
 const WORKSPACE_COLORS = [
   "#4B8EF5",
@@ -44,7 +45,7 @@ interface WorkspaceStore {
 }
 
 function nameFromPath(path: string): string {
-  return path.split(/[\\/]/).filter(Boolean).pop() ?? "workspace";
+  return getFileName(path) || "workspace";
 }
 
 async function persist(workspaces: Workspace[], activeIndex: number | null) {

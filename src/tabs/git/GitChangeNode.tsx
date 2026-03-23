@@ -5,6 +5,7 @@ import { getNodeFiles } from "../../lib/git-tree";
 import type { TreeNode } from "../../lib/git-tree";
 import { useDragStore } from "../../store/drag.store";
 import { startDragThreshold } from "../../lib/drag-threshold";
+import { gitStatusColor } from "../../lib/git-colors";
 
 interface GitChangeNodeProps {
   node: TreeNode;
@@ -17,20 +18,6 @@ interface GitChangeNodeProps {
 
 const INDENT_SIZE = 16;
 const LEFT_PAD = 8;
-
-function getFileIconColor(status: string): string {
-  switch (status) {
-    case "added":
-    case "untracked":
-      return "text-[var(--color-status-green)]";
-    case "deleted":
-      return "text-[var(--color-status-red)]";
-    case "modified":
-    case "renamed":
-    default:
-      return "text-[var(--color-status-amber)]";
-  }
-}
 
 function getCheckState(node: TreeNode): "checked" | "unchecked" | "indeterminate" {
   const files = getNodeFiles(node);
@@ -145,7 +132,7 @@ export function GitChangeNode({
         {/* Icon */}
         <IconComp
           size={14}
-          className={`shrink-0 ${node.isDir ? "text-[var(--color-accent-blue)]" : node.change ? getFileIconColor(node.change.status) : "text-[var(--color-text-tertiary)]"}`}
+          className={`shrink-0 ${node.isDir ? "text-[var(--color-accent-blue)]" : node.change ? gitStatusColor(node.change.status) : "text-[var(--color-text-tertiary)]"}`}
         />
 
         {/* Name */}

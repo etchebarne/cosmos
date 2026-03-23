@@ -1,7 +1,8 @@
 import { useEffect, useCallback, useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
-import { FileTreeNode, useFileTreeSelection } from "./FileTreeNode";
+import { FileTreeNode } from "./FileTreeNode";
+import { useFileTreeSelection } from "./file-tree-stores";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { StateView } from "../../components/shared/StateView";
 import { useGitStatus } from "../../hooks/use-git-status";

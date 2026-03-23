@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Trash, CaretRight, File } from "@phosphor-icons/react";
 import { Dialog } from "../../components/shared/Dialog";
+import { gitStatusColor, gitStatusLabel } from "../../lib/git-colors";
 
 interface GitStashEntry {
   index: number;
@@ -18,32 +19,6 @@ interface StashDialogProps {
   onClose: () => void;
   workspacePath: string;
   onApply: () => void;
-}
-
-function fileStatusColor(status: string): string {
-  switch (status) {
-    case "added":
-      return "text-[var(--color-status-green)]";
-    case "deleted":
-      return "text-[var(--color-status-red)]";
-    case "modified":
-    case "renamed":
-    default:
-      return "text-[var(--color-status-amber)]";
-  }
-}
-
-function fileStatusLabel(status: string): string {
-  switch (status) {
-    case "added":
-      return "A";
-    case "deleted":
-      return "D";
-    case "renamed":
-      return "R";
-    default:
-      return "M";
-  }
 }
 
 function StashEntryRow({
@@ -132,14 +107,14 @@ function StashEntryRow({
           {!filesLoading &&
             files.map((file) => (
               <div key={file.path} className="flex items-center gap-2 px-8 py-1.5">
-                <File size={12} className={fileStatusColor(file.status)} />
+                <File size={12} className={gitStatusColor(file.status)} />
                 <span className="text-[11px] text-[var(--color-text-secondary)] flex-1 truncate">
                   {file.path}
                 </span>
                 <span
-                  className={`text-[10px] font-mono font-medium ${fileStatusColor(file.status)}`}
+                  className={`text-[10px] font-mono font-medium ${gitStatusColor(file.status)}`}
                 >
-                  {fileStatusLabel(file.status)}
+                  {gitStatusLabel(file.status)}
                 </span>
               </div>
             ))}

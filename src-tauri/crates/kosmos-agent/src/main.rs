@@ -6,19 +6,8 @@ use kosmos_core::EventSink;
 use kosmos_protocol::events::Event;
 use kosmos_protocol::framing;
 use kosmos_protocol::requests::{Request, RequestMessage, ResponseMessage};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
+use kosmos_protocol::ToStringErr;
 use tokio::sync::broadcast;
-
-// ── Shared types ──
-
-trait ToStringErr<T> {
-    fn str_err(self) -> Result<T, String>;
-}
-impl<T, E: std::fmt::Display> ToStringErr<T> for Result<T, E> {
-    fn str_err(self) -> Result<T, String> {
-        self.str_err()
-    }
-}
 
 struct AgentState {
     watcher: kosmos_core::watcher::WatcherManager,
@@ -67,54 +56,7 @@ fn to_json(val: impl serde::Serialize) -> Result<serde_json::Value, String> {
     serde_json::to_value(val).map_err(|e| format!("Serialization error: {e}"))
 }
 
-// ── Async framing (for Unix socket I/O) ──
-
-async fn async_read_message(
-    reader: &mut (impl AsyncBufReadExt + Unpin),
-) -> io::Result<String> {
-    let mut content_length: Option<usize> = None;
-    loop {
-        let mut line = String::new();
-        let n = reader.read_line(&mut line).await?;
-        if n == 0 {
-            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "EOF"));
-        }
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            break;
-        }
-        if let Some(val) = trimmed.strip_prefix("Content-Length:") {
-            content_length = Some(val.trim().parse().map_err(|e| {
-                io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    format!("Invalid Content-Length: {e}"),
-                )
-            })?);
-        }
-    }
-    let length = content_length
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing Content-Length"))?;
-    if length > 64 * 1024 * 1024 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "Message too large",
-        ));
-    }
-    let mut body = vec![0u8; length];
-    reader.read_exact(&mut body).await?;
-    String::from_utf8(body)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))
-}
-
-async fn async_write_message(
-    writer: &mut (impl AsyncWriteExt + Unpin),
-    json: &str,
-) -> io::Result<()> {
-    let header = format!("Content-Length: {}\r\n\r\n", json.len());
-    writer.write_all(header.as_bytes()).await?;
-    writer.write_all(json.as_bytes()).await?;
-    writer.flush().await
-}
+use kosmos_protocol::framing::{async_read_message, async_write_message};
 
 // ── Request dispatcher (shared between daemon and inline modes) ──
 
