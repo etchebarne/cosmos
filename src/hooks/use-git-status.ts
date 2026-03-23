@@ -24,14 +24,11 @@ export function useGitStatus(workspacePath: string | null, active = true) {
     }
   }, [workspacePath]);
 
-  // Fetch on mount and when becoming active
-  useEffect(() => {
-    if (active) refresh();
-  }, [refresh, active]);
-
-  // Only watch for file changes when this workspace is active
+  // Fetch on mount/active-change and watch for file changes while active
   useEffect(() => {
     if (!workspacePath || !active) return;
+
+    refresh();
 
     invoke("watch_workspace", { path: workspacePath });
 

@@ -9,17 +9,42 @@ use tokio::sync::Mutex;
 
 use crate::remote::router::BackendRouter;
 
+trait ToStringErr<T> {
+    fn str_err(self) -> Result<T, String>;
+}
+impl<T, E: std::fmt::Display> ToStringErr<T> for Result<T, E> {
+    fn str_err(self) -> Result<T, String> {
+        self.map_err(|e| e.to_string())
+    }
+}
+
 fn no_agent_error(path: &str) -> String {
     format!("Remote agent not connected for path: {path}")
 }
 
 /// Tracks which server IDs belong to remote agents, mapping server_id -> workspace_path.
 /// This allows lsp_send and lsp_stop (which only receive a server_id) to route correctly.
-pub struct RemoteServerMap(pub Mutex<HashMap<String, String>>);
+pub struct RemoteServerMap(Mutex<HashMap<String, String>>);
 
 impl RemoteServerMap {
     pub fn new() -> Self {
         Self(Mutex::new(HashMap::new()))
+    }
+
+    pub async fn insert(&self, server_id: String, workspace_path: String) {
+        self.0.lock().await.insert(server_id, workspace_path);
+    }
+
+    pub async fn get(&self, server_id: &str) -> Option<String> {
+        self.0.lock().await.get(server_id).cloned()
+    }
+
+    pub async fn remove(&self, server_id: &str) -> Option<String> {
+        self.0.lock().await.remove(server_id)
+    }
+
+    pub async fn retain_workspace(&self, workspace_path: &str) {
+        self.0.lock().await.retain(|_, wp| wp != workspace_path);
     }
 }
 
@@ -46,18 +71,16 @@ pub async fn lsp_start(
             })
             .await?;
         let start_result: LspStartResult =
-            serde_json::from_value(result).map_err(|e| e.to_string())?;
+            serde_json::from_value(result).str_err()?;
         remote_servers
-            .0
-            .lock()
-            .await
-            .insert(start_result.server_id.clone(), workspace_path);
+            .insert(start_result.server_id.clone(), workspace_path)
+            .await;
         return Ok(start_result);
     }
     if BackendRouter::is_remote_path(&workspace_path) {
         return Err(no_agent_error(&workspace_path));
     }
-    state.start(&workspace_path, &language_id).await.map_err(|e| e.to_string())
+    state.start(&workspace_path, &language_id).await.str_err()
 }
 
 #[tauri::command]
@@ -68,7 +91,7 @@ pub async fn lsp_send(
     server_id: String,
     message: String,
 ) -> Result<(), String> {
-    let wp = remote_servers.0.lock().await.get(&server_id).cloned();
+    let wp = remote_servers.get(&server_id).await;
     if let Some(wp) = wp {
         if let Some((agent, _)) = router.resolve(&wp).await {
             // Fire-and-forget: the LSP response comes back via events, not
@@ -82,7 +105,7 @@ pub async fn lsp_send(
             return Ok(());
         }
     }
-    state.send(&server_id, &message).await.map_err(|e| e.to_string())
+    state.send(&server_id, &message).await.str_err()
 }
 
 #[tauri::command]
@@ -92,14 +115,14 @@ pub async fn lsp_stop(
     remote_servers: State<'_, RemoteServerMap>,
     server_id: String,
 ) -> Result<(), String> {
-    let wp = remote_servers.0.lock().await.remove(&server_id);
+    let wp = remote_servers.remove(&server_id).await;
     if let Some(wp) = wp {
         if let Some((agent, _)) = router.resolve(&wp).await {
             agent.request(Request::LspStop { server_id }).await?;
             return Ok(());
         }
     }
-    state.stop(&server_id).await.map_err(|e| e.to_string())
+    state.stop(&server_id).await.str_err()
 }
 
 #[tauri::command]
@@ -110,9 +133,7 @@ pub async fn lsp_stop_workspace(
     workspace_path: String,
 ) -> Result<(), String> {
     if let Some((agent, linux_path)) = router.resolve(&workspace_path).await {
-        let mut map = remote_servers.0.lock().await;
-        map.retain(|_, wp| wp != &workspace_path);
-        drop(map);
+        remote_servers.retain_workspace(&workspace_path).await;
 
         agent
             .request(Request::LspStopWorkspace {
@@ -124,7 +145,7 @@ pub async fn lsp_stop_workspace(
     if BackendRouter::is_remote_path(&workspace_path) {
         return Err(no_agent_error(&workspace_path));
     }
-    state.stop_workspace(&workspace_path).await.map_err(|e| e.to_string())
+    state.stop_workspace(&workspace_path).await.str_err()
 }
 
 #[tauri::command]
@@ -139,7 +160,7 @@ pub async fn lsp_check_availability(
                 workspace_path: linux_path,
             })
             .await?;
-        return serde_json::from_value(result).map_err(|e| e.to_string());
+        return serde_json::from_value(result).str_err();
     }
     if BackendRouter::is_remote_path(&workspace_path) {
         return Err(no_agent_error(&workspace_path));
@@ -147,7 +168,7 @@ pub async fn lsp_check_availability(
     let mgr = state.inner().clone();
     tokio::task::spawn_blocking(move || mgr.check_availability(&workspace_path))
         .await
-        .map_err(|e| e.to_string())
+        .str_err()
 }
 
 #[tauri::command]
@@ -168,7 +189,7 @@ pub async fn lsp_scan_projects(
             })
             .await?;
         let mut projects: Vec<DetectedProject> =
-            serde_json::from_value(result).map_err(|e| e.to_string())?;
+            serde_json::from_value(result).str_err()?;
         // Prepend wsl prefix to project_root so the frontend can route lsp_start correctly
         if let Some(prefix) = wsl_prefix(&workspace_path) {
             for project in &mut projects {
@@ -183,7 +204,7 @@ pub async fn lsp_scan_projects(
     let mgr = state.inner().clone();
     tokio::task::spawn_blocking(move || mgr.scan_projects(&workspace_path))
         .await
-        .map_err(|e| e.to_string())
+        .str_err()
 }
 
 #[tauri::command]
@@ -206,7 +227,7 @@ pub async fn lsp_resolve_root(
                 workspace_path: linux_wp,
             })
             .await?;
-        let root: String = serde_json::from_value(result).map_err(|e| e.to_string())?;
+        let root: String = serde_json::from_value(result).str_err()?;
         return Ok(format!("{}{}", prefix, root));
     }
     if BackendRouter::is_remote_path(&workspace_path) {
@@ -216,7 +237,7 @@ pub async fn lsp_resolve_root(
         LspManager::resolve_root(&file_path, &language_id, &workspace_path)
     })
     .await
-    .map_err(|e| e.to_string())
+    .str_err()
 }
 
 #[tauri::command]
@@ -243,7 +264,7 @@ pub async fn lsp_installed_list(
     if let Some(wp) = &workspace_path {
         if let Some((agent, _)) = router.resolve(wp).await {
             let result = agent.request(Request::LspInstalledList).await?;
-            return serde_json::from_value(result).map_err(|e| e.to_string());
+            return serde_json::from_value(result).str_err();
         }
     }
     Ok(state.installed_list())
@@ -264,10 +285,10 @@ pub async fn lsp_install_server(
                     std::time::Duration::from_secs(300),
                 )
                 .await?;
-            return serde_json::from_value(result).map_err(|e| e.to_string());
+            return serde_json::from_value(result).str_err();
         }
     }
-    state.install_server(&name).await.map_err(|e| e.to_string())
+    state.install_server(&name).await.str_err()
 }
 
 #[tauri::command]
@@ -285,5 +306,5 @@ pub async fn lsp_uninstall_server(
             return Ok(());
         }
     }
-    state.uninstall_server(&name).map_err(|e| e.to_string())
+    state.uninstall_server(&name).str_err()
 }

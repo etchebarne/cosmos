@@ -64,44 +64,6 @@ interface LayoutStore {
   setTabDirty: (tabId: string, dirty: boolean) => void;
 }
 
-/**
- * Find an existing tab across all leaves, or determine the best pane
- * to open a new tab in (preferring editor/changes panes).
- */
-function resolveOpenTarget(
-  layout: PaneNode,
-  lastEditorPaneId: string | null,
-  tabType: string,
-  filePath: string,
-) {
-  const leaves = findAllLeaves(layout);
-
-  // Check if a tab for this file is already open
-  for (const leaf of leaves) {
-    const existing = leaf.tabs.find(
-      (t) => t.type === tabType && (t.metadata?.filePath as string) === filePath,
-    );
-    if (existing) {
-      return { kind: "existing" as const, leaf, tab: existing };
-    }
-  }
-
-  // Find panes that already have editor or changes tabs
-  const editorPanes = leaves.filter((leaf) =>
-    leaf.tabs.some((t) => t.type === "editor" || t.type === "changes"),
-  );
-
-  let targetPaneId: string | null = null;
-  if (editorPanes.length === 1) {
-    targetPaneId = editorPanes[0].id;
-  } else if (editorPanes.length > 1) {
-    const lastUsed = editorPanes.find((p) => p.id === lastEditorPaneId);
-    targetPaneId = lastUsed ? lastUsed.id : editorPanes[0].id;
-  }
-
-  return { kind: "new" as const, targetPaneId };
-}
-
 function makeSplit(
   direction: "horizontal" | "vertical",
   children: [PaneNode, PaneNode],
@@ -121,19 +83,37 @@ function openTabInBestPane(
   metadata: Record<string, unknown>,
   sourcePaneId: string,
 ) {
-  const result = resolveOpenTarget(state.layout, state.lastEditorPaneId, tabType, filePath);
+  const leaves = findAllLeaves(state.layout);
 
-  if (result.kind === "existing") {
-    const layout =
-      updateNode(state.layout, result.leaf.id, (l) => ({
-        ...l,
-        activeTabId: result.tab.id,
-      })) ?? state.layout;
-    return { layout, lastEditorPaneId: result.leaf.id, activePaneId: result.leaf.id };
+  // Check if a tab for this file is already open
+  for (const leaf of leaves) {
+    const existing = leaf.tabs.find(
+      (t) => t.type === tabType && (t.metadata?.filePath as string) === filePath,
+    );
+    if (existing) {
+      const layout =
+        updateNode(state.layout, leaf.id, (l) => ({
+          ...l,
+          activeTabId: existing.id,
+        })) ?? state.layout;
+      return { layout, lastEditorPaneId: leaf.id, activePaneId: leaf.id };
+    }
+  }
+
+  // Find the best pane to open a new tab in
+  const editorPanes = leaves.filter((leaf) =>
+    leaf.tabs.some((t) => t.type === "editor" || t.type === "changes"),
+  );
+
+  let targetPaneId: string | null = null;
+  if (editorPanes.length === 1) {
+    targetPaneId = editorPanes[0].id;
+  } else if (editorPanes.length > 1) {
+    const lastUsed = editorPanes.find((p) => p.id === state.lastEditorPaneId);
+    targetPaneId = lastUsed ? lastUsed.id : editorPanes[0].id;
   }
 
   const tab = createTab(tabType, tabTitle, metadata);
-  const { targetPaneId } = result;
 
   if (targetPaneId) {
     const layout =
@@ -152,21 +132,6 @@ function openTabInBestPane(
     }) ?? state.layout;
 
   return { layout, lastEditorPaneId: newLeaf.id, activePaneId: newLeaf.id };
-}
-
-function closeTabsInDirection(
-  state: { layout: PaneNode },
-  paneId: string,
-  tabId: string,
-  direction: "left" | "right",
-) {
-  const layout = updateNode(state.layout, paneId, (leaf) => {
-    const idx = leaf.tabs.findIndex((t) => t.id === tabId);
-    const tabs = direction === "left" ? leaf.tabs.slice(idx) : leaf.tabs.slice(0, idx + 1);
-    const activeTabId = tabs.some((t) => t.id === leaf.activeTabId) ? leaf.activeTabId : tabId;
-    return { ...leaf, tabs, activeTabId };
-  });
-  return { layout: layout ?? createLeaf() };
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -246,10 +211,26 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
     }),
 
   closeTabsToLeft: (paneId, tabId) =>
-    set((state) => closeTabsInDirection(state, paneId, tabId, "left")),
+    set((state) => {
+      const layout = updateNode(state.layout, paneId, (leaf) => {
+        const idx = leaf.tabs.findIndex((t) => t.id === tabId);
+        const tabs = leaf.tabs.slice(idx);
+        const activeTabId = tabs.some((t) => t.id === leaf.activeTabId) ? leaf.activeTabId : tabId;
+        return { ...leaf, tabs, activeTabId };
+      });
+      return { layout: layout ?? createLeaf() };
+    }),
 
   closeTabsToRight: (paneId, tabId) =>
-    set((state) => closeTabsInDirection(state, paneId, tabId, "right")),
+    set((state) => {
+      const layout = updateNode(state.layout, paneId, (leaf) => {
+        const idx = leaf.tabs.findIndex((t) => t.id === tabId);
+        const tabs = leaf.tabs.slice(0, idx + 1);
+        const activeTabId = tabs.some((t) => t.id === leaf.activeTabId) ? leaf.activeTabId : tabId;
+        return { ...leaf, tabs, activeTabId };
+      });
+      return { layout: layout ?? createLeaf() };
+    }),
 
   closeAllTabs: (paneId) =>
     set((state) => {

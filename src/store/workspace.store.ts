@@ -65,21 +65,22 @@ async function fetchAvatarUrl(path: string): Promise<string | null> {
 }
 
 /** Resolve avatars for workspaces that don't have one yet, then persist. */
-function resolveAvatars() {
-  const state = useWorkspaceStore.getState();
-  for (let i = 0; i < state.workspaces.length; i++) {
-    const w = state.workspaces[i];
-    if (w.avatarUrl !== undefined) continue;
-    fetchAvatarUrl(w.path).then((avatarUrl) => {
-      const current = useWorkspaceStore.getState();
-      const idx = current.workspaces.findIndex((ws) => ws.path === w.path);
-      if (idx === -1) return;
-      const workspaces = [...current.workspaces];
-      workspaces[idx] = { ...workspaces[idx], avatarUrl };
-      persist(workspaces, current.activeIndex);
-      useWorkspaceStore.setState({ workspaces });
-    });
-  }
+async function resolveAvatars() {
+  const { workspaces } = useWorkspaceStore.getState();
+  await Promise.all(
+    workspaces
+      .filter((w) => w.avatarUrl === undefined)
+      .map(async (w) => {
+        const avatarUrl = await fetchAvatarUrl(w.path);
+        const current = useWorkspaceStore.getState();
+        const idx = current.workspaces.findIndex((ws) => ws.path === w.path);
+        if (idx === -1) return;
+        const updated = [...current.workspaces];
+        updated[idx] = { ...updated[idx], avatarUrl };
+        persist(updated, current.activeIndex);
+        useWorkspaceStore.setState({ workspaces: updated });
+      }),
+  );
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({

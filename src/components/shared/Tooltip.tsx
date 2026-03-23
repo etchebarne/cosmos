@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 
 interface TooltipProps {
@@ -15,14 +15,14 @@ export function Tooltip({ content, children, delay = 400, side = "bottom" }: Too
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const show = useCallback(() => {
-    timeoutRef.current = setTimeout(() => setVisible(true), delay);
-  }, [delay]);
-
-  const hide = useCallback(() => {
+  const handleHover = (hovering: boolean) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setVisible(false);
-  }, []);
+    if (hovering) {
+      timeoutRef.current = setTimeout(() => setVisible(true), delay);
+    } else {
+      setVisible(false);
+    }
+  };
 
   useLayoutEffect(() => {
     if (!visible || !triggerRef.current || !tooltipRef.current) return;
@@ -59,7 +59,12 @@ export function Tooltip({ content, children, delay = 400, side = "bottom" }: Too
 
   return (
     <>
-      <div ref={triggerRef} onMouseEnter={show} onMouseLeave={hide} className="inline-flex">
+      <div
+        ref={triggerRef}
+        onMouseEnter={() => handleHover(true)}
+        onMouseLeave={() => handleHover(false)}
+        className="inline-flex"
+      >
         {children}
       </div>
       {visible &&

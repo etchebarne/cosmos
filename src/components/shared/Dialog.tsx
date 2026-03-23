@@ -9,22 +9,12 @@ interface DialogProps {
 
 export function Dialog({ open, onClose, title, children }: DialogProps) {
   const [shouldRender, setShouldRender] = useState(open);
-  const [isClosing, setIsClosing] = useState(false);
+  const isClosing = shouldRender && !open;
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) {
-      setShouldRender(true);
-      setIsClosing(false);
-    } else if (shouldRender) {
-      setIsClosing(true);
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-        setIsClosing(false);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [open, shouldRender]);
+    if (open) setShouldRender(true);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -35,12 +25,17 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [open, onClose]);
 
+  const handleAnimationEnd = () => {
+    if (!open) setShouldRender(false);
+  };
+
   if (!shouldRender) return null;
 
   return (
     <div
       ref={overlayRef}
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
+      onAnimationEnd={handleAnimationEnd}
       onMouseDown={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}

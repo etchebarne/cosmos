@@ -1,8 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use kosmos_core::EventSink;
 use kosmos_protocol::events::Event;
 use kosmos_protocol::requests::{Request, RequestMessage, ResponseMessage};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -20,14 +21,12 @@ const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
 
 /// A connection to a remote kosmos-agent process.
 pub struct RemoteAgent {
-    child: Arc<Mutex<Child>>,
+    child: Mutex<Child>,
     stdin: Arc<Mutex<ChildStdin>>,
     next_id: AtomicU64,
     pending: Arc<Mutex<HashMap<u64, oneshot::Sender<ResponseMessage>>>>,
     alive: Arc<AtomicBool>,
     pub connection_type: ConnectionType,
-    /// Terminal IDs spawned on this agent, used to emit TerminalExit on death.
-    terminal_ids: Arc<Mutex<HashSet<String>>>,
 }
 
 impl Drop for RemoteAgent {
@@ -42,7 +41,7 @@ impl Drop for RemoteAgent {
 impl RemoteAgent {
     pub async fn spawn(
         conn: ConnectionType,
-        on_event: Arc<dyn Fn(Event) + Send + Sync>,
+        on_event: Arc<dyn EventSink>,
     ) -> Result<Self, String> {
         let mut child = match &conn {
             ConnectionType::Local => {
@@ -119,7 +118,6 @@ impl RemoteAgent {
             Arc::new(Mutex::new(HashMap::new()));
         let alive = Arc::new(AtomicBool::new(true));
 
-        let terminal_ids: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
 
         let pending_clone = pending.clone();
         let alive_clone = alive.clone();
@@ -137,13 +135,12 @@ impl RemoteAgent {
         });
 
         let agent = Self {
-            child: Arc::new(Mutex::new(child)),
+            child: Mutex::new(child),
             stdin: Arc::new(Mutex::new(stdin)),
             next_id: AtomicU64::new(1),
             pending,
             alive: alive.clone(),
             connection_type: conn,
-            terminal_ids,
         };
 
         // Keepalive: periodically send a Ping to prevent idle pipe closure.
@@ -185,16 +182,6 @@ impl RemoteAgent {
     /// Check if the agent process is still alive.
     pub fn is_alive(&self) -> bool {
         self.alive.load(Ordering::SeqCst)
-    }
-
-    /// Register a terminal ID so we can emit TerminalExit if the agent dies.
-    pub async fn register_terminal(&self, id: String) {
-        self.terminal_ids.lock().await.insert(id);
-    }
-
-    /// Unregister a terminal ID (e.g. when the terminal is closed normally).
-    pub async fn unregister_terminal(&self, id: &str) {
-        self.terminal_ids.lock().await.remove(id);
     }
 
     /// Send a request and wait for the response with the default timeout.
@@ -290,7 +277,7 @@ impl RemoteAgent {
 async fn read_agent_stdout(
     stdout: ChildStdout,
     pending: Arc<Mutex<HashMap<u64, oneshot::Sender<ResponseMessage>>>>,
-    on_event: Arc<dyn Fn(Event) + Send + Sync>,
+    on_event: Arc<dyn EventSink>,
 ) {
     let mut reader = BufReader::new(stdout);
     loop {
@@ -335,7 +322,7 @@ async fn read_agent_stdout(
         }
 
         if let Ok(event) = serde_json::from_str::<Event>(&text) {
-            on_event(event);
+            on_event.emit(event);
         }
     }
 }

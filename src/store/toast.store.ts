@@ -23,7 +23,7 @@ export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
 
   addToast: (toast) => {
-    const id = `toast-${++nextId}`;
+    const id = String(++nextId);
     const entry: Toast = { ...toast, id, duration: toast.duration ?? 8000 };
     set((s) => ({ toasts: [...s.toasts, entry] }));
     return id;

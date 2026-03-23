@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { useState } from "react";
 import { getTabDefinition } from "../../tabs";
 import { ErrorBoundary } from "../shared/ErrorBoundary";
 import type { Tab } from "../../types";
@@ -8,7 +8,7 @@ interface TabContentProps {
   paneId: string;
 }
 
-export const TabContent = memo(function TabContent({ tab, paneId }: TabContentProps) {
+export function TabContent({ tab, paneId }: TabContentProps) {
   const definition = getTabDefinition(tab.type);
   const [mountKey, setMountKey] = useState(0);
 
@@ -49,4 +49,4 @@ export const TabContent = memo(function TabContent({ tab, paneId }: TabContentPr
       <Component key={mountKey} tab={tab} paneId={paneId} />
     </ErrorBoundary>
   );
-});
+}

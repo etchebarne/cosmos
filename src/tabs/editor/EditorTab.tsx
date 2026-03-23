@@ -18,76 +18,51 @@ import { useThemeListener } from "../../hooks/use-theme-listener";
 import { getEditorMeta } from "../../types";
 import { StateView } from "../../components/shared/StateView";
 import { BASE_EDITOR_OPTIONS } from "../../lib/monaco-config";
+import { initExtMap, languageIdFromExt } from "../../lib/ext-to-lang";
 import type { TabContentProps } from "../types";
 
 // ── Language detection from file extension (for early LSP start) ──
 
-const EXT_TO_LANGUAGE: Record<string, string> = {
-  ts: "typescript",
-  tsx: "typescriptreact",
-  js: "javascript",
-  jsx: "javascriptreact",
-  css: "css",
-  scss: "scss",
-  less: "less",
-  json: "json",
-  jsonc: "jsonc",
-  html: "html",
-  htm: "html",
-  py: "python",
-  rs: "rust",
-  go: "go",
-  c: "c",
-  h: "c",
-  cpp: "cpp",
-  cc: "cpp",
-  cxx: "cpp",
-  hpp: "cpp",
-  yaml: "yaml",
-  yml: "yaml",
-  toml: "toml",
-  sh: "shell",
-  bash: "shell",
-  sql: "sql",
-  xml: "xml",
-  svg: "xml",
-  md: "markdown",
-};
-
 function languageIdFromPath(filePath: string): string {
   const ext = filePath.match(/\.([^./\\]+)$/)?.[1]?.toLowerCase();
-  return (ext && EXT_TO_LANGUAGE[ext]) ?? "plaintext";
+  return (ext && languageIdFromExt(ext)) ?? "plaintext";
 }
 
 // ── Cross-file navigation (Ctrl+Click go-to-definition) ──
 
-const editorInstances = new Map<string, editor.IStandaloneCodeEditor>();
-const pendingReveals = new Map<string, { lineNumber: number; column: number }>();
+interface EditorCacheEntry {
+  instance: editor.IStandaloneCodeEditor;
+  pendingReveal?: { lineNumber: number; column: number };
+}
+
+const editorCache = new Map<string, EditorCacheEntry>();
 let editorOpenerRegistered = false;
 
 /** Clear module-level caches for a workspace path prefix. */
 export function cleanupEditorInstances(workspacePath: string) {
-  for (const key of editorInstances.keys()) {
-    if (key.startsWith(workspacePath)) editorInstances.delete(key);
-  }
-  for (const key of pendingReveals.keys()) {
-    if (key.startsWith(workspacePath)) pendingReveals.delete(key);
+  for (const key of editorCache.keys()) {
+    if (key.startsWith(workspacePath)) editorCache.delete(key);
   }
 }
 
 /** Reveal a position in an already-open editor, or queue it for when the editor mounts. */
 export function revealPosition(filePath: string, position: { lineNumber: number; column: number }) {
-  pendingReveals.set(filePath, position);
+  const entry = editorCache.get(filePath);
+  if (entry) {
+    entry.pendingReveal = position;
+  } else {
+    editorCache.set(filePath, { instance: null!, pendingReveal: position });
+  }
 
   // For already-mounted editors (handleEditorDidMount won't fire again),
   // schedule a deferred reveal after layout settles.
   setTimeout(() => {
-    if (pendingReveals.get(filePath) !== position) return; // consumed or replaced
-    const existing = editorInstances.get(filePath);
-    if (existing) {
-      pendingReveals.delete(filePath);
-      existing.setPosition(position);
-      existing.revealPositionInCenter(position);
+    const cached = editorCache.get(filePath);
+    if (!cached || cached.pendingReveal !== position) return; // consumed or replaced
+    if (cached.instance) {
+      cached.pendingReveal = undefined;
+      cached.instance.setPosition(position);
+      cached.instance.revealPositionInCenter(position);
     }
   }, 50);
 }
@@ -316,7 +291,7 @@ export function EditorTab({ tab }: TabContentProps) {
       lspOpenedRef.current = false;
       changeDisposableRef.current?.dispose();
       useLayoutStore.getState().setTabDirty(tab.id, false);
-      if (fp) editorInstances.delete(fp);
+      if (fp) editorCache.delete(fp);
       if (ws && uri) {
         const client = useLspStore.getState().getClient(ws.path, lspLanguageRef.current);
         client?.didClose(uri);
@@ -393,10 +368,10 @@ export function EditorTab({ tab }: TabContentProps) {
 
     // Register editor instance for cross-file navigation
     if (filePath) {
-      editorInstances.set(filePath, instance);
-      const pendingReveal = pendingReveals.get(filePath);
+      const cached = editorCache.get(filePath);
+      const pendingReveal = cached?.pendingReveal;
+      editorCache.set(filePath, { instance, pendingReveal: undefined });
       if (pendingReveal) {
-        pendingReveals.delete(filePath);
         // Defer reveal — @monaco-editor/react toggles the container from
         // display:none to display:block after onMount, triggering a
         // ResizeObserver → layout() that resets scroll. setTimeout runs
@@ -485,6 +460,7 @@ export function EditorTab({ tab }: TabContentProps) {
     monacoRef.current = monaco;
     defineKosmosTheme(monaco);
     setupMonacoLanguages(monaco);
+    initExtMap(monaco);
     registerEditorOpener(monaco);
 
     // Eagerly start the LSP server while Monaco finishes mounting the editor.

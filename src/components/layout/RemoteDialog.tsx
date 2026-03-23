@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useReducer, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
 import { Dialog } from "../shared/Dialog";
@@ -16,91 +16,118 @@ interface DirEntry {
   is_dir: boolean;
 }
 
+interface BrowserState {
+  cwd: string;
+  entries: DirEntry[];
+  loading: boolean;
+  error: string | null;
+  status: string | null;
+  connecting: boolean;
+}
+
+type BrowserAction =
+  | { type: "SET_CWD"; cwd: string }
+  | { type: "FETCH_START" }
+  | { type: "FETCH_SUCCESS"; entries: DirEntry[] }
+  | { type: "FETCH_ERROR"; error: string }
+  | { type: "RESET" }
+  | { type: "CONNECT_START" }
+  | { type: "CONNECT_STATUS"; status: string }
+  | { type: "CONNECT_FAIL"; status: string };
+
+const initialState: BrowserState = {
+  cwd: "/",
+  entries: [],
+  loading: true,
+  error: null,
+  status: null,
+  connecting: false,
+};
+
+function browserReducer(state: BrowserState, action: BrowserAction): BrowserState {
+  switch (action.type) {
+    case "SET_CWD":
+      return { ...state, cwd: action.cwd };
+    case "FETCH_START":
+      return { ...state, loading: true, error: null };
+    case "FETCH_SUCCESS":
+      return { ...state, entries: action.entries, loading: false };
+    case "FETCH_ERROR":
+      return { ...state, error: action.error, entries: [], loading: false };
+    case "RESET":
+      return { ...state, status: null, connecting: false, error: null };
+    case "CONNECT_START":
+      return { ...state, connecting: true, status: "Deploying agent..." };
+    case "CONNECT_STATUS":
+      return { ...state, status: action.status };
+    case "CONNECT_FAIL":
+      return { ...state, status: action.status, connecting: false };
+  }
+}
+
 export function RemoteDialog({ open, onClose, distro }: RemoteDialogProps) {
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
-  const [cwd, setCwd] = useState("/");
-  const [entries, setEntries] = useState<DirEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
+  const [state, dispatch] = useReducer(browserReducer, initialState);
+  const { cwd, entries, loading, error, status, connecting } = state;
 
   // Resolve home dir on open
   useEffect(() => {
     if (!open) return;
-    setStatus(null);
-    setConnecting(false);
-    setError(null);
+    dispatch({ type: "RESET" });
     invoke<string>("wsl_resolve_home", { distro })
-      .then((home) => {
-        setCwd(home);
-      })
-      .catch(() => {
-        setCwd("/");
-      });
+      .then((home) => dispatch({ type: "SET_CWD", cwd: home }))
+      .catch(() => dispatch({ type: "SET_CWD", cwd: "/" }));
   }, [open, distro]);
 
   // Fetch directory listing when cwd changes
   useEffect(() => {
     if (!open || !cwd) return;
-    setLoading(true);
-    setError(null);
+    dispatch({ type: "FETCH_START" });
     invoke<DirEntry[]>("wsl_list_dir", { distro, path: cwd })
-      .then((result) => {
-        setEntries(result);
-        setLoading(false);
-      })
-      .catch((e) => {
-        setError(String(e));
-        setEntries([]);
-        setLoading(false);
-      });
+      .then((result) => dispatch({ type: "FETCH_SUCCESS", entries: result }))
+      .catch((e) => dispatch({ type: "FETCH_ERROR", error: String(e) }));
   }, [open, distro, cwd]);
 
   const navigate = useCallback(
     (name: string) => {
       const next = cwd === "/" ? `/${name}` : `${cwd}/${name}`;
-      setCwd(next);
+      dispatch({ type: "SET_CWD", cwd: next });
     },
     [cwd],
   );
 
   const navigateUp = useCallback(() => {
     if (cwd === "/") return;
-    // Remove trailing slash before finding parent
     const normalized = cwd.endsWith("/") ? cwd.slice(0, -1) : cwd;
     const parent = normalized.substring(0, normalized.lastIndexOf("/")) || "/";
-    setCwd(parent);
+    dispatch({ type: "SET_CWD", cwd: parent });
   }, [cwd]);
 
   const navigateBreadcrumb = useCallback(
     (index: number) => {
-      // index 0 = "/", index 1 = first segment, etc.
       if (index === 0) {
-        setCwd("/");
+        dispatch({ type: "SET_CWD", cwd: "/" });
         return;
       }
       const segments = cwd.split("/").filter(Boolean);
       const path = "/" + segments.slice(0, index).join("/");
-      setCwd(path);
+      dispatch({ type: "SET_CWD", cwd: path });
     },
     [cwd],
   );
 
   const handleConnect = useCallback(async () => {
-    setConnecting(true);
-    setStatus("Deploying agent...");
+    dispatch({ type: "CONNECT_START" });
 
     try {
       try {
         await invoke("deploy_agent_wsl", { distro });
       } catch (e) {
-        setStatus(`Agent deploy failed: ${e}`);
-        setConnecting(false);
+        dispatch({ type: "CONNECT_FAIL", status: `Agent deploy failed: ${e}` });
         return;
       }
 
-      setStatus("Connecting...");
+      dispatch({ type: "CONNECT_STATUS", status: "Connecting..." });
 
       await invoke("remote_connect", {
         workspacePath: `wsl://${distro}${cwd}`,
@@ -114,8 +141,7 @@ export function RemoteDialog({ open, onClose, distro }: RemoteDialogProps) {
 
       onClose();
     } catch (e) {
-      setStatus(`Connection failed: ${e}`);
-      setConnecting(false);
+      dispatch({ type: "CONNECT_FAIL", status: `Connection failed: ${e}` });
     }
   }, [cwd, distro, openWorkspace, onClose]);
 

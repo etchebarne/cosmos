@@ -16,12 +16,6 @@ async function persist(values: Record<string, unknown>) {
   await s.set("values", values);
 }
 
-function applySideEffects(key: string, value: unknown) {
-  if (key === "theme.colorTheme") {
-    applyTheme(String(value));
-  }
-}
-
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   values: {},
   ready: false,
@@ -31,9 +25,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     const values = (await s.get<Record<string, unknown>>("values")) ?? {};
     set({ values, ready: true });
 
-    // Apply all persisted settings
-    for (const [key, value] of Object.entries(values)) {
-      applySideEffects(key, value);
+    // Apply persisted theme
+    const colorTheme = values["theme.colorTheme"];
+    if (colorTheme !== undefined) {
+      applyTheme(String(colorTheme));
     }
   },
 
@@ -41,7 +36,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     const next = { ...get().values, [key]: value };
     set({ values: next });
     persist(next);
-    applySideEffects(key, value);
+    if (key === "theme.colorTheme") {
+      applyTheme(String(value));
+    }
   },
 
   get: (key: string) => get().values[key],

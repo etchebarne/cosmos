@@ -1,14 +1,12 @@
 /**
- * Characters that must be percent-encoded in a file URI path segment.
- * We encode everything RFC 3986 considers reserved or unsafe in a path,
- * except `/` (path separator) and `:` (drive letter on Windows).
+ * Percent-encode a file path for use in a file:// URI.
+ * Uses the built-in encodeURI for most characters, then encodes
+ * the few reserved characters that encodeURI leaves alone but
+ * are unsafe in file URI paths (e.g. #, ?).
  */
 function encodeFilePath(path: string): string {
-  return path.replace(/[^a-zA-Z0-9/_.\-~:]/g, (ch) => {
-    const code = ch.charCodeAt(0);
-    if (code <= 0x7f) return `%${code.toString(16).toUpperCase().padStart(2, "0")}`;
-    // Multi-byte UTF-8: encode each byte
-    return encodeURIComponent(ch);
+  return encodeURI(path).replace(/[#?;@&=+$,!'()*]/g, (ch) => {
+    return `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`;
   });
 }
 
@@ -42,13 +40,13 @@ export function fileUriToPath(uri: string): string {
   // Handle both file:/// and file://host/ forms
   let path = uri.replace(/^file:\/\/(?:\/([a-zA-Z]:))?/, "$1");
   if (!path.startsWith("/") && !/^[a-zA-Z]:/.test(path)) {
-    // file://host/path → /path (strip host)
+    // file://host/path -> /path (strip host)
     path = uri.replace(/^file:\/\/[^/]*/, "");
   }
 
   path = decodeURIComponent(path);
 
-  // After decoding, strip embedded wsl:// prefix: /wsl://distro/path → wsl://distro/path
+  // After decoding, strip embedded wsl:// prefix: /wsl://distro/path -> wsl://distro/path
   if (path.startsWith("/wsl://")) {
     return path.slice(1);
   }

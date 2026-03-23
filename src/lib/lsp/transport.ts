@@ -76,6 +76,15 @@ export class TauriLspTransport {
     });
   }
 
+  /** Send a JSON-RPC message to the server (no-op if disposed). */
+  private send(message: object): Promise<void> {
+    if (this.disposed) return Promise.resolve();
+    return invoke("lsp_send", {
+      serverId: this.serverId,
+      message: JSON.stringify(message),
+    }) as Promise<void>;
+  }
+
   sendRequest<R>(method: string, params?: unknown, timeoutMs?: number): CancellablePromise<R> {
     if (this.disposed) {
       const p = Promise.reject(new Error("Transport disposed")) as CancellablePromise<R>;
@@ -112,10 +121,7 @@ export class TauriLspTransport {
         }
       };
 
-      invoke("lsp_send", {
-        serverId: this.serverId,
-        message: JSON.stringify(request),
-      }).catch((err) => {
+      this.send(request).catch((err) => {
         clearTimeout(timer);
         this.pendingRequests.delete(id);
         reject(err);
@@ -127,13 +133,8 @@ export class TauriLspTransport {
   }
 
   sendNotification(method: string, params?: unknown): void {
-    if (this.disposed) return;
-
     const notification: JsonRpcNotification = { jsonrpc: "2.0", method, params };
-    invoke("lsp_send", {
-      serverId: this.serverId,
-      message: JSON.stringify(notification),
-    }).catch((err) => {
+    this.send(notification).catch((err) => {
       console.warn(`[kosmos:lsp] Notification '${method}' delivery failed:`, err);
     });
   }
@@ -171,22 +172,16 @@ export class TauriLspTransport {
 
   /** Send a successful JSON-RPC response to a server-initiated request. */
   private respondToRequest(id: number, result: unknown): void {
-    if (this.disposed) return;
-    const response: JsonRpcResponse = { jsonrpc: "2.0", id, result };
-    invoke("lsp_send", {
-      serverId: this.serverId,
-      message: JSON.stringify(response),
-    }).catch(() => {});
+    this.send({ jsonrpc: "2.0", id, result } satisfies JsonRpcResponse).catch(() => {});
   }
 
   /** Send a JSON-RPC error response to a server-initiated request. */
   private respondToRequestWithError(id: number, code: number, message: string): void {
-    if (this.disposed) return;
-    const response: JsonRpcResponse = { jsonrpc: "2.0", id, error: { code, message } };
-    invoke("lsp_send", {
-      serverId: this.serverId,
-      message: JSON.stringify(response),
-    }).catch(() => {});
+    this.send({
+      jsonrpc: "2.0",
+      id,
+      error: { code, message },
+    } satisfies JsonRpcResponse).catch(() => {});
   }
 
   private handleMessage(raw: string): void {

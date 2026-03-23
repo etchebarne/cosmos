@@ -54,7 +54,7 @@ function InfinityCanvas({ tab }: TabContentProps) {
     onClick: () => {
       if (contextMenu) {
         const position = screenToFlowPosition({ x: contextMenu.x, y: contextMenu.y });
-        addNode(tab.id, def.type, position);
+        addNode(tab.id, { type: def.type, position });
       }
     },
   }));

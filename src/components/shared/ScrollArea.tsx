@@ -1,11 +1,7 @@
 import { OverlayScrollbarsComponent } from "overlayscrollbars-react";
-import type { ElementType } from "react";
 import type { OverlayScrollbarsComponentProps } from "overlayscrollbars-react";
 
-export function ScrollArea<T extends ElementType = "div">({
-  children,
-  ...props
-}: OverlayScrollbarsComponentProps<T>) {
+export function ScrollArea({ children, ...props }: OverlayScrollbarsComponentProps) {
   return (
     <OverlayScrollbarsComponent
       options={{
@@ -19,7 +15,7 @@ export function ScrollArea<T extends ElementType = "div">({
           y: "scroll",
         },
       }}
-      {...(props as any)}
+      {...props}
     >
       {children}
     </OverlayScrollbarsComponent>

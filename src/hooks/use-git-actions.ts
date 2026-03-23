@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useToastStore } from "../store/toast.store";
 
@@ -23,6 +23,8 @@ export function useGitActions(
   const [activeAction, setActiveAction] = useState<GitAction>("fetch");
   const [actionRunning, setActionRunning] = useState(false);
   const [actionDone, setActionDone] = useState(false);
+  const runningRef = useRef(false);
+  const activeRef = useRef<GitAction>("fetch");
 
   const currentAction = useMemo(
     () => GIT_ACTIONS.find((a) => a.key === activeAction)!,
@@ -31,9 +33,13 @@ export function useGitActions(
 
   const handleRunAction = useCallback(
     async (action?: GitAction) => {
-      if (!workspacePath || actionRunning) return;
-      const act = GIT_ACTIONS.find((a) => a.key === (action ?? activeAction))!;
-      if (action) setActiveAction(action);
+      if (!workspacePath || runningRef.current) return;
+      const act = GIT_ACTIONS.find((a) => a.key === (action ?? activeRef.current))!;
+      if (action) {
+        setActiveAction(action);
+        activeRef.current = action;
+      }
+      runningRef.current = true;
       setActionRunning(true);
       try {
         await invoke(act.command, { path: workspacePath });
@@ -53,10 +59,11 @@ export function useGitActions(
           type: "error",
         });
       } finally {
+        runningRef.current = false;
         setActionRunning(false);
       }
     },
-    [workspacePath, refresh, actionRunning, activeAction, setError],
+    [workspacePath, refresh, setError],
   );
 
   return {

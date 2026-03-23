@@ -61,11 +61,7 @@ pub async fn remote_disconnect(
     workspace_path: String,
 ) -> Result<(), String> {
     // Clean up LSP server mappings for this workspace
-    remote_servers
-        .0
-        .lock()
-        .await
-        .retain(|_, wp| wp != &workspace_path);
+    remote_servers.retain_workspace(&workspace_path).await;
     router.disconnect(&workspace_path).await;
     Ok(())
 }

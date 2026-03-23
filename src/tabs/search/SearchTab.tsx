@@ -63,7 +63,10 @@ function fuzzyMatch(query: string, target: string): { score: number; indices: nu
 
 // ── Highlighted text (fuzzy match indices) ──
 
-function HighlightedPath({ text, indices }: { text: string; indices: number[] }) {
+function highlightedParts(
+  text: string,
+  indices: number[],
+): { text: string; highlighted: boolean }[] {
   const set = new Set(indices);
   const parts: { text: string; highlighted: boolean }[] = [];
   let current = "";
@@ -80,19 +83,7 @@ function HighlightedPath({ text, indices }: { text: string; indices: number[] })
   }
   if (current) parts.push({ text: current, highlighted: isHighlighted });
 
-  return (
-    <span className="truncate">
-      {parts.map((p, i) =>
-        p.highlighted ? (
-          <span key={i} className="text-[var(--color-accent-blue)] font-semibold">
-            {p.text}
-          </span>
-        ) : (
-          <span key={i}>{p.text}</span>
-        ),
-      )}
-    </span>
-  );
+  return parts;
 }
 
 // ── File preview panel (Monaco read-only) ──
@@ -466,8 +457,16 @@ export function SearchTab({ tab: _tab, paneId }: TabContentProps) {
                       <span className="text-[12px] text-[var(--color-text-primary)] font-medium truncate">
                         {r.path.split("/").pop()}
                       </span>
-                      <span className="text-[10px] text-[var(--color-text-tertiary)]">
-                        <HighlightedPath text={r.path} indices={r.indices} />
+                      <span className="text-[10px] text-[var(--color-text-tertiary)] truncate">
+                        {highlightedParts(r.path, r.indices).map((p, j) =>
+                          p.highlighted ? (
+                            <span key={j} className="text-[var(--color-accent-blue)] font-semibold">
+                              {p.text}
+                            </span>
+                          ) : (
+                            <span key={j}>{p.text}</span>
+                          ),
+                        )}
                       </span>
                     </div>
                     {i === selectedIndex && (

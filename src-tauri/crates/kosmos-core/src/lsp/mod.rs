@@ -60,43 +60,29 @@ fn spawn_server(
     working_dir: &str,
 ) -> std::io::Result<(Child, Option<tokio::process::ChildStderr>)> {
     #[cfg(target_os = "windows")]
-    {
-        let mut child = if command.ends_with(".cmd") || command.ends_with(".bat") {
-            tokio::process::Command::new("cmd")
-                .arg("/C")
-                .arg(command)
-                .args(args)
-                .current_dir(working_dir)
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .creation_flags(CREATE_NO_WINDOW)
-                .spawn()?
-        } else {
-            tokio::process::Command::new(command)
-                .args(args)
-                .current_dir(working_dir)
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .creation_flags(CREATE_NO_WINDOW)
-                .spawn()?
-        };
-        let stderr = child.stderr.take();
-        Ok((child, stderr))
-    }
+    let mut cmd = if command.ends_with(".cmd") || command.ends_with(".bat") {
+        let mut c = tokio::process::Command::new("cmd");
+        c.arg("/C").arg(command);
+        c
+    } else {
+        tokio::process::Command::new(command)
+    };
+
     #[cfg(not(target_os = "windows"))]
-    {
-        let mut child = tokio::process::Command::new(command)
-            .args(args)
-            .current_dir(working_dir)
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()?;
-        let stderr = child.stderr.take();
-        Ok((child, stderr))
-    }
+    let mut cmd = tokio::process::Command::new(command);
+
+    cmd.args(args)
+        .current_dir(working_dir)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+
+    let mut child = cmd.spawn()?;
+    let stderr = child.stderr.take();
+    Ok((child, stderr))
 }
 
 impl LspManager {

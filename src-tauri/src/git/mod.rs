@@ -9,60 +9,38 @@ fn no_agent_error(path: &str) -> String {
     format!("Remote agent not connected for path: {path}")
 }
 
-/// Route a command through the remote agent if available, else run locally.
-/// Use `route_val!` when the remote response needs deserialization,
-/// and `route_void!` when the response can be discarded.
-macro_rules! route_val {
-    ($router:expr, $path:expr, $request:expr, $local:expr) => {
-        if let Some((agent, remote_path)) = $router.resolve(&$path).await {
-            let val = agent.request($request(remote_path)).await?;
-            serde_json::from_value(val).map_err(|e| e.to_string())
-        } else if BackendRouter::is_remote_path(&$path) {
-            Err(no_agent_error(&$path))
-        } else {
-            $local(&$path).await.map_err(|e| e.to_string())
-        }
-    };
+trait ToStringErr<T> {
+    fn str_err(self) -> Result<T, String>;
+}
+impl<T, E: std::fmt::Display> ToStringErr<T> for Result<T, E> {
+    fn str_err(self) -> Result<T, String> {
+        self.map_err(|e| e.to_string())
+    }
 }
 
-macro_rules! route_void {
-    ($router:expr, $path:expr, $request:expr, $local:expr) => {
-        if let Some((agent, remote_path)) = $router.resolve(&$path).await {
-            agent.request($request(remote_path)).await?;
-            Ok(())
-        } else if BackendRouter::is_remote_path(&$path) {
-            Err(no_agent_error(&$path))
-        } else {
-            $local(&$path).await.map_err(|e| e.to_string())
-        }
-    };
+async fn route_val<T, E, F, Fut>(
+    router: &State<'_, BackendRouter>, path: &str,
+    request: impl FnOnce(String) -> Request, local: F,
+) -> Result<T, String>
+where F: FnOnce() -> Fut, Fut: std::future::Future<Output = Result<T, E>>, T: serde::de::DeserializeOwned, E: std::fmt::Display,
+{
+    if let Some((agent, remote_path)) = router.resolve(path).await {
+        let val = agent.request(request(remote_path)).await?;
+        serde_json::from_value(val).str_err()
+    } else if BackendRouter::is_remote_path(path) { Err(no_agent_error(path)) }
+    else { local().await.str_err() }
 }
 
-/// Route a void command with extra args forwarded to both remote and local.
-macro_rules! route_void_extra {
-    ($router:expr, $path:expr, $request:expr, $local:expr) => {
-        if let Some((agent, remote_path)) = $router.resolve(&$path).await {
-            agent.request($request(remote_path)).await?;
-            Ok(())
-        } else if BackendRouter::is_remote_path(&$path) {
-            Err(no_agent_error(&$path))
-        } else {
-            $local.map_err(|e| e.to_string())
-        }
-    };
-}
-
-macro_rules! route_val_extra {
-    ($router:expr, $path:expr, $request:expr, $local:expr) => {
-        if let Some((agent, remote_path)) = $router.resolve(&$path).await {
-            let val = agent.request($request(remote_path)).await?;
-            serde_json::from_value(val).map_err(|e| e.to_string())
-        } else if BackendRouter::is_remote_path(&$path) {
-            Err(no_agent_error(&$path))
-        } else {
-            $local.map_err(|e| e.to_string())
-        }
-    };
+async fn route_void<E, F, Fut>(
+    router: &State<'_, BackendRouter>, path: &str,
+    request: impl FnOnce(String) -> Request, local: F,
+) -> Result<(), String>
+where F: FnOnce() -> Fut, Fut: std::future::Future<Output = Result<(), E>>, E: std::fmt::Display,
+{
+    if let Some((agent, remote_path)) = router.resolve(path).await {
+        agent.request(request(remote_path)).await?; Ok(())
+    } else if BackendRouter::is_remote_path(path) { Err(no_agent_error(path)) }
+    else { local().await.str_err() }
 }
 
 #[tauri::command]
@@ -70,11 +48,7 @@ pub async fn get_git_branch(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<Option<String>, String> {
-    route_val!(
-        router, path,
-        |p: String| Request::GetGitBranch { path: p },
-        kosmos_core::git::get_git_branch
-    )
+    route_val(&router, &path, |p| Request::GetGitBranch { path: p }, || kosmos_core::git::get_git_branch(&path)).await
 }
 
 #[tauri::command]
@@ -82,11 +56,7 @@ pub async fn get_git_status(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<GitStatusInfo, String> {
-    route_val!(
-        router, path,
-        |p: String| Request::GetGitStatus { path: p },
-        kosmos_core::git::get_git_status
-    )
+    route_val(&router, &path, |p| Request::GetGitStatus { path: p }, || kosmos_core::git::get_git_status(&path)).await
 }
 
 #[tauri::command]
@@ -95,11 +65,7 @@ pub async fn git_stage(
     path: String,
     files: Vec<String>,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitStage { path: p, files: files.clone() },
-        kosmos_core::git::git_stage(&path, files).await
-    )
+    { let f = files.clone(); route_void(&router, &path, |p| Request::GitStage { path: p, files: f }, || kosmos_core::git::git_stage(&path, files)).await }
 }
 
 #[tauri::command]
@@ -108,11 +74,7 @@ pub async fn git_unstage(
     path: String,
     files: Vec<String>,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitUnstage { path: p, files: files.clone() },
-        kosmos_core::git::git_unstage(&path, files).await
-    )
+    { let f = files.clone(); route_void(&router, &path, |p| Request::GitUnstage { path: p, files: f }, || kosmos_core::git::git_unstage(&path, files)).await }
 }
 
 #[tauri::command]
@@ -120,11 +82,7 @@ pub async fn git_stage_all(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitStageAll { path: p },
-        kosmos_core::git::git_stage_all
-    )
+    route_void(&router, &path, |p| Request::GitStageAll { path: p }, || kosmos_core::git::git_stage_all(&path)).await
 }
 
 #[tauri::command]
@@ -133,11 +91,7 @@ pub async fn git_commit(
     path: String,
     message: String,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitCommit { path: p, message: message.clone() },
-        kosmos_core::git::git_commit(&path, &message).await
-    )
+    route_void(&router, &path, |p| Request::GitCommit { path: p, message: message.clone() }, || kosmos_core::git::git_commit(&path, &message)).await
 }
 
 #[tauri::command]
@@ -145,11 +99,7 @@ pub async fn git_list_branches(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<Vec<GitBranchInfo>, String> {
-    route_val!(
-        router, path,
-        |p: String| Request::GitListBranches { path: p },
-        kosmos_core::git::git_list_branches
-    )
+    route_val(&router, &path, |p| Request::GitListBranches { path: p }, || kosmos_core::git::git_list_branches(&path)).await
 }
 
 #[tauri::command]
@@ -158,11 +108,7 @@ pub async fn git_checkout(
     path: String,
     branch: String,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitCheckout { path: p, branch: branch.clone() },
-        kosmos_core::git::git_checkout(&path, &branch).await
-    )
+    route_void(&router, &path, |p| Request::GitCheckout { path: p, branch: branch.clone() }, || kosmos_core::git::git_checkout(&path, &branch)).await
 }
 
 #[tauri::command]
@@ -171,11 +117,7 @@ pub async fn git_delete_branch(
     path: String,
     branch: String,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitDeleteBranch { path: p, branch: branch.clone() },
-        kosmos_core::git::git_delete_branch(&path, &branch).await
-    )
+    route_void(&router, &path, |p| Request::GitDeleteBranch { path: p, branch: branch.clone() }, || kosmos_core::git::git_delete_branch(&path, &branch)).await
 }
 
 #[tauri::command]
@@ -184,11 +126,7 @@ pub async fn git_discard(
     path: String,
     files: Vec<String>,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitDiscard { path: p, files: files.clone() },
-        kosmos_core::git::git_discard(&path, files).await
-    )
+    { let f = files.clone(); route_void(&router, &path, |p| Request::GitDiscard { path: p, files: f }, || kosmos_core::git::git_discard(&path, files)).await }
 }
 
 #[tauri::command]
@@ -197,11 +135,7 @@ pub async fn git_trash_untracked(
     path: String,
     files: Vec<String>,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitTrashUntracked { path: p, files: files.clone() },
-        kosmos_core::git::git_trash_untracked(&path, files)
-    )
+    { let f = files.clone(); route_void(&router, &path, |p| Request::GitTrashUntracked { path: p, files: f }, || async { kosmos_core::git::git_trash_untracked(&path, files) }).await }
 }
 
 #[tauri::command]
@@ -209,11 +143,7 @@ pub async fn git_stash_all(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitStashAll { path: p },
-        kosmos_core::git::git_stash_all
-    )
+    route_void(&router, &path, |p| Request::GitStashAll { path: p }, || kosmos_core::git::git_stash_all(&path)).await
 }
 
 #[tauri::command]
@@ -222,11 +152,7 @@ pub async fn git_stash_files(
     path: String,
     files: Vec<String>,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitStashFiles { path: p, files: files.clone() },
-        kosmos_core::git::git_stash_files(&path, files).await
-    )
+    { let f = files.clone(); route_void(&router, &path, |p| Request::GitStashFiles { path: p, files: f }, || kosmos_core::git::git_stash_files(&path, files)).await }
 }
 
 #[tauri::command]
@@ -234,11 +160,7 @@ pub async fn git_stash_list(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<Vec<GitStashEntry>, String> {
-    route_val!(
-        router, path,
-        |p: String| Request::GitStashList { path: p },
-        kosmos_core::git::git_stash_list
-    )
+    route_val(&router, &path, |p| Request::GitStashList { path: p }, || kosmos_core::git::git_stash_list(&path)).await
 }
 
 #[tauri::command]
@@ -247,11 +169,7 @@ pub async fn git_stash_show(
     path: String,
     index: usize,
 ) -> Result<Vec<GitStashFile>, String> {
-    route_val_extra!(
-        router, path,
-        |p: String| Request::GitStashShow { path: p, index },
-        kosmos_core::git::git_stash_show(&path, index).await
-    )
+    route_val(&router, &path, |p| Request::GitStashShow { path: p, index }, || kosmos_core::git::git_stash_show(&path, index)).await
 }
 
 #[tauri::command]
@@ -260,11 +178,7 @@ pub async fn git_stash_pop(
     path: String,
     index: usize,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitStashPop { path: p, index },
-        kosmos_core::git::git_stash_pop(&path, index).await
-    )
+    route_void(&router, &path, |p| Request::GitStashPop { path: p, index }, || kosmos_core::git::git_stash_pop(&path, index)).await
 }
 
 #[tauri::command]
@@ -273,11 +187,7 @@ pub async fn git_stash_drop(
     path: String,
     index: usize,
 ) -> Result<(), String> {
-    route_void_extra!(
-        router, path,
-        |p: String| Request::GitStashDrop { path: p, index },
-        kosmos_core::git::git_stash_drop(&path, index).await
-    )
+    route_void(&router, &path, |p| Request::GitStashDrop { path: p, index }, || kosmos_core::git::git_stash_drop(&path, index)).await
 }
 
 #[tauri::command]
@@ -285,11 +195,7 @@ pub async fn git_discard_all_tracked(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitDiscardAllTracked { path: p },
-        kosmos_core::git::git_discard_all_tracked
-    )
+    route_void(&router, &path, |p| Request::GitDiscardAllTracked { path: p }, || kosmos_core::git::git_discard_all_tracked(&path)).await
 }
 
 #[tauri::command]
@@ -297,11 +203,7 @@ pub async fn git_trash_all_untracked(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitTrashAllUntracked { path: p },
-        kosmos_core::git::git_trash_all_untracked
-    )
+    route_void(&router, &path, |p| Request::GitTrashAllUntracked { path: p }, || kosmos_core::git::git_trash_all_untracked(&path)).await
 }
 
 #[tauri::command]
@@ -310,11 +212,7 @@ pub async fn git_diff(
     path: String,
     file: String,
 ) -> Result<String, String> {
-    route_val_extra!(
-        router, path,
-        |p: String| Request::GitDiff { path: p, file: file.clone() },
-        kosmos_core::git::git_diff(&path, &file).await
-    )
+    route_val(&router, &path, |p| Request::GitDiff { path: p, file: file.clone() }, || kosmos_core::git::git_diff(&path, &file)).await
 }
 
 #[tauri::command]
@@ -323,11 +221,7 @@ pub async fn git_diff_untracked(
     path: String,
     file: String,
 ) -> Result<String, String> {
-    route_val_extra!(
-        router, path,
-        |p: String| Request::GitDiffUntracked { path: p, file: file.clone() },
-        kosmos_core::git::git_diff_untracked(&path, &file).await
-    )
+    route_val(&router, &path, |p| Request::GitDiffUntracked { path: p, file: file.clone() }, || kosmos_core::git::git_diff_untracked(&path, &file)).await
 }
 
 #[tauri::command]
@@ -335,11 +229,7 @@ pub async fn git_init(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitInit { path: p },
-        kosmos_core::git::git_init
-    )
+    route_void(&router, &path, |p| Request::GitInit { path: p }, || kosmos_core::git::git_init(&path)).await
 }
 
 #[tauri::command]
@@ -347,11 +237,7 @@ pub async fn git_fetch(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitFetch { path: p },
-        kosmos_core::git::git_fetch
-    )
+    route_void(&router, &path, |p| Request::GitFetch { path: p }, || kosmos_core::git::git_fetch(&path)).await
 }
 
 #[tauri::command]
@@ -359,11 +245,7 @@ pub async fn git_pull(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitPull { path: p },
-        kosmos_core::git::git_pull
-    )
+    route_void(&router, &path, |p| Request::GitPull { path: p }, || kosmos_core::git::git_pull(&path)).await
 }
 
 #[tauri::command]
@@ -371,11 +253,7 @@ pub async fn git_pull_rebase(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitPullRebase { path: p },
-        kosmos_core::git::git_pull_rebase
-    )
+    route_void(&router, &path, |p| Request::GitPullRebase { path: p }, || kosmos_core::git::git_pull_rebase(&path)).await
 }
 
 #[tauri::command]
@@ -383,11 +261,7 @@ pub async fn git_push(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitPush { path: p },
-        kosmos_core::git::git_push
-    )
+    route_void(&router, &path, |p| Request::GitPush { path: p }, || kosmos_core::git::git_push(&path)).await
 }
 
 #[tauri::command]
@@ -395,11 +269,7 @@ pub async fn git_force_push(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void!(
-        router, path,
-        |p: String| Request::GitForcePush { path: p },
-        kosmos_core::git::git_force_push
-    )
+    route_void(&router, &path, |p| Request::GitForcePush { path: p }, || kosmos_core::git::git_force_push(&path)).await
 }
 
 #[tauri::command]
@@ -407,11 +277,7 @@ pub async fn get_git_remote_owner(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<Option<String>, String> {
-    route_val!(
-        router, path,
-        |p: String| Request::GetGitRemoteOwner { path: p },
-        kosmos_core::git::get_git_remote_owner
-    )
+    route_val(&router, &path, |p| Request::GetGitRemoteOwner { path: p }, || kosmos_core::git::get_git_remote_owner(&path)).await
 }
 
 #[tauri::command]
@@ -428,7 +294,7 @@ pub async fn watch_workspace(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        watcher.watch(&path).map_err(|e| e.to_string())
+        watcher.watch(&path).str_err()
     }
 }
 
@@ -444,5 +310,5 @@ pub async fn unwatch_workspace(
             return Ok(());
         }
     }
-    watcher.unwatch().map_err(|e| e.to_string())
+    watcher.unwatch().str_err()
 }

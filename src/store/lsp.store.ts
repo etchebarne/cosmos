@@ -107,9 +107,10 @@ const MAX_RESTART_DELAY_MS = 30_000;
 
 // Track active progress tokens across all servers.
 // Key: "workspacePath\0serverLang\0token"
-const progressTokens = new Map<string, IndexProgress>();
-// Auto-expire stale progress tokens that never received an "end" event.
-const progressTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const progressEntries = new Map<
+  string,
+  { progress: IndexProgress; timer: ReturnType<typeof setTimeout> | null }
+>();
 /** Max time a progress token can live without an "end" event (5 minutes). */
 const PROGRESS_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -117,9 +118,8 @@ function progressKey(workspacePath: string, serverLang: string, token: string | 
   return `${workspacePath}\0${serverLang}\0${token}`;
 }
 
-// Track restart attempts and start timestamps per server to implement backoff
-const restartAttempts = new Map<string, number>();
-const serverStartTimestamps = new Map<string, number>();
+// Track restart state per server (key: "workspacePath:serverLang")
+const restartState = new Map<string, { attempts: number; startTimestamp: number }>();
 
 export const useLspStore = create<LspState>()(
   immer((set, get) => {
@@ -153,7 +153,7 @@ export const useLspStore = create<LspState>()(
         for (const wp of workspaces) {
           const prefix = wp + "\0";
           const entries: IndexProgress[] = [];
-          for (const [key, progress] of progressTokens) {
+          for (const [key, { progress }] of progressEntries) {
             if (key.startsWith(prefix)) {
               entries.push(progress);
             }
@@ -183,56 +183,57 @@ export const useLspStore = create<LspState>()(
         });
 
         // Attempt automatic restart with exponential backoff + jitter
+        if (!monacoRef) return;
+
         const key = `${workspacePath}:${serverLang}`;
-        let attempts = restartAttempts.get(key) ?? 0;
+        const rs = restartState.get(key);
+        let attempts = rs?.attempts ?? 0;
 
         // If server ran >60s before crashing, reset attempts (it was stable)
-        const startTs = serverStartTimestamps.get(key);
-        if (startTs && Date.now() - startTs > 60_000) {
-          attempts = 0;
-        }
+        if (rs && Date.now() - rs.startTimestamp > 60_000) attempts = 0;
 
-        if (attempts < MAX_RESTART_ATTEMPTS && monacoRef) {
-          restartAttempts.set(key, attempts + 1);
-          const monaco = monacoRef;
-
-          // Exponential backoff with jitter
-          const baseDelay = Math.min(BASE_RESTART_DELAY_MS * 2 ** attempts, MAX_RESTART_DELAY_MS);
-          const delay = Math.round(baseDelay * (0.5 + Math.random() * 0.5));
-
-          console.warn(
-            `[kosmos:lsp] Server ${serverLang} stopped unexpectedly. ` +
-              `Restart attempt ${attempts + 1}/${MAX_RESTART_ATTEMPTS} in ${delay}ms...`,
-          );
-
-          setTimeout(() => {
-            // Clear old server entry so startServer doesn't see it as "stopped"
-            set((state) => {
-              const ws = state.servers[workspacePath];
-              if (ws) delete ws[serverLang];
-            });
-
-            get()
-              .startServer(workspacePath, serverLang, null, monaco)
-              .then((client) => {
-                if (client) {
-                  // Reset attempts on successful restart
-                  restartAttempts.delete(key);
-                  serverStartTimestamps.set(key, Date.now());
-                  console.info(`[kosmos:lsp] Server ${serverLang} restarted successfully.`);
-                }
-              })
-              .catch((err) => {
-                console.error(`[kosmos:lsp] Restart failed for ${serverLang}:`, err);
-              });
-          }, delay);
-        } else if (attempts >= MAX_RESTART_ATTEMPTS) {
+        if (attempts >= MAX_RESTART_ATTEMPTS) {
           console.error(
             `[kosmos:lsp] Server ${serverLang} stopped. Max restart attempts (${MAX_RESTART_ATTEMPTS}) reached.`,
           );
-          restartAttempts.delete(key);
-          serverStartTimestamps.delete(key);
+          restartState.delete(key);
+          return;
         }
+
+        restartState.set(key, {
+          attempts: attempts + 1,
+          startTimestamp: rs?.startTimestamp ?? Date.now(),
+        });
+
+        const monaco = monacoRef;
+        const delay = Math.round(
+          Math.min(BASE_RESTART_DELAY_MS * 2 ** attempts, MAX_RESTART_DELAY_MS) *
+            (0.5 + Math.random() * 0.5),
+        );
+
+        console.warn(
+          `[kosmos:lsp] Server ${serverLang} stopped unexpectedly. ` +
+            `Restart attempt ${attempts + 1}/${MAX_RESTART_ATTEMPTS} in ${delay}ms...`,
+        );
+
+        setTimeout(() => {
+          set((s) => {
+            const ws = s.servers[workspacePath];
+            if (ws) delete ws[serverLang];
+          });
+
+          get()
+            .startServer(workspacePath, serverLang, null, monaco)
+            .then((client) => {
+              if (client) {
+                restartState.set(key, { attempts: 0, startTimestamp: Date.now() });
+                console.info(`[kosmos:lsp] Server ${serverLang} restarted successfully.`);
+              }
+            })
+            .catch((err) => {
+              console.error(`[kosmos:lsp] Restart failed for ${serverLang}:`, err);
+            });
+        }, delay);
       }
     }
 
@@ -332,47 +333,46 @@ export const useLspStore = create<LspState>()(
         client.onProgress((token, value) => {
           const key = progressKey(workspacePath, serverLang, token);
           if (value.kind === "begin") {
-            progressTokens.set(key, {
+            const entry = progressEntries.get(key);
+            if (entry?.timer) clearTimeout(entry.timer);
+            const progress: IndexProgress = {
               serverName: result.serverName,
               title: value.title,
               message: value.message,
               percentage: value.percentage,
-            });
-            // Auto-expire if "end" is never received
-            clearTimeout(progressTimers.get(key));
-            progressTimers.set(
-              key,
-              setTimeout(() => {
-                progressTokens.delete(key);
-                progressTimers.delete(key);
+            };
+            progressEntries.set(key, {
+              progress,
+              timer: setTimeout(() => {
+                progressEntries.delete(key);
                 syncProgressState(workspacePath);
               }, PROGRESS_TIMEOUT_MS),
-            );
+            });
             // Flush immediately so the indicator appears right away
             flushProgressSync();
           } else if (value.kind === "report") {
-            const existing = progressTokens.get(key);
-            if (existing) {
-              progressTokens.set(key, {
-                ...existing,
-                message: value.message ?? existing.message,
-                percentage: value.percentage ?? existing.percentage,
-              });
+            const entry = progressEntries.get(key);
+            if (entry) {
+              entry.progress = {
+                ...entry.progress,
+                message: value.message ?? entry.progress.message,
+                percentage: value.percentage ?? entry.progress.percentage,
+              };
             }
             // Throttled — syncProgressState batches report updates
             syncProgressState(workspacePath);
           } else if (value.kind === "end") {
-            progressTokens.delete(key);
-            clearTimeout(progressTimers.get(key));
-            progressTimers.delete(key);
+            const entry = progressEntries.get(key);
+            if (entry?.timer) clearTimeout(entry.timer);
+            progressEntries.delete(key);
             // Flush immediately so the indicator disappears right away
             flushProgressSync();
           }
         });
 
-        // Store under the user's workspace path (for organization/cleanup)
+        // Record start timestamp for restart backoff logic
         const startKey = `${workspacePath}:${serverLang}`;
-        serverStartTimestamps.set(startKey, Date.now());
+        restartState.set(startKey, { attempts: 0, startTimestamp: Date.now() });
 
         setServerInfo(workspacePath, serverLang, {
           serverId: result.serverId,
@@ -553,10 +553,9 @@ export const useLspStore = create<LspState>()(
 
       installServer: async (workspacePath, serverName) => {
         const workspace = get().servers[workspacePath];
-        const langEntry = workspace
-          ? Object.entries(workspace).find(([, info]) => info.serverName === serverName)
-          : null;
-        const serverLang = langEntry?.[0];
+        const serverLang = workspace
+          ? Object.keys(workspace).find((lang) => workspace[lang].serverName === serverName)
+          : undefined;
 
         if (serverLang) {
           set((state) => {
@@ -640,25 +639,20 @@ export const useLspStore = create<LspState>()(
 
         await Promise.allSettled(shutdownPromises);
 
-        // Clean up progress tokens, timers, and pending sync for this workspace
+        // Clean up progress entries and pending sync for this workspace
         pendingSyncWorkspaces.delete(workspacePath);
         const prefix = workspacePath + "\0";
-        for (const key of progressTokens.keys()) {
-          if (key.startsWith(prefix)) progressTokens.delete(key);
-        }
-        for (const [key, timer] of progressTimers) {
+        for (const [key, entry] of progressEntries) {
           if (key.startsWith(prefix)) {
-            clearTimeout(timer);
-            progressTimers.delete(key);
+            if (entry.timer) clearTimeout(entry.timer);
+            progressEntries.delete(key);
           }
         }
 
-        // Clean up restart attempt and timestamp tracking
-        for (const key of restartAttempts.keys()) {
-          if (key.startsWith(workspacePath + ":")) restartAttempts.delete(key);
-        }
-        for (const key of serverStartTimestamps.keys()) {
-          if (key.startsWith(workspacePath + ":")) serverStartTimestamps.delete(key);
+        // Clean up restart state tracking
+        const restartPrefix = workspacePath + ":";
+        for (const key of restartState.keys()) {
+          if (key.startsWith(restartPrefix)) restartState.delete(key);
         }
 
         set((state) => {

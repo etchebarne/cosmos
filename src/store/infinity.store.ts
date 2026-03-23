@@ -31,10 +31,12 @@ interface InfinityStore {
   getNodes: (tabId: string) => InfinityNode[];
   addNode: (
     tabId: string,
-    type: string,
-    position: { x: number; y: number },
-    title?: string,
-    metadata?: Record<string, unknown>,
+    opts: {
+      type: string;
+      position: { x: number; y: number };
+      title?: string;
+      metadata?: Record<string, unknown>;
+    },
   ) => void;
   removeNode: (tabId: string, nodeId: string) => void;
   onNodesChange: (tabId: string, changes: NodeChange<InfinityNode>[]) => void;
@@ -47,7 +49,7 @@ export const useInfinityStore = create<InfinityStore>((set, get) => ({
 
   getNodes: (tabId) => get().canvases[tabId] ?? EMPTY_NODES,
 
-  addNode: (tabId, type, position, title, metadata) =>
+  addNode: (tabId, { type, position, title, metadata }) =>
     set((state) => {
       const def = getTabDefinition(type);
       if (!def) return state;
@@ -91,27 +93,22 @@ export const useInfinityStore = create<InfinityStore>((set, get) => ({
   onNodesChange: (tabId, changes) =>
     set((state) => {
       const nodes = state.canvases[tabId] ?? EMPTY_NODES;
-      let updated = applyNodeChanges(changes, nodes);
+      const updated = applyNodeChanges(changes, nodes);
 
       // Snap dimensions and position to grid during resize
-      const resizingIds = new Set<string>();
       for (const c of changes) {
         if (c.type === "dimensions" && c.resizing !== undefined) {
-          resizingIds.add(c.id);
-        }
-      }
-
-      if (resizingIds.size > 0) {
-        updated = updated.map((node) => {
-          if (!resizingIds.has(node.id)) return node;
+          const idx = updated.findIndex((n) => n.id === c.id);
+          if (idx === -1) continue;
+          const node = updated[idx];
           const w = Number(node.style?.width ?? 400);
           const h = Number(node.style?.height ?? 300);
-          return {
+          updated[idx] = {
             ...node,
             position: { x: snap(node.position.x), y: snap(node.position.y) },
             style: { ...node.style, width: snap(w), height: snap(h) },
           };
-        });
+        }
       }
 
       return {

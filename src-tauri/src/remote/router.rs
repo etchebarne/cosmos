@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
+use kosmos_core::EventSink;
 use kosmos_protocol::events::Event;
 use kosmos_protocol::requests::Request;
 
@@ -18,6 +19,27 @@ struct AgentEntry {
     last_reconnect: Option<std::time::Instant>,
 }
 
+/// An EventSink that prepends a workspace prefix to path-based events.
+struct PrefixedEventSink {
+    prefix: String,
+    inner: Arc<dyn EventSink>,
+}
+
+impl EventSink for PrefixedEventSink {
+    fn emit(&self, event: Event) {
+        let event = match event {
+            Event::FileTreeChanged { dirs } => Event::FileTreeChanged {
+                dirs: dirs.into_iter().map(|d| format!("{}{}", self.prefix, d)).collect(),
+            },
+            Event::FileContentChanged { files } => Event::FileContentChanged {
+                files: files.into_iter().map(|f| format!("{}{}", self.prefix, f)).collect(),
+            },
+            other => other,
+        };
+        self.inner.emit(event);
+    }
+}
+
 /// Routes requests to the appropriate backend: local kosmos-core or remote agent.
 ///
 /// Each remote workspace has a `RemoteAgent` connection. Local workspaces use
@@ -28,49 +50,26 @@ pub struct BackendRouter {
     agents: Mutex<HashMap<String, AgentEntry>>,
     /// Maps terminal IDs to their remote agent (for routing write/resize/close).
     remote_terminals: Mutex<HashMap<String, Arc<RemoteAgent>>>,
-    /// Callback for delivering events from remote agents to the host.
-    on_event: Arc<dyn Fn(Event) + Send + Sync>,
+    /// Event sink for delivering events from remote agents to the host.
+    events: Arc<dyn EventSink>,
 }
 
 impl BackendRouter {
-    pub fn new(on_event: Arc<dyn Fn(Event) + Send + Sync>) -> Self {
+    pub fn new(events: Arc<dyn EventSink>) -> Self {
         Self {
             agents: Mutex::new(HashMap::new()),
             remote_terminals: Mutex::new(HashMap::new()),
-            on_event,
+            events,
         }
     }
 
-    /// Build the event callback that prepends workspace prefix to path-based events.
-    fn make_event_callback(
-        &self,
-        workspace_path: &str,
-    ) -> Arc<dyn Fn(Event) + Send + Sync> {
+    /// Build the event sink that prepends workspace prefix to path-based events.
+    fn make_event_sink(&self, workspace_path: &str) -> Arc<dyn EventSink> {
         let prefix = Self::extract_prefix(workspace_path).unwrap_or_default();
-        let on_event = self.on_event.clone();
         if prefix.is_empty() {
-            on_event
+            self.events.clone()
         } else {
-            Arc::new(move |event| {
-                let event = match event {
-                    Event::FileTreeChanged { dirs } => Event::FileTreeChanged {
-                        dirs: dirs
-                            .into_iter()
-                            .map(|d| format!("{}{}", prefix, d))
-                            .collect(),
-                    },
-                    Event::FileContentChanged { files } => Event::FileContentChanged {
-                        files: files
-                            .into_iter()
-                            .map(|f| format!("{}{}", prefix, f))
-                            .collect(),
-                    },
-                    // Terminal and LSP events don't carry paths — they use IDs
-                    // that are already routed via remote_terminals / RemoteServerMap.
-                    other => other,
-                };
-                on_event(event);
-            })
+            Arc::new(PrefixedEventSink { prefix, inner: self.events.clone() })
         }
     }
 
@@ -92,8 +91,8 @@ impl BackendRouter {
         }
 
         // Spawn without holding the lock — this can take seconds for WSL startup.
-        let callback = self.make_event_callback(workspace_path);
-        let agent = Arc::new(RemoteAgent::spawn(conn.clone(), callback).await?);
+        let sink = self.make_event_sink(workspace_path);
+        let agent = Arc::new(RemoteAgent::spawn(conn.clone(), sink).await?);
 
         // Re-register existing terminals from the daemon. On first connect this
         // returns an empty list; on reconnect it returns terminals that survived
@@ -102,7 +101,6 @@ impl BackendRouter {
             if let Ok(ids) = serde_json::from_value::<Vec<String>>(val) {
                 let mut terminals = self.remote_terminals.lock().await;
                 for id in ids {
-                    agent.register_terminal(id.clone()).await;
                     terminals.insert(id, agent.clone());
                 }
             }
@@ -161,7 +159,7 @@ impl BackendRouter {
 
         let prefix = format!("wsl://{distro}");
 
-        // First pass: check if agent is alive.
+        // First pass: check if agent is alive and read backoff info in one lock.
         let reconnect_info = {
             let agents = self.agents.lock().await;
             let mut found = None;
@@ -170,50 +168,33 @@ impl BackendRouter {
                     if entry.agent.is_alive() {
                         return Some((entry.agent.clone(), linux_path.to_string()));
                     }
-                    // Agent is dead — grab info for reconnection
-                    found = Some((key.clone(), entry.connection.clone()));
+                    // Agent is dead — check backoff before attempting reconnect
+                    let backoff_secs = std::cmp::min(1u64 << entry.reconnect_attempts, 60);
+                    let should_skip = entry
+                        .last_reconnect
+                        .map(|t| t.elapsed().as_secs() < backoff_secs)
+                        .unwrap_or(false);
+                    if !should_skip {
+                        found = Some((key.clone(), entry.connection.clone()));
+                    }
                     break;
                 }
             }
             found
         };
 
-        // Agent is dead — attempt transparent reconnection with exponential backoff.
+        // Agent is dead — attempt transparent reconnection.
         if let Some((workspace_key, conn)) = reconnect_info {
-            // Check backoff: skip if reconnecting too soon
-            let should_skip = {
-                let agents = self.agents.lock().await;
-                if let Some(entry) = agents.get(&workspace_key) {
-                    let backoff_secs = std::cmp::min(1u64 << entry.reconnect_attempts, 60);
-                    entry
-                        .last_reconnect
-                        .map(|t| t.elapsed().as_secs() < backoff_secs)
-                        .unwrap_or(false)
-                } else {
-                    false
-                }
-            };
-
-            if should_skip {
-                tracing::debug!(workspace = %workspace_key, "Skipping reconnect (backoff)");
-                return None;
-            }
 
             tracing::warn!(workspace = %workspace_key, "Agent dead, reconnecting...");
             match self.connect(&workspace_key, conn).await {
                 Ok(()) => {
                     tracing::info!(workspace = %workspace_key, "Reconnected");
-                    // Reset backoff on success
-                    {
-                        let mut agents = self.agents.lock().await;
-                        if let Some(entry) = agents.get_mut(&workspace_key) {
-                            entry.reconnect_attempts = 0;
-                            entry.last_reconnect = None;
-                        }
-                    }
-                    // Retry lookup with the new agent.
-                    let agents = self.agents.lock().await;
-                    if let Some(entry) = agents.get(&workspace_key) {
+                    // Reset backoff and return the new agent in one lock.
+                    let mut agents = self.agents.lock().await;
+                    if let Some(entry) = agents.get_mut(&workspace_key) {
+                        entry.reconnect_attempts = 0;
+                        entry.last_reconnect = None;
                         if entry.agent.is_alive() {
                             return Some((entry.agent.clone(), linux_path.to_string()));
                         }
@@ -238,7 +219,6 @@ impl BackendRouter {
 
     /// Register a terminal ID as belonging to a remote agent.
     pub async fn register_remote_terminal(&self, id: String, agent: Arc<RemoteAgent>) {
-        agent.register_terminal(id.clone()).await;
         self.remote_terminals.lock().await.insert(id, agent);
     }
 
@@ -258,8 +238,6 @@ impl BackendRouter {
 
     /// Remove a remote terminal registration.
     pub async fn remove_remote_terminal(&self, id: &str) {
-        if let Some(agent) = self.remote_terminals.lock().await.remove(id) {
-            agent.unregister_terminal(id).await;
-        }
+        self.remote_terminals.lock().await.remove(id);
     }
 }

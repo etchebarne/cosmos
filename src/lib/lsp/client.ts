@@ -74,12 +74,14 @@ export class LspClient {
   private transport: TauriLspTransport;
   capabilities: ServerCapabilities | null = null;
   private openDocuments = new Set<string>();
-  /** WSL prefix (e.g. "wsl://Ubuntu") to strip from outgoing URIs and add to incoming ones. */
-  private wslPrefix: string | null = null;
+  /** WSL prefix variants: raw "wsl://Ubuntu" and encoded "wsl%3A//Ubuntu". */
+  private wslRaw: string | null = null;
+  private wslEncoded: string | null = null;
 
   constructor(transport: TauriLspTransport, wslPrefix?: string) {
     this.transport = transport;
-    this.wslPrefix = wslPrefix ?? null;
+    this.wslRaw = wslPrefix ?? null;
+    this.wslEncoded = wslPrefix ? wslPrefix.replace(":", "%3A") : null;
 
     // Handle server request to create a progress token — just acknowledge it
     this.transport.onRequest("window/workDoneProgress/create", () => null);
@@ -110,19 +112,16 @@ export class LspClient {
 
   /** Convert an editor URI to a server URI (strip wsl:// prefix from the path). */
   toServerUri(uri: string): string {
-    if (!this.wslPrefix) return uri;
-    // Monaco percent-encodes the colon: wsl%3A//Ubuntu instead of wsl://Ubuntu
-    const encoded = this.wslPrefix.replace(":", "%3A");
+    if (!this.wslEncoded) return uri;
     // file:///wsl%3A//Ubuntu/home/... → file:///home/...
-    return uri.replace(`/${encoded}`, "").replace(`/${this.wslPrefix}`, "");
+    return uri.replace(`/${this.wslEncoded}`, "").replace(`/${this.wslRaw}`, "");
   }
 
   /** Convert a server URI back to an editor URI (add wsl:// prefix to the path). */
   fromServerUri(uri: string): string {
-    if (!this.wslPrefix) return uri;
+    if (!this.wslEncoded) return uri;
     // file:///home/... → file:///wsl%3A//Ubuntu/home/...
-    const encoded = this.wslPrefix.replace(":", "%3A");
-    return uri.replace("file:///", `file:///${encoded}/`);
+    return uri.replace("file:///", `file:///${this.wslEncoded}/`);
   }
 
   /** Subscribe to work-done progress updates (indexing, loading, etc.). */
@@ -137,6 +136,7 @@ export class LspClient {
 
   async initialize(workspacePath: string): Promise<InitializeResult> {
     const rootUri = this.toServerUri(pathToFileUri(workspacePath));
+    const noDynamic = { dynamicRegistration: false } as const;
 
     const params: InitializeParams = {
       processId: null,
@@ -144,13 +144,13 @@ export class LspClient {
       capabilities: {
         textDocument: {
           synchronization: {
-            dynamicRegistration: false,
+            ...noDynamic,
             willSave: false,
             willSaveWaitUntil: false,
             didSave: true,
           },
           completion: {
-            dynamicRegistration: false,
+            ...noDynamic,
             completionItem: {
               snippetSupport: true,
               commitCharactersSupport: true,
@@ -166,25 +166,25 @@ export class LspClient {
             contextSupport: true,
           },
           hover: {
-            dynamicRegistration: false,
+            ...noDynamic,
             contentFormat: ["markdown", "plaintext"],
           },
           signatureHelp: {
-            dynamicRegistration: false,
+            ...noDynamic,
             signatureInformation: {
               documentationFormat: ["markdown", "plaintext"],
               parameterInformation: { labelOffsetSupport: true },
             },
           },
-          definition: { dynamicRegistration: false },
-          references: { dynamicRegistration: false },
-          documentHighlight: { dynamicRegistration: false },
+          definition: noDynamic,
+          references: noDynamic,
+          documentHighlight: noDynamic,
           documentSymbol: {
-            dynamicRegistration: false,
+            ...noDynamic,
             hierarchicalDocumentSymbolSupport: true,
           },
           codeAction: {
-            dynamicRegistration: false,
+            ...noDynamic,
             codeActionLiteralSupport: {
               codeActionKind: {
                 valueSet: [
@@ -202,9 +202,9 @@ export class LspClient {
               properties: ["edit"],
             },
           },
-          formatting: { dynamicRegistration: false },
-          rangeFormatting: { dynamicRegistration: false },
-          rename: { dynamicRegistration: false, prepareSupport: true },
+          formatting: noDynamic,
+          rangeFormatting: noDynamic,
+          rename: { ...noDynamic, prepareSupport: true },
           publishDiagnostics: {
             relatedInformation: true,
             tagSupport: { valueSet: [1, 2] },
@@ -212,9 +212,7 @@ export class LspClient {
         },
         workspace: {
           workspaceFolders: true,
-          didChangeWatchedFiles: {
-            dynamicRegistration: false,
-          },
+          didChangeWatchedFiles: noDynamic,
         },
         window: {
           workDoneProgress: true,

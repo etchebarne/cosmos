@@ -12,45 +12,11 @@ import { useLayoutStore } from "./store/layout.store";
 import { useWorkspaceStore } from "./store/workspace.store";
 import { useSettingsStore } from "./store/settings.store";
 import { useLspStore } from "./store/lsp.store";
-import type { Workspace } from "./store/workspace.store";
-import type { PaneNode } from "./types";
 import { applyTheme } from "./lib/themes";
 import "overlayscrollbars/overlayscrollbars.css";
 import "./styles/globals.css";
 
 applyTheme("kosmos-dark");
-
-function WorkspacePane({
-  workspace,
-  layout,
-  isActive,
-  connecting,
-}: {
-  workspace: Workspace;
-  layout: PaneNode;
-  isActive: boolean;
-  connecting: boolean;
-}) {
-  const contextValue = useMemo(() => ({ workspace, isActive }), [workspace, isActive]);
-
-  return (
-    <WorkspaceProvider value={contextValue}>
-      <PanePortalProvider layout={layout}>
-        <div className={isActive ? "flex w-full h-full min-w-0 min-h-0" : "hidden"}>
-          {connecting ? (
-            <div className="flex items-center justify-center w-full h-full">
-              <p className="text-xs text-[var(--color-text-secondary)] animate-pulse">
-                Connecting to remote workspace...
-              </p>
-            </div>
-          ) : (
-            <PaneContainer node={layout} />
-          )}
-        </div>
-      </PanePortalProvider>
-    </WorkspaceProvider>
-  );
-}
 
 function App() {
   const { layout, layouts, activeWorkspacePath, setWorkspace } = useLayoutStore(
@@ -117,14 +83,24 @@ function App() {
         {workspaces.map((ws) => {
           const wsLayout = allLayouts[ws.path];
           if (!wsLayout) return null;
+          const isActive = ws.path === activeWorkspacePath;
+          const isConnecting = connectingPaths.has(ws.path);
           return (
-            <WorkspacePane
-              key={ws.path}
-              workspace={ws}
-              layout={wsLayout}
-              isActive={ws.path === activeWorkspacePath}
-              connecting={connectingPaths.has(ws.path)}
-            />
+            <WorkspaceProvider key={ws.path} value={{ workspace: ws, isActive }}>
+              <PanePortalProvider layout={wsLayout}>
+                <div className={isActive ? "flex w-full h-full min-w-0 min-h-0" : "hidden"}>
+                  {isConnecting ? (
+                    <div className="flex items-center justify-center w-full h-full">
+                      <p className="text-xs text-[var(--color-text-secondary)] animate-pulse">
+                        Connecting to remote workspace...
+                      </p>
+                    </div>
+                  ) : (
+                    <PaneContainer node={wsLayout} />
+                  )}
+                </div>
+              </PanePortalProvider>
+            </WorkspaceProvider>
           );
         })}
         {!hasWorkspace && <EmptyState />}

@@ -230,7 +230,7 @@ async fn install_npm(entry: &RegistryEntry, install_dir: &Path) -> Result<String
         args.extend(extras.iter().cloned());
     }
 
-    let output = tokio::process::Command::new("npm")
+    let output = shell_command("npm")
         .args(&args)
         .current_dir(install_dir)
         .output()

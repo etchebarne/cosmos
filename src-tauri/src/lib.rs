@@ -101,11 +101,7 @@ pub fn run() {
             app.manage(lsp::RemoteServerMap::new());
 
             // Backend router for remote workspaces
-            let event_callback: Arc<dyn Fn(Event) + Send + Sync> = {
-                let sink = events.clone();
-                Arc::new(move |event| sink.emit(event))
-            };
-            app.manage(remote::router::BackendRouter::new(event_callback));
+            app.manage(remote::router::BackendRouter::new(events.clone()));
 
             Ok(())
         })

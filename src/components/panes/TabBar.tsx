@@ -145,39 +145,37 @@ export const TabBar = memo(function TabBar({ paneId, tabs, activeTabId }: TabBar
         <Plus size={14} />
       </button>
 
-      {contextMenu &&
-        (() => {
-          const tabIdx = tabs.findIndex((t) => t.id === contextMenu.tab.id);
-          const items: ContextMenuItem[] = [
-            { label: "Close", onClick: () => closeTab(paneId, contextMenu.tab.id) },
-            {
-              label: "Close Others",
-              onClick: () => closeOtherTabs(paneId, contextMenu.tab.id),
-              disabled: tabs.length <= 1,
-            },
-            { separator: true },
-            {
-              label: "Close to the Left",
-              onClick: () => closeTabsToLeft(paneId, contextMenu.tab.id),
-              disabled: tabIdx === 0,
-            },
-            {
-              label: "Close to the Right",
-              onClick: () => closeTabsToRight(paneId, contextMenu.tab.id),
-              disabled: tabIdx === tabs.length - 1,
-            },
-            { separator: true },
-            { label: "Close All", onClick: () => closeAllTabs(paneId), destructive: true },
-          ];
-          return (
-            <ContextMenu
-              x={contextMenu.x}
-              y={contextMenu.y}
-              items={items}
-              onClose={() => setContextMenu(null)}
-            />
-          );
-        })()}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={(() => {
+            const tabIdx = tabs.findIndex((t) => t.id === contextMenu.tab.id);
+            return [
+              { label: "Close", onClick: () => closeTab(paneId, contextMenu.tab.id) },
+              {
+                label: "Close Others",
+                onClick: () => closeOtherTabs(paneId, contextMenu.tab.id),
+                disabled: tabs.length <= 1,
+              },
+              { separator: true },
+              {
+                label: "Close to the Left",
+                onClick: () => closeTabsToLeft(paneId, contextMenu.tab.id),
+                disabled: tabIdx === 0,
+              },
+              {
+                label: "Close to the Right",
+                onClick: () => closeTabsToRight(paneId, contextMenu.tab.id),
+                disabled: tabIdx === tabs.length - 1,
+              },
+              { separator: true },
+              { label: "Close All", onClick: () => closeAllTabs(paneId), destructive: true },
+            ] as ContextMenuItem[];
+          })()}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 });

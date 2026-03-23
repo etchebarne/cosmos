@@ -4,7 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { getTheme } from "../../lib/themes";
 import { useWorkspaceStore } from "../../store/workspace.store";
-import { ContextMenu, type ContextMenuItem } from "../shared/ContextMenu";
+import { ContextMenu } from "../shared/ContextMenu";
 import { Tooltip } from "../shared/Tooltip";
 import { useLayoutStore } from "../../store/layout.store";
 import { RemoteDialog } from "./RemoteDialog";
@@ -21,9 +21,7 @@ export function ProjectBar() {
   const reorderWorkspace = useWorkspaceStore((s) => s.reorderWorkspace);
 
   const [dragPath, setDragPath] = useState<string | null>(null);
-  const isDraggingRef = useRef(false);
-  const currentIndexRef = useRef<number>(0);
-  const swapXRef = useRef<number | null>(null);
+  const dragRef = useRef({ isDragging: false, currentIndex: 0, swapX: null as number | null });
   const workspaceBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   // Snapshot of button positions taken right before a reorder
   const positionsRef = useRef<Map<string, number>>(new Map());
@@ -87,8 +85,10 @@ export function ProjectBar() {
     setContextMenu({ x: e.clientX, y: e.clientY, index });
   }, []);
 
-  const handleCloseMenu = useCallback(() => setContextMenu(null), []);
-  const handleCloseAddMenu = useCallback(() => setAddMenu(null), []);
+  const closeMenu = useCallback((menu: "context" | "add") => {
+    if (menu === "context") setContextMenu(null);
+    else setAddMenu(null);
+  }, []);
 
   const getDropIndex = useCallback((clientX: number) => {
     const refs = workspaceBtnRefs.current;
@@ -125,8 +125,9 @@ export function ProjectBar() {
 
       const startX = e.clientX;
       const startY = e.clientY;
-      isDraggingRef.current = false;
-      currentIndexRef.current = index;
+      const drag = dragRef.current;
+      drag.isDragging = false;
+      drag.currentIndex = index;
       const path = useWorkspaceStore.getState().workspaces[index]?.path;
 
       const SWAP_DEAD_ZONE = 16;
@@ -134,34 +135,31 @@ export function ProjectBar() {
       const onMouseMove = (ev: MouseEvent) => {
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
-        if (!isDraggingRef.current && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
-          isDraggingRef.current = true;
+        if (!drag.isDragging && Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+          drag.isDragging = true;
           setDragPath(path);
         }
-        if (isDraggingRef.current) {
+        if (drag.isDragging) {
           // After a swap, require the cursor to move past a dead zone before allowing another
-          if (
-            swapXRef.current !== null &&
-            Math.abs(ev.clientX - swapXRef.current) < SWAP_DEAD_ZONE
-          ) {
+          if (drag.swapX !== null && Math.abs(ev.clientX - drag.swapX) < SWAP_DEAD_ZONE) {
             return;
           }
           const targetIndex = getDropIndex(ev.clientX);
-          if (targetIndex !== currentIndexRef.current) {
+          if (targetIndex !== drag.currentIndex) {
             snapshotPositions();
-            reorderWorkspace(currentIndexRef.current, targetIndex);
-            currentIndexRef.current = targetIndex;
-            swapXRef.current = ev.clientX;
+            reorderWorkspace(drag.currentIndex, targetIndex);
+            drag.currentIndex = targetIndex;
+            drag.swapX = ev.clientX;
           }
         }
       };
 
       const onMouseUp = () => {
-        if (!isDraggingRef.current) {
+        if (!drag.isDragging) {
           switchWorkspace(index);
         }
-        isDraggingRef.current = false;
-        swapXRef.current = null;
+        drag.isDragging = false;
+        drag.swapX = null;
         setDragPath(null);
         document.removeEventListener("mousemove", onMouseMove);
         document.removeEventListener("mouseup", onMouseUp);
@@ -198,18 +196,6 @@ export function ProjectBar() {
     },
     [wslDistros],
   );
-
-  const addMenuItems: ContextMenuItem[] = [
-    {
-      label: "Open Local Folder",
-      onClick: () => handleOpenFolder(),
-    },
-    { separator: true },
-    ...wslDistros.map((distro) => ({
-      label: `WSL: ${distro}`,
-      onClick: () => setRemoteDialog(distro),
-    })),
-  ];
 
   return (
     <div className="flex items-center gap-2 h-[52px] min-h-[52px] px-3 bg-[var(--color-project-bar-bg)] border-b border-[var(--color-border-primary)]">
@@ -314,7 +300,7 @@ export function ProjectBar() {
               onClick: () => closeWorkspace(contextMenu.index),
             },
           ]}
-          onClose={handleCloseMenu}
+          onClose={() => closeMenu("context")}
         />
       )}
 
@@ -322,8 +308,15 @@ export function ProjectBar() {
         <ContextMenu
           x={addMenu.x}
           y={addMenu.y}
-          items={addMenuItems}
-          onClose={handleCloseAddMenu}
+          items={[
+            { label: "Open Local Folder", onClick: () => handleOpenFolder() },
+            { separator: true },
+            ...wslDistros.map((distro) => ({
+              label: `WSL: ${distro}`,
+              onClick: () => setRemoteDialog(distro),
+            })),
+          ]}
+          onClose={() => closeMenu("add")}
         />
       )}
 
