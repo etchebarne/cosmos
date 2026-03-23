@@ -2,157 +2,33 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import Editor, { type Monaco } from "@monaco-editor/react";
-import type { editor, Uri, IRange, IPosition } from "monaco-editor";
+import type { editor } from "monaco-editor";
 import {
   TextDocumentSyncKind,
   type TextDocumentContentChangeEvent,
 } from "vscode-languageserver-protocol";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { useLspStore } from "../../store/lsp.store";
-import { pathToFileUri, fileUriToPath } from "../../lib/lsp/uri";
+import { pathToFileUri } from "../../lib/lsp/uri";
 import { useLayoutStore } from "../../store/layout.store";
 import { useEditorStore } from "../../store/editor.store";
 import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
-import { getTheme } from "../../lib/themes";
 import { useThemeListener } from "../../hooks/use-theme-listener";
 import { getEditorMeta } from "../../types";
 import { StateView } from "../../components/shared/StateView";
 import { BASE_EDITOR_OPTIONS } from "../../lib/monaco-config";
 import { initExtMap, languageIdFromExt } from "../../lib/ext-to-lang";
-import { getFileName, normalizePath, getFileExtension } from "../../lib/path-utils";
+import { normalizePath, getFileExtension } from "../../lib/path-utils";
 import type { TabContentProps } from "../types";
+import { defineKosmosTheme } from "./monaco-theme";
+import { registerEditorOpener } from "./editor-opener";
+import { editorCache } from "./editor-cache";
 
 // ── Language detection from file extension (for early LSP start) ──
 
 function languageIdFromPath(filePath: string): string {
   const ext = getFileExtension(filePath);
   return (ext && languageIdFromExt(ext)) ?? "plaintext";
-}
-
-// ── Cross-file navigation (Ctrl+Click go-to-definition) ──
-
-interface EditorCacheEntry {
-  instance: editor.IStandaloneCodeEditor;
-  pendingReveal?: { lineNumber: number; column: number };
-}
-
-const editorCache = new Map<string, EditorCacheEntry>();
-let editorOpenerRegistered = false;
-
-/** Clear module-level caches for a workspace path prefix. */
-export function cleanupEditorInstances(workspacePath: string) {
-  for (const key of editorCache.keys()) {
-    if (key.startsWith(workspacePath)) editorCache.delete(key);
-  }
-}
-
-/** Reveal a position in an already-open editor, or queue it for when the editor mounts. */
-export function revealPosition(filePath: string, position: { lineNumber: number; column: number }) {
-  const entry = editorCache.get(filePath);
-  if (entry) {
-    entry.pendingReveal = position;
-  } else {
-    editorCache.set(filePath, { instance: null!, pendingReveal: position });
-  }
-
-  // For already-mounted editors (handleEditorDidMount won't fire again),
-  // schedule a deferred reveal after layout settles.
-  setTimeout(() => {
-    const cached = editorCache.get(filePath);
-    if (!cached || cached.pendingReveal !== position) return; // consumed or replaced
-    if (cached.instance) {
-      cached.pendingReveal = undefined;
-      cached.instance.setPosition(position);
-      cached.instance.revealPositionInCenter(position);
-    }
-  }, 50);
-}
-
-/** Convert a file URI to an OS path with the drive letter uppercased to match OS convention. */
-function uriToNormalizedPath(uri: string): string {
-  let p = fileUriToPath(uri);
-  // Uppercase drive letter to match Windows OS convention (OS returns C:\, but URIs use c:/)
-  if (/^[a-z]:/.test(p)) {
-    p = p[0].toUpperCase() + p.slice(1);
-  }
-  return p;
-}
-
-function registerEditorOpener(monaco: Monaco) {
-  if (editorOpenerRegistered) return;
-  editorOpenerRegistered = true;
-
-  monaco.editor.registerEditorOpener({
-    openCodeEditor(
-      source: editor.ICodeEditor,
-      resource: Uri,
-      selectionOrPosition?: IRange | IPosition,
-    ) {
-      // If the definition is in the same file, let Monaco's default handler
-      // navigate within the current editor.
-      const sourceModel = source.getModel();
-      if (sourceModel && sourceModel.uri.toString() === resource.toString()) {
-        return false;
-      }
-
-      const filePath = uriToNormalizedPath(resource.toString());
-      const fileName = getFileName(filePath);
-
-      // Determine target position
-      let position: { lineNumber: number; column: number } | undefined;
-      if (selectionOrPosition) {
-        if ("lineNumber" in selectionOrPosition) {
-          position = {
-            lineNumber: selectionOrPosition.lineNumber,
-            column: selectionOrPosition.column,
-          };
-        } else {
-          position = {
-            lineNumber: selectionOrPosition.startLineNumber,
-            column: selectionOrPosition.startColumn,
-          };
-        }
-      }
-
-      const store = useLayoutStore.getState();
-      store.openFile(filePath, fileName, store.activePaneId ?? "");
-
-      if (position) {
-        revealPosition(filePath, position);
-      }
-
-      return true;
-    },
-  });
-}
-
-export function defineKosmosTheme(monaco: Monaco) {
-  const t = getTheme();
-  monaco.editor.defineTheme("kosmos", {
-    base: t.type === "dark" ? "vs-dark" : "vs",
-    inherit: true,
-    rules: [{ token: "tag", foreground: "569cd6" }],
-    colors: {
-      "editor.background": t.editor.background,
-      "editor.foreground": t.editor.foreground,
-      "editor.lineHighlightBackground": t.editor.lineHighlight,
-      "editor.selectionBackground": t.editor.selection,
-      "editor.inactiveSelectionBackground": t.editor.inactiveSelection,
-      "editorLineNumber.foreground": t.editor.lineNumber,
-      "editorLineNumber.activeForeground": t.editor.lineNumberActive,
-      "editorCursor.foreground": t.editor.cursor,
-      "editorIndentGuide.background": t.editor.indentGuide,
-      "editorIndentGuide.activeBackground": t.editor.indentGuideActive,
-      "editorWidget.background": t.editor.widget,
-      "editorWidget.border": t.editor.widgetBorder,
-      "editorSuggestWidget.background": t.editor.suggestBackground,
-      "editorSuggestWidget.border": t.editor.suggestBorder,
-      "editorSuggestWidget.selectedBackground": t.editor.suggestSelected,
-      "scrollbarSlider.background": t.ui.scrollbar.track,
-      "scrollbarSlider.hoverBackground": t.ui.scrollbar.hover,
-      "scrollbarSlider.activeBackground": t.ui.scrollbar.active,
-    },
-  });
 }
 
 export function EditorTab({ tab }: TabContentProps) {

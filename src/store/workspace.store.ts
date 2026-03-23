@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { getTauriStore } from "../lib/tauri-store";
 import { useLspStore } from "./lsp.store";
-import { cleanupEditorInstances } from "../tabs/editor/EditorTab";
+import { cleanupEditorInstances } from "../tabs/editor/editor-cache";
 import { getFileName } from "../lib/path-utils";
 
 const WORKSPACE_COLORS = [

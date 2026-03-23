@@ -2,6 +2,7 @@ pub mod editor;
 pub mod error;
 pub mod file_tree;
 pub mod git;
+pub mod git_stash;
 pub mod lsp;
 pub mod terminal;
 pub mod watcher;

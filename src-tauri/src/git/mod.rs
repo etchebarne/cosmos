@@ -135,7 +135,7 @@ pub async fn git_stash_all(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<(), String> {
-    route_void(&router, &path, |p| Request::GitStashAll { path: p }, || kosmos_core::git::git_stash_all(&path)).await
+    route_void(&router, &path, |p| Request::GitStashAll { path: p }, || kosmos_core::git_stash::git_stash_all(&path)).await
 }
 
 #[tauri::command]
@@ -144,7 +144,7 @@ pub async fn git_stash_files(
     path: String,
     files: Vec<String>,
 ) -> Result<(), String> {
-    { let f = files.clone(); route_void(&router, &path, |p| Request::GitStashFiles { path: p, files: f }, || kosmos_core::git::git_stash_files(&path, files)).await }
+    { let f = files.clone(); route_void(&router, &path, |p| Request::GitStashFiles { path: p, files: f }, || kosmos_core::git_stash::git_stash_files(&path, files)).await }
 }
 
 #[tauri::command]
@@ -152,7 +152,7 @@ pub async fn git_stash_list(
     router: State<'_, BackendRouter>,
     path: String,
 ) -> Result<Vec<GitStashEntry>, String> {
-    route_val(&router, &path, |p| Request::GitStashList { path: p }, || kosmos_core::git::git_stash_list(&path)).await
+    route_val(&router, &path, |p| Request::GitStashList { path: p }, || kosmos_core::git_stash::git_stash_list(&path)).await
 }
 
 #[tauri::command]
@@ -161,7 +161,7 @@ pub async fn git_stash_show(
     path: String,
     index: usize,
 ) -> Result<Vec<GitStashFile>, String> {
-    route_val(&router, &path, |p| Request::GitStashShow { path: p, index }, || kosmos_core::git::git_stash_show(&path, index)).await
+    route_val(&router, &path, |p| Request::GitStashShow { path: p, index }, || kosmos_core::git_stash::git_stash_show(&path, index)).await
 }
 
 #[tauri::command]
@@ -170,7 +170,7 @@ pub async fn git_stash_pop(
     path: String,
     index: usize,
 ) -> Result<(), String> {
-    route_void(&router, &path, |p| Request::GitStashPop { path: p, index }, || kosmos_core::git::git_stash_pop(&path, index)).await
+    route_void(&router, &path, |p| Request::GitStashPop { path: p, index }, || kosmos_core::git_stash::git_stash_pop(&path, index)).await
 }
 
 #[tauri::command]
@@ -179,7 +179,7 @@ pub async fn git_stash_drop(
     path: String,
     index: usize,
 ) -> Result<(), String> {
-    route_void(&router, &path, |p| Request::GitStashDrop { path: p, index }, || kosmos_core::git::git_stash_drop(&path, index)).await
+    route_void(&router, &path, |p| Request::GitStashDrop { path: p, index }, || kosmos_core::git_stash::git_stash_drop(&path, index)).await
 }
 
 #[tauri::command]

@@ -6,13 +6,14 @@ import { useLayoutStore } from "../../store/layout.store";
 import { useIsDarkTheme } from "../../lib/themes";
 import { useDragStore } from "../../store/drag.store";
 import { startDragThreshold } from "../../lib/drag-threshold";
-import { getFileName, getParentDir, normalizePath, joinPath } from "../../lib/path-utils";
+import { getFileName, getParentDir, normalizePath } from "../../lib/path-utils";
 import { ContextMenu } from "../../components/shared/ContextMenu";
-import type { ContextMenuItem } from "../../components/shared/ContextMenu";
 import type { DirEntry } from "./FileTreeTab";
 import { useFileTreeSelection, useFileClipboard } from "./file-tree-stores";
 import { GitFileTreeContext } from "./git-file-tree-context";
 import { FileIcon } from "./file-icons";
+import { InlineInput } from "./InlineInput";
+import { useFileTreeActions } from "./useFileTreeActions";
 
 // ── Helpers ──
 
@@ -26,74 +27,6 @@ interface FileTreeNodeProps {
 
 const INDENT_SIZE = 16;
 const LEFT_PAD = 8;
-
-// ── Inline input ──
-
-function InlineInput({
-  depth,
-  iconNode,
-  defaultValue,
-  onConfirm,
-  onCancel,
-}: {
-  depth: number;
-  iconNode: React.ReactNode;
-  defaultValue: string;
-  onConfirm: (value: string) => void;
-  onCancel: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    el.focus();
-    const dotIndex = defaultValue.lastIndexOf(".");
-    if (dotIndex > 0) {
-      el.setSelectionRange(0, dotIndex);
-    } else {
-      el.select();
-    }
-  }, [defaultValue]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      const value = inputRef.current?.value.trim();
-      if (value) onConfirm(value);
-      else onCancel();
-    } else if (e.key === "Escape") {
-      onCancel();
-    }
-  };
-
-  return (
-    <div
-      className="relative flex items-center w-full h-[28px] gap-1.5"
-      style={{ paddingLeft: LEFT_PAD + depth * INDENT_SIZE }}
-    >
-      {Array.from({ length: depth }, (_, i) => (
-        <span
-          key={i}
-          className="absolute top-0 bottom-0 w-px bg-[var(--color-border-primary)] opacity-40"
-          style={{ left: LEFT_PAD + i * INDENT_SIZE + 8 }}
-        />
-      ))}
-      <span className="w-4 h-4 shrink-0" />
-      {iconNode}
-      <input
-        ref={inputRef}
-        className="flex-1 text-[13px] bg-[var(--color-bg-input)] text-[var(--color-text-primary)] border border-[var(--color-border-focus)] outline-none px-1 min-w-0"
-        defaultValue={defaultValue}
-        onKeyDown={handleKeyDown}
-        onBlur={() => {
-          const value = inputRef.current?.value.trim();
-          if (value && value !== defaultValue) onConfirm(value);
-          else onCancel();
-        }}
-      />
-    </div>
-  );
-}
 
 // ── Main component ──
 
@@ -131,7 +64,6 @@ export function FileTreeNode({
   const refreshDir = useCallback(
     (dirPath: string) => {
       if (normalizePath(dirPath) === normalizePath(entry.path)) {
-        // This node IS the directory to refresh — update directly
         invoke<DirEntry[]>("read_dir", { path: dirPath })
           .then((result) => {
             setChildren(result);
@@ -139,7 +71,6 @@ export function FileTreeNode({
           })
           .catch((e) => console.warn("read_dir failed:", e));
       } else {
-        // Target directory is a different node — notify it via event
         window.dispatchEvent(
           new CustomEvent("file-tree-refresh", {
             detail: { dir: dirPath },
@@ -149,6 +80,24 @@ export function FileTreeNode({
     },
     [entry.path],
   );
+
+  const { handleRename, handleCreate, contextMenuItems } = useFileTreeActions({
+    entry,
+    depth,
+    loaded,
+    creating,
+    clipboard,
+    isSelected,
+    selectionSize,
+    setChildren,
+    setLoaded,
+    setExpanded,
+    setCreating,
+    setRenaming,
+    setClipboard,
+    clearClipboard,
+    refreshDir,
+  });
 
   const handleClick = useCallback(
     async (e: React.MouseEvent) => {
@@ -351,199 +300,6 @@ export function FileTreeNode({
     },
     [entry.path],
   );
-
-  const targetDir = entry.isDir ? entry.path : getParentDir(entry.path);
-
-  const handleNewFile = useCallback(() => {
-    if (entry.isDir) {
-      if (!loaded) {
-        invoke<DirEntry[]>("read_dir", { path: entry.path }).then((result) => {
-          setChildren(result);
-          setLoaded(true);
-          setExpanded(true);
-          setCreating("file");
-        });
-      } else {
-        setExpanded(true);
-        setCreating("file");
-      }
-    } else {
-      window.dispatchEvent(
-        new CustomEvent("file-tree-create", {
-          detail: { dir: targetDir, type: "file" },
-        }),
-      );
-    }
-  }, [entry.isDir, entry.path, loaded, targetDir]);
-
-  const handleNewDir = useCallback(() => {
-    if (entry.isDir) {
-      if (!loaded) {
-        invoke<DirEntry[]>("read_dir", { path: entry.path }).then((result) => {
-          setChildren(result);
-          setLoaded(true);
-          setExpanded(true);
-          setCreating("dir");
-        });
-      } else {
-        setExpanded(true);
-        setCreating("dir");
-      }
-    } else {
-      window.dispatchEvent(
-        new CustomEvent("file-tree-create", {
-          detail: { dir: targetDir, type: "dir" },
-        }),
-      );
-    }
-  }, [entry.isDir, entry.path, loaded, targetDir]);
-
-  const handleCut = useCallback(() => {
-    const sel = useFileTreeSelection.getState().selectedPaths;
-    const paths = sel.has(entry.path) && sel.size > 1 ? [...sel] : [entry.path];
-    setClipboard({
-      mode: "cut",
-      files: paths.map((p) => ({ path: p, name: getFileName(p) })),
-    });
-  }, [entry.path, setClipboard]);
-
-  const handleCopy = useCallback(() => {
-    const sel = useFileTreeSelection.getState().selectedPaths;
-    const paths = sel.has(entry.path) && sel.size > 1 ? [...sel] : [entry.path];
-    setClipboard({
-      mode: "copy",
-      files: paths.map((p) => ({ path: p, name: getFileName(p) })),
-    });
-  }, [entry.path, setClipboard]);
-
-  const handlePaste = useCallback(async () => {
-    if (!clipboard) return;
-    try {
-      for (const file of clipboard.files) {
-        if (clipboard.mode === "copy") {
-          await invoke("copy_entry", {
-            source: file.path,
-            destDir: targetDir,
-          });
-        } else {
-          await invoke("move_file", {
-            source: file.path,
-            destDir: targetDir,
-          });
-        }
-      }
-      if (clipboard.mode === "cut") clearClipboard();
-      refreshDir(targetDir);
-    } catch {
-      // silently fail
-    }
-  }, [clipboard, targetDir, refreshDir, clearClipboard]);
-
-  const handleRename = useCallback(
-    async (newName: string) => {
-      try {
-        await invoke("rename_entry", { path: entry.path, newName });
-        refreshDir(getParentDir(entry.path));
-      } catch {
-        // silently fail
-      }
-      setRenaming(false);
-    },
-    [entry.path, refreshDir],
-  );
-
-  const handleCreate = useCallback(
-    async (name: string) => {
-      const fullPath = joinPath(entry.path, name);
-      try {
-        if (creating === "dir") {
-          await invoke("create_dir", { path: fullPath });
-        } else {
-          await invoke("create_file", { path: fullPath });
-        }
-        refreshDir(entry.path);
-      } catch {
-        // silently fail
-      }
-      setCreating(null);
-    },
-    [entry.path, creating, refreshDir],
-  );
-
-  const handleReveal = useCallback(() => {
-    invoke("reveal_in_explorer", { path: entry.path });
-  }, [entry.path]);
-
-  const handleTrash = useCallback(async () => {
-    const sel = useFileTreeSelection.getState().selectedPaths;
-    const paths = sel.has(entry.path) && sel.size > 1 ? [...sel] : [entry.path];
-    const dirsToRefresh = new Set<string>();
-    for (const p of paths) {
-      try {
-        await invoke("trash_entry", { path: p });
-        dirsToRefresh.add(getParentDir(p));
-      } catch {
-        // silently fail
-      }
-    }
-    for (const d of dirsToRefresh) refreshDir(d);
-    useFileTreeSelection.getState().clear();
-  }, [entry.path, refreshDir]);
-
-  const handleDelete = useCallback(async () => {
-    const sel = useFileTreeSelection.getState().selectedPaths;
-    const paths = sel.has(entry.path) && sel.size > 1 ? [...sel] : [entry.path];
-    const dirsToRefresh = new Set<string>();
-    for (const p of paths) {
-      try {
-        await invoke("delete_entry", { path: p });
-        dirsToRefresh.add(getParentDir(p));
-      } catch {
-        // silently fail
-      }
-    }
-    for (const d of dirsToRefresh) refreshDir(d);
-    useFileTreeSelection.getState().clear();
-  }, [entry.path, refreshDir]);
-
-  const multiSelected = isSelected && selectionSize > 1;
-  const isRoot = depth === 0;
-  const contextMenuItems: ContextMenuItem[] = isRoot
-    ? [
-        { label: "New File", onClick: handleNewFile },
-        { label: "New Folder", onClick: handleNewDir },
-        { separator: true },
-        {
-          label: "Paste",
-          onClick: handlePaste,
-          disabled: !clipboard,
-        },
-        { separator: true },
-        { label: "Reveal in File Explorer", onClick: handleReveal },
-      ]
-    : [
-        { label: "New File", onClick: handleNewFile },
-        { label: "New Folder", onClick: handleNewDir },
-        { separator: true },
-        { label: "Cut", onClick: handleCut },
-        { label: "Copy", onClick: handleCopy },
-        {
-          label: "Paste",
-          onClick: handlePaste,
-          disabled: !clipboard,
-        },
-        { separator: true },
-        {
-          label: "Rename",
-          onClick: () => setRenaming(true),
-          disabled: multiSelected,
-        },
-        { separator: true },
-        { label: "Reveal in File Explorer", onClick: handleReveal },
-        { separator: true },
-        { label: "Move to Trash", onClick: handleTrash, destructive: true },
-        { label: "Delete", onClick: handleDelete, destructive: true },
-      ];
 
   const dirIcon = entry.isDir ? (expanded ? FolderOpen : Folder) : null;
 

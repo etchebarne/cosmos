@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, type MouseEvent } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import {
   GitBranch,
   CaretDown,
@@ -17,11 +16,12 @@ import type { ContextMenuItem } from "../../components/shared/ContextMenu";
 import { BranchPicker } from "./BranchPicker";
 import { StashDialog } from "./StashDialog";
 import { useGitStatus } from "../../hooks/use-git-status";
-import { useGitActions, GIT_ACTIONS } from "../../hooks/use-git-actions";
+import { useGitActions as useGitRemoteActions, GIT_ACTIONS } from "../../hooks/use-git-actions";
 import { useClickOutside } from "../../hooks/use-click-outside";
 import { buildChangeTree, getNodeFiles } from "../../lib/git-tree";
 import type { TreeNode } from "../../lib/git-tree";
 import { useLayoutStore } from "../../store/layout.store";
+import { useGitActions } from "./useGitActions";
 import type { TabContentProps } from "../types";
 
 export function GitTab({ tab: _tab, paneId }: TabContentProps) {
@@ -30,11 +30,8 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
   const workspacePath = activeWorkspace?.path ?? null;
 
   const { status, loading, error, setError, refresh } = useGitStatus(workspacePath, isActive);
-  const { activeAction, actionRunning, actionDone, currentAction, handleRunAction } = useGitActions(
-    workspacePath,
-    refresh,
-    setError,
-  );
+  const { activeAction, actionRunning, actionDone, currentAction, handleRunAction } =
+    useGitRemoteActions(workspacePath, refresh, setError);
 
   const [commitMessage, setCommitMessage] = useState("");
   const [committing, setCommitting] = useState(false);
@@ -55,151 +52,26 @@ export function GitTab({ tab: _tab, paneId }: TabContentProps) {
 
   useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu);
 
-  const handleStageAll = useCallback(async () => {
-    if (!workspacePath) return;
-    try {
-      await invoke("git_stage_all", { path: workspacePath });
-      refresh();
-    } catch (e) {
-      setError(String(e));
-    }
-  }, [workspacePath, refresh, setError]);
-
-  const handleUnstageAll = useCallback(async () => {
-    if (!workspacePath || !status) return;
-    try {
-      const stagedFiles = status.changes.filter((c) => c.staged).map((c) => c.path);
-      if (stagedFiles.length > 0) {
-        await invoke("git_unstage", {
-          path: workspacePath,
-          files: stagedFiles,
-        });
-        refresh();
-      }
-    } catch (e) {
-      setError(String(e));
-    }
-  }, [workspacePath, status, refresh, setError]);
-
-  const handleToggleStage = useCallback(
-    async (node: TreeNode) => {
-      if (!workspacePath) return;
-      const files = getNodeFiles(node).map((f) => f.path);
-      const allStaged = getNodeFiles(node).every((f) => f.staged);
-      try {
-        if (allStaged) {
-          await invoke("git_unstage", {
-            path: workspacePath,
-            files,
-          });
-        } else {
-          await invoke("git_stage", { path: workspacePath, files });
-        }
-        refresh();
-      } catch (e) {
-        setError(String(e));
-      }
-    },
-    [workspacePath, refresh, setError],
-  );
-
-  const handleCommit = useCallback(async () => {
-    if (!workspacePath || !commitMessage.trim()) return;
-    setCommitting(true);
-    try {
-      await invoke("git_commit", {
-        path: workspacePath,
-        message: commitMessage,
-      });
-      setCommitMessage("");
-      refresh();
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setCommitting(false);
-    }
-  }, [workspacePath, commitMessage, refresh, setError]);
-
-  const handleInit = useCallback(async () => {
-    if (!workspacePath) return;
-    try {
-      await invoke("git_init", { path: workspacePath });
-      refresh();
-    } catch (e) {
-      setError(String(e));
-    }
-  }, [workspacePath, refresh, setError]);
-
-  const handleStashAll = useCallback(async () => {
-    if (!workspacePath) return;
-    try {
-      await invoke("git_stash_all", { path: workspacePath });
-      refresh();
-    } catch (e) {
-      setError(String(e));
-    }
-  }, [workspacePath, refresh, setError]);
-
-  const handleStashFiles = useCallback(
-    async (node: TreeNode) => {
-      if (!workspacePath) return;
-      const files = getNodeFiles(node).map((f) => f.path);
-      try {
-        await invoke("git_stash_files", { path: workspacePath, files });
-        refresh();
-      } catch (e) {
-        setError(String(e));
-      }
-    },
-    [workspacePath, refresh, setError],
-  );
-
-  const handleDiscardAllTracked = useCallback(async () => {
-    if (!workspacePath) return;
-    try {
-      await invoke("git_discard_all_tracked", { path: workspacePath });
-      refresh();
-    } catch (e) {
-      setError(String(e));
-    }
-  }, [workspacePath, refresh, setError]);
-
-  const handleTrashAllUntracked = useCallback(async () => {
-    if (!workspacePath) return;
-    try {
-      await invoke("git_trash_all_untracked", { path: workspacePath });
-      refresh();
-    } catch (e) {
-      setError(String(e));
-    }
-  }, [workspacePath, refresh, setError]);
-
-  const handleDiscard = useCallback(
-    async (node: TreeNode) => {
-      if (!workspacePath) return;
-      const files = getNodeFiles(node).map((f) => f.path);
-      try {
-        await invoke("git_discard", { path: workspacePath, files });
-        refresh();
-      } catch (e) {
-        setError(String(e));
-      }
-    },
-    [workspacePath, refresh, setError],
-  );
-
-  const handleTrash = useCallback(
-    async (node: TreeNode) => {
-      if (!workspacePath) return;
-      const files = getNodeFiles(node).map((f) => f.path);
-      try {
-        await invoke("git_trash_untracked", { path: workspacePath, files });
-        refresh();
-      } catch (e) {
-        setError(String(e));
-      }
-    },
-    [workspacePath, refresh, setError],
+  const {
+    handleStageAll,
+    handleUnstageAll,
+    handleToggleStage,
+    handleCommit,
+    handleInit,
+    handleStashAll,
+    handleStashFiles,
+    handleDiscardAllTracked,
+    handleTrashAllUntracked,
+    handleDiscard,
+    handleTrash,
+  } = useGitActions(
+    workspacePath,
+    status,
+    commitMessage,
+    setCommitMessage,
+    setCommitting,
+    refresh,
+    setError,
   );
 
   const handleFileClick = useCallback(

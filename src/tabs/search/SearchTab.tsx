@@ -1,18 +1,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { MagnifyingGlass, File, TextT, ArrowElbowDownLeft } from "@phosphor-icons/react";
-import MonacoEditor, { type Monaco } from "@monaco-editor/react";
-import type { editor } from "monaco-editor";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { useLayoutStore } from "../../store/layout.store";
 import { getFileName, joinPath } from "../../lib/path-utils";
-import { revealPosition, defineKosmosTheme } from "../editor/EditorTab";
-import { useEditorStore } from "../../store/editor.store";
-import { setupMonacoLanguages, resolveModelLanguage } from "../../lib/lsp/monaco-languages";
-import { pathToFileUri } from "../../lib/lsp/uri";
+import { revealPosition } from "../editor/editor-cache";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { StateView } from "../../components/shared/StateView";
-import { BASE_EDITOR_OPTIONS } from "../../lib/monaco-config";
+import { fuzzyMatch, highlightedParts } from "./fuzzy";
+import { FilePreview } from "./FilePreview";
 import type { TabContentProps } from "../types";
 
 type SearchMode = "files" | "content";
@@ -28,186 +24,6 @@ interface ContentResult {
   line: number;
   col: number;
   text: string;
-}
-
-// ── Fuzzy matcher ──
-
-function fuzzyMatch(query: string, target: string): { score: number; indices: number[] } | null {
-  const qLower = query.toLowerCase();
-  const tLower = target.toLowerCase();
-
-  let qi = 0;
-  const indices: number[] = [];
-
-  for (let i = 0; i < target.length && qi < query.length; i++) {
-    if (tLower[i] === qLower[qi]) {
-      indices.push(i);
-      qi++;
-    }
-  }
-
-  if (qi !== query.length) return null;
-
-  let score = 0;
-  for (let i = 0; i < indices.length; i++) {
-    const idx = indices[i];
-    if (i > 0 && idx === indices[i - 1] + 1) score += 10;
-    if (idx === 0 || "/.-_ \\".includes(target[idx - 1])) score += 5;
-    if (target[idx] === query[i]) score += 1;
-  }
-  score -= target.length * 0.1;
-  const lastSlash = target.lastIndexOf("/");
-  if (lastSlash >= 0 && indices[0] > lastSlash) score += 8;
-
-  return { score, indices };
-}
-
-// ── Highlighted text (fuzzy match indices) ──
-
-function highlightedParts(
-  text: string,
-  indices: number[],
-): { text: string; highlighted: boolean }[] {
-  const set = new Set(indices);
-  const parts: { text: string; highlighted: boolean }[] = [];
-  let current = "";
-  let isHighlighted = set.has(0);
-
-  for (let i = 0; i < text.length; i++) {
-    const h = set.has(i);
-    if (h !== isHighlighted) {
-      if (current) parts.push({ text: current, highlighted: isHighlighted });
-      current = "";
-      isHighlighted = h;
-    }
-    current += text[i];
-  }
-  if (current) parts.push({ text: current, highlighted: isHighlighted });
-
-  return parts;
-}
-
-// ── File preview panel (Monaco read-only) ──
-
-function FilePreview({
-  filePath,
-  matchLine,
-  query,
-}: {
-  filePath: string;
-  matchLine: number;
-  query: string;
-}) {
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const monacoRef = useRef<Monaco | null>(null);
-  const decorationsRef = useRef<editor.IEditorDecorationsCollection | null>(null);
-  const matchLineRef = useRef(matchLine);
-  const queryRef = useRef(query);
-  matchLineRef.current = matchLine;
-  queryRef.current = query;
-  const editorFontSize = useEditorStore((s) => s.editorFontSize);
-  const [ready, setReady] = useState(false);
-
-  function applyDecorations(ed: editor.IStandaloneCodeEditor, line: number, q: string) {
-    decorationsRef.current?.clear();
-    const decorations: editor.IModelDeltaDecoration[] = [
-      {
-        range: { startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 },
-        options: { isWholeLine: true, className: "search-match-line-highlight" },
-      },
-    ];
-
-    if (q) {
-      const model = ed.getModel();
-      if (model && line <= model.getLineCount()) {
-        const lineContent = model.getLineContent(line);
-        const col = lineContent.toLowerCase().indexOf(q.toLowerCase());
-        if (col !== -1) {
-          decorations.push({
-            range: {
-              startLineNumber: line,
-              startColumn: col + 1,
-              endLineNumber: line,
-              endColumn: col + 1 + q.length,
-            },
-            options: { inlineClassName: "search-match-text-highlight" },
-          });
-        }
-      }
-    }
-
-    decorationsRef.current = ed.createDecorationsCollection(decorations);
-    ed.revealLineInCenter(line);
-  }
-
-  // Load file and swap model when filePath changes, then apply decorations
-  useEffect(() => {
-    const ed = editorRef.current;
-    const monaco = monacoRef.current;
-    if (!ed || !monaco || !ready) return;
-
-    let cancelled = false;
-
-    invoke<string>("read_file", { path: filePath })
-      .then((content) => {
-        if (cancelled) return;
-        const uri = monaco.Uri.parse(pathToFileUri(filePath));
-        let model = monaco.editor.getModel(uri);
-        if (model) {
-          model.setValue(content);
-        } else {
-          model = monaco.editor.createModel(content, undefined, uri);
-        }
-        ed.setModel(model);
-        resolveModelLanguage(monaco, model);
-        applyDecorations(ed, matchLineRef.current, queryRef.current);
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [filePath, ready]);
-
-  // Update decorations when matchLine/query changes (same file)
-  useEffect(() => {
-    const ed = editorRef.current;
-    if (!ed || !ready) return;
-    applyDecorations(ed, matchLine, query);
-  }, [matchLine, query, ready]);
-
-  function handleBeforeMount(monaco: Monaco) {
-    defineKosmosTheme(monaco);
-    setupMonacoLanguages(monaco);
-  }
-
-  function handleMount(instance: editor.IStandaloneCodeEditor, monaco: Monaco) {
-    editorRef.current = instance;
-    monacoRef.current = monaco;
-    setReady(true);
-  }
-
-  // Dispose preview models on unmount
-  useEffect(() => {
-    return () => {
-      editorRef.current?.getModel()?.dispose();
-    };
-  }, []);
-
-  return (
-    <MonacoEditor
-      theme="kosmos"
-      beforeMount={handleBeforeMount}
-      onMount={handleMount}
-      options={{
-        ...BASE_EDITOR_OPTIONS,
-        readOnly: true,
-        fontSize: editorFontSize,
-        renderLineHighlight: "none",
-        domReadOnly: true,
-      }}
-    />
-  );
 }
 
 // ── Main component ──
