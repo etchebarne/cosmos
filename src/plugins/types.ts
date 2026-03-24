@@ -4,7 +4,6 @@ import type { TabContentProps } from "../tabs/types";
 // ── Manifest (static JSON in each plugin directory) ──
 
 export interface PluginManifest {
-  id: string;
   name: string;
   version: string;
   description?: string;
@@ -36,6 +35,8 @@ export interface PluginCommandContribution {
 // ── Runtime state ──
 
 export interface InstalledPlugin {
+  /** Store key — derived from the plugin's directory name */
+  pluginId: string;
   manifest: PluginManifest;
   /** Absolute path to the plugin directory */
   path: string;

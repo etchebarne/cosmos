@@ -29,9 +29,9 @@ function InstalledPluginCard({ plugin }: { plugin: InstalledPlugin }) {
     setRemoving(true);
     try {
       if (plugin.activated) {
-        await deactivatePlugin(plugin.manifest.id);
+        await deactivatePlugin(plugin.pluginId);
       }
-      await uninstall(plugin.manifest.id);
+      await uninstall(plugin.pluginId);
       addToast({ message: `Uninstalled "${plugin.manifest.name}"`, type: "success" });
     } catch {
       addToast({ message: `Failed to uninstall "${plugin.manifest.name}"`, type: "error" });
@@ -42,9 +42,9 @@ function InstalledPluginCard({ plugin }: { plugin: InstalledPlugin }) {
 
   const handleToggle = async () => {
     if (plugin.enabled && plugin.activated) {
-      await deactivatePlugin(plugin.manifest.id);
+      await deactivatePlugin(plugin.pluginId);
     }
-    setEnabled(plugin.manifest.id, !plugin.enabled);
+    setEnabled(plugin.pluginId, !plugin.enabled);
     addToast({
       message: `${plugin.enabled ? "Disabled" : "Enabled"} "${plugin.manifest.name}" — restart to apply`,
       type: "info",
@@ -217,13 +217,13 @@ export function MarketplaceTab({ tab: _tab, paneId: _paneId }: TabContentProps) 
   }, [fetchRegistry]);
 
   const installedList = Object.values(plugins);
-  const installedIds = new Set(installedList.map((p) => p.manifest.id));
+  const installedIds = new Set(installedList.map((p) => p.pluginId));
 
   const filteredInstalled = filter
     ? installedList.filter(
         (p) =>
           p.manifest.name.toLowerCase().includes(filter.toLowerCase()) ||
-          p.manifest.id.toLowerCase().includes(filter.toLowerCase()),
+          p.pluginId.toLowerCase().includes(filter.toLowerCase()),
       )
     : installedList;
 
@@ -281,7 +281,7 @@ export function MarketplaceTab({ tab: _tab, paneId: _paneId }: TabContentProps) 
             </p>
           ) : (
             filteredInstalled.map((plugin) => (
-              <InstalledPluginCard key={plugin.manifest.id} plugin={plugin} />
+              <InstalledPluginCard key={plugin.pluginId} plugin={plugin} />
             ))
           )}
         </div>

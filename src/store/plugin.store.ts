@@ -62,12 +62,12 @@ export const usePluginStore = create<PluginStore>((set, get) => ({
     const plugins: Record<string, InstalledPlugin> = {};
     for (const { manifest, path } of manifests) {
       // Use directory name as key — matches the registry-derived ID for marketplace installs
-      const dirName = path.split(/[\\/]/).pop() ?? manifest.id;
+      const dirName = path.split(/[\\/]/).pop() ?? manifest.name;
       plugins[dirName] = {
+        pluginId: dirName,
         manifest,
         path,
         enabled: !disabled.has(dirName),
-        // Preserve activation state if already activated
         activated: existing[dirName]?.activated ?? false,
       };
     }
