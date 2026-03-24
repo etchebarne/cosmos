@@ -1,4 +1,5 @@
 import React, { useState, useEffect, createElement, type ComponentType } from "react";
+import * as JsxRuntime from "react/jsx-runtime";
 import { invoke } from "@tauri-apps/api/core";
 import { registerTab, getTabDefinition } from "../tabs/registry";
 import { usePluginStore } from "../store/plugin.store";
@@ -13,15 +14,55 @@ const pluginDisposables = new Map<string, Disposable[]>();
 const pluginModules = new Map<string, PluginModule>();
 
 /**
+ * Blob URLs that serve React to extensions.
+ *
+ * Extensions externalise `react` and `react/jsx-runtime` during their
+ * esbuild step.  When we load extension code we rewrite those bare
+ * specifiers to these blob URLs so the browser can resolve them — no
+ * import-map, no shim files, no Vite plugin.
+ *
+ * The blob-URL modules read from two short-lived window properties that
+ * are set in initPlugins() and exist solely as a bridge.
+ */
+let reactBlobUrl: string;
+let jsxBlobUrl: string;
+
+function buildReactBlobUrl(): string {
+  const names = Object.keys(React).filter((k) => /^[a-zA-Z_$]/.test(k));
+  const src = `const R=window.__kr;export default R;${names.map((n) => `export const ${n}=R.${n};`).join("")}`;
+  return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+}
+
+function buildJsxBlobUrl(): string {
+  const src =
+    "const J=window.__kj;" +
+    "export const jsx=J.jsx,jsxs=J.jsxs,Fragment=J.Fragment,jsxDEV=J.jsxDEV||J.jsx;";
+  return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+}
+
+/**
+ * Rewrite bare `react` / `react/jsx-runtime` specifiers in bundled
+ * extension code so they point at our blob-URL modules.
+ */
+function rewriteReactImports(code: string): string {
+  return code
+    .replace(/from\s*["']react\/jsx-runtime["']/g, `from"${jsxBlobUrl}"`)
+    .replace(/from\s*["']react\/jsx-dev-runtime["']/g, `from"${jsxBlobUrl}"`)
+    .replace(/from\s*["']react["']/g, `from"${reactBlobUrl}"`);
+}
+
+/**
  * Initialize the plugin system.
  * 1. Scans for installed plugins via the store.
  * 2. Registers stub tabs for each plugin's contributed tabs.
  * 3. Eagerly activates enabled plugins.
  */
 export async function initPlugins() {
-  // Expose React on window so plugins can use it from file:// imports
-  // (bare specifiers like `import React from 'react'` don't resolve outside the bundler)
-  (window as any).__kosmos = { React };
+  // Bridge React to blob-URL modules that extensions will import from.
+  (window as any).__kr = React;
+  (window as any).__kj = JsxRuntime;
+  reactBlobUrl = buildReactBlobUrl();
+  jsxBlobUrl = buildJsxBlobUrl();
 
   const store = usePluginStore.getState();
   await store.init();
@@ -141,11 +182,11 @@ export async function activatePlugin(pluginId: string): Promise<void> {
   store.markActivated(pluginId);
 
   try {
-    // Read plugin JS through Tauri (file:// imports are blocked by the webview's origin policy)
-    // then load via a blob URL which is same-origin and works with dynamic import()
+    // Read plugin JS through Tauri (file:// imports are blocked by the webview's origin policy),
+    // rewrite bare react specifiers, then load via a blob URL (same-origin, works with import()).
     const entryPath = `${plugin.path}/${plugin.manifest.main}`.split("\\").join("/");
-    const code: string = await invoke("read_file", { path: entryPath });
-    const blob = new Blob([code], { type: "text/javascript" });
+    const raw: string = await invoke("read_file", { path: entryPath });
+    const blob = new Blob([rewriteReactImports(raw)], { type: "text/javascript" });
     const blobUrl = URL.createObjectURL(blob);
 
     let mod: PluginModule;

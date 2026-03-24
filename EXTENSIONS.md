@@ -43,7 +43,7 @@ Declares what your plugin contributes. The folder name becomes the plugin's ID �
 
 ### 2. package.json
 
-Plugins use [esbuild](https://esbuild.github.io/) to bundle JSX/TSX into a single file. React is externalized — Kosmos provides it at runtime via an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/importmap).
+Plugins use [esbuild](https://esbuild.github.io/) to bundle JSX/TSX into a single file. React is externalized — Kosmos provides the host's React instance at runtime so plugins share a single copy.
 
 ```json
 {
