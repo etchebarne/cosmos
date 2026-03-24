@@ -14,6 +14,10 @@ export function getAllTabDefinitions(): TabDefinition[] {
   return Array.from(registry.values());
 }
 
+export function unregisterTab(type: string) {
+  registry.delete(type);
+}
+
 export function getVisibleTabDefinitions(): TabDefinition[] {
   return Array.from(registry.values()).filter((d) => !d.hidden);
 }

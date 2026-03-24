@@ -1,0 +1,199 @@
+import React, { useState, useEffect, createElement, type ComponentType } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { registerTab, getTabDefinition } from "../tabs/registry";
+import { usePluginStore } from "../store/plugin.store";
+import { createPluginAPI } from "./api";
+import type { Disposable, PluginModule, InstalledPlugin } from "./types";
+import type { TabContentProps } from "../tabs/types";
+
+/** Tracks disposables per plugin so we can clean up on deactivation. */
+const pluginDisposables = new Map<string, Disposable[]>();
+
+/** Cached plugin modules after dynamic import. */
+const pluginModules = new Map<string, PluginModule>();
+
+/**
+ * Initialize the plugin system.
+ * 1. Scans for installed plugins via the store.
+ * 2. Registers stub tabs for each plugin's contributed tabs.
+ * 3. Eagerly activates enabled plugins.
+ */
+export async function initPlugins() {
+  // Expose React on window so plugins can use it from file:// imports
+  // (bare specifiers like `import React from 'react'` don't resolve outside the bundler)
+  (window as any).__kosmos = { React };
+
+  const store = usePluginStore.getState();
+  await store.init();
+
+  const { plugins } = usePluginStore.getState();
+
+  for (const [pluginId, plugin] of Object.entries(plugins)) {
+    registerPluginStubs(pluginId, plugin);
+
+    if (plugin.enabled) {
+      activatePlugin(pluginId).catch((err) => {
+        console.warn(`Failed to activate plugin "${pluginId}":`, err);
+      });
+    }
+  }
+}
+
+/**
+ * Register stub tab definitions from a plugin's manifest.
+ * These lightweight stubs appear in the blank-tab menu immediately
+ * without loading the plugin's actual code.
+ */
+function registerPluginStubs(pluginId: string, plugin: InstalledPlugin) {
+  const tabs = plugin.manifest.contributes?.tabs;
+  if (!tabs) return;
+
+  for (const tab of tabs) {
+    registerTab({
+      type: tab.type,
+      title: tab.title,
+      icon: tab.icon,
+      defaultSize: tab.defaultSize,
+      // Stub component that triggers lazy activation
+      component: createLazyTabComponent(pluginId, tab.type),
+    });
+  }
+}
+
+/**
+ * Create a React component that triggers plugin activation on first render,
+ * then re-renders with the real component once loaded.
+ */
+function createLazyTabComponent(pluginId: string, tabType: string): ComponentType<TabContentProps> {
+  const LazyPluginTab = (props: TabContentProps) => {
+    const [Component, setComponent] = useState<ComponentType<TabContentProps> | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+      let cancelled = false;
+
+      const resolve = () => {
+        if (cancelled) return;
+        const def = getTabDefinition(tabType);
+        if (def && def.component !== LazyPluginTab) {
+          setComponent(() => def.component);
+        } else {
+          setError("Plugin did not register its tab component");
+        }
+      };
+
+      // If plugin was already activated eagerly on startup, just resolve
+      const plugin = usePluginStore.getState().plugins[pluginId];
+      if (plugin?.activated) {
+        resolve();
+      } else {
+        activatePlugin(pluginId)
+          .then(resolve)
+          .catch((err: Error) => {
+            if (!cancelled) setError(err.message);
+          });
+      }
+
+      return () => {
+        cancelled = true;
+      };
+    }, []);
+
+    if (error) {
+      return createElement(
+        "div",
+        {
+          className:
+            "flex items-center justify-center h-full text-xs text-[var(--color-status-red)]",
+        },
+        `Plugin error: ${error}`,
+      );
+    }
+
+    if (!Component) {
+      return createElement(
+        "div",
+        {
+          className:
+            "flex items-center justify-center h-full text-xs text-[var(--color-text-secondary)] animate-pulse",
+        },
+        "Loading plugin…",
+      );
+    }
+
+    return createElement(Component, props);
+  };
+
+  LazyPluginTab.displayName = `LazyPlugin(${pluginId}/${tabType})`;
+  return LazyPluginTab;
+}
+
+/**
+ * Activate a plugin by dynamically importing its entry point and calling activate().
+ * No-op if already activated.
+ */
+export async function activatePlugin(pluginId: string): Promise<void> {
+  const store = usePluginStore.getState();
+  const plugin = store.plugins[pluginId];
+  if (!plugin || plugin.activated) return;
+
+  // Mark as activated early to prevent double-activation
+  store.markActivated(pluginId);
+
+  try {
+    // Read plugin JS through Tauri (file:// imports are blocked by the webview's origin policy)
+    // then load via a blob URL which is same-origin and works with dynamic import()
+    const entryPath = `${plugin.path}/${plugin.manifest.main}`.split("\\").join("/");
+    const code: string = await invoke("read_file", { path: entryPath });
+    const blob = new Blob([code], { type: "text/javascript" });
+    const blobUrl = URL.createObjectURL(blob);
+
+    let mod: PluginModule;
+    try {
+      mod = await import(/* @vite-ignore */ blobUrl);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+    pluginModules.set(pluginId, mod);
+
+    const { api, disposables } = createPluginAPI(pluginId);
+    pluginDisposables.set(pluginId, disposables);
+
+    await mod.activate(api);
+  } catch (err) {
+    // Revert activation state on failure
+    const plugins = { ...usePluginStore.getState().plugins };
+    if (plugins[pluginId]) {
+      plugins[pluginId] = { ...plugins[pluginId], activated: false };
+      usePluginStore.setState({ plugins });
+    }
+    throw err;
+  }
+}
+
+/**
+ * Deactivate a plugin — call its deactivate() and dispose all registered resources.
+ */
+export async function deactivatePlugin(pluginId: string): Promise<void> {
+  const mod = pluginModules.get(pluginId);
+  if (mod?.deactivate) {
+    await mod.deactivate();
+  }
+  pluginModules.delete(pluginId);
+
+  const disposables = pluginDisposables.get(pluginId);
+  if (disposables) {
+    for (const d of disposables) {
+      d.dispose();
+    }
+    pluginDisposables.delete(pluginId);
+  }
+
+  const store = usePluginStore.getState();
+  const plugin = store.plugins[pluginId];
+  if (plugin) {
+    const plugins = { ...store.plugins };
+    plugins[pluginId] = { ...plugin, activated: false };
+    usePluginStore.setState({ plugins });
+  }
+}

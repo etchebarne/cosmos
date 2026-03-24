@@ -9,6 +9,7 @@ import {
   GearSix,
   Infinity as InfinityIcon,
   MagnifyingGlass,
+  PuzzlePiece,
 } from "@phosphor-icons/react";
 
 interface TabIconProps {
@@ -28,6 +29,7 @@ const iconMap: Record<string, Icon> = {
   settings: GearSix,
   infinity: InfinityIcon,
   "magnifying-glass": MagnifyingGlass,
+  "puzzle-piece": PuzzlePiece,
 };
 
 export function TabIcon({ name, size = 14, className }: TabIconProps) {

@@ -1,5 +1,6 @@
 mod git;
 mod lsp;
+mod plugins;
 mod remote;
 mod search;
 mod settings;
@@ -103,6 +104,9 @@ pub fn run() {
             // Backend router for remote workspaces
             app.manage(remote::router::BackendRouter::new(events.clone()));
 
+            // Plugin process manager
+            app.manage(plugins::PluginProcessManager::default());
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -177,6 +181,14 @@ pub fn run() {
             remote::commands::remote_ensure_connected,
             search::list_workspace_files,
             search::search_in_files,
+            plugins::plugin_list,
+            plugins::plugin_install,
+            plugins::plugin_uninstall,
+            plugins::plugin_fetch_registry,
+            plugins::plugin_shell_execute,
+            plugins::plugin_shell_spawn,
+            plugins::plugin_shell_write,
+            plugins::plugin_shell_kill,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

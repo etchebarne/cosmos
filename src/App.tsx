@@ -12,6 +12,7 @@ import { useLayoutStore } from "./store/layout.store";
 import { useWorkspaceStore } from "./store/workspace.store";
 import { useSettingsStore } from "./store/settings.store";
 import { useLspStore } from "./store/lsp.store";
+import { initPlugins } from "./plugins";
 import { applyTheme } from "./lib/themes";
 import "overlayscrollbars/overlayscrollbars.css";
 import "./styles/globals.css";
@@ -41,6 +42,7 @@ function App() {
   useEffect(() => {
     init();
     initSettings();
+    initPlugins().catch((err) => console.warn("Plugin init failed:", err));
   }, [init, initSettings]);
 
   // Sync active workspace path to layout store
