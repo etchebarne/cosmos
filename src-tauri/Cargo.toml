@@ -44,4 +44,5 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 kosmos-protocol = { path = "crates/kosmos-protocol" }
 kosmos-core = { path = "crates/kosmos-core" }
 ignore = "0.4"
+png = "0.17"
 

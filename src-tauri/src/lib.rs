@@ -169,6 +169,7 @@ pub fn run() {
             terminal::terminal_write,
             terminal::terminal_resize,
             terminal::terminal_close,
+            terminal::terminal_forward_clipboard_image,
             settings::get_settings_schema,
             remote::commands::list_wsl_distros,
             remote::commands::deploy_agent_wsl,

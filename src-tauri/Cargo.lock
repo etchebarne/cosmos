@@ -2356,6 +2356,7 @@ dependencies = [
  "kosmos-protocol",
  "notify",
  "notify-debouncer-mini",
+ "png 0.17.16",
  "portable-pty",
  "reqwest 0.12.28",
  "serde",

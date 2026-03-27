@@ -134,9 +134,12 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
               return;
             }
           } catch {}
-          // No text on clipboard (e.g. image data). Forward the raw Ctrl+V
-          // byte (\x16) to the PTY so TUI apps that read the system clipboard
-          // directly (like Claude Code for image paste) can handle it.
+          // No text on clipboard (e.g. image data). For remote terminals,
+          // write the image to the WSL filesystem and set the clipboard so
+          // TUI apps can read it. Then send the raw Ctrl+V byte.
+          await invoke("terminal_forward_clipboard_image", { id: terminalId }).catch((err) => {
+            console.warn("clipboard image forward:", err);
+          });
           invoke("terminal_write", { id: terminalId, data: "\x16" });
         })();
         return false;

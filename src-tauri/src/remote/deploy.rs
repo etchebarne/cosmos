@@ -98,6 +98,8 @@ pub async fn deploy_to_wsl(app: &AppHandle, distro: &str) -> Result<(), String> 
 
     // Skip kill + copy if the remote binary is already identical
     if binaries_match(distro, &wsl_path, &bin).await {
+        // Still deploy shims (cheap, always idempotent)
+        deploy_clipboard_shims(distro).await;
         return Ok(());
     }
 
@@ -107,7 +109,63 @@ pub async fn deploy_to_wsl(app: &AppHandle, distro: &str) -> Result<(), String> 
     run_wsl(distro, &["cp", &wsl_path, &bin]).await?;
     run_wsl(distro, &["chmod", "+x", &bin]).await?;
 
+    deploy_clipboard_shims(distro).await;
+
     Ok(())
+}
+
+/// Deploy lightweight clipboard shim scripts to `~/.local/bin/` so that TUI
+/// apps running inside WSL terminals can read image data from the host
+/// clipboard without requiring `xclip` or `wl-clipboard` to be installed.
+///
+/// The shims serve image data from `/tmp/kosmos-clipboard.png` (written by the
+/// host-side `terminal_forward_clipboard_image` command) and fall back to
+/// `powershell.exe`/`clip.exe` for text operations.
+///
+/// Ubuntu (and most modern distros) add `~/.local/bin` to PATH via `.profile`
+/// when the directory exists. Since deploy runs before the agent starts
+/// (`bash -lc`), the directory is present when `.profile` is sourced.
+async fn deploy_clipboard_shims(distro: &str) {
+    let home = match wsl_resolve_home(distro).await {
+        Ok(h) => h,
+        Err(_) => return,
+    };
+
+    let bin_dir = format!(r"\\wsl.localhost\{distro}{home}/.local/bin");
+    if std::fs::create_dir_all(&bin_dir).is_err() {
+        return;
+    }
+
+    let xclip_shim = r#"#!/bin/sh
+KOSMOS_IMG=/tmp/kosmos-clipboard.png
+REAL=/usr/bin/xclip
+reading=false; image=false; targets=false
+for arg in "$@"; do case "$arg" in -o) reading=true ;; image/*) image=true ;; TARGETS) targets=true ;; esac; done
+if $reading && $targets && [ -f "$KOSMOS_IMG" ]; then printf 'image/png\n'; exit 0; fi
+if $reading && $image && [ -f "$KOSMOS_IMG" ]; then cat "$KOSMOS_IMG"; exit 0; fi
+[ -x "$REAL" ] && exec "$REAL" "$@"
+if $reading; then powershell.exe -NoProfile -Command 'Get-Clipboard' 2>/dev/null | tr -d '\r'
+else clip.exe 2>/dev/null; fi
+"#;
+
+    let wl_paste_shim = r#"#!/bin/sh
+KOSMOS_IMG=/tmp/kosmos-clipboard.png
+REAL=/usr/bin/wl-paste
+listing=false; image=false
+for arg in "$@"; do case "$arg" in -l|--list-types) listing=true ;; image/*|--type=image/*) image=true ;; esac; done
+if $listing && [ -f "$KOSMOS_IMG" ]; then printf 'image/png\n'; exit 0; fi
+if $image && [ -f "$KOSMOS_IMG" ]; then cat "$KOSMOS_IMG"; exit 0; fi
+[ -x "$REAL" ] && exec "$REAL" "$@"
+powershell.exe -NoProfile -Command 'Get-Clipboard' 2>/dev/null | tr -d '\r'
+"#;
+
+    // Strip \r — source files on Windows have \r\n but shell scripts need \n
+    let _ = std::fs::write(format!(r"{bin_dir}\xclip"), xclip_shim.replace('\r', ""));
+    let _ = std::fs::write(format!(r"{bin_dir}\wl-paste"), wl_paste_shim.replace('\r', ""));
+    let _ = run_wsl(distro, &["chmod", "+x",
+        &format!("{home}/.local/bin/xclip"),
+        &format!("{home}/.local/bin/wl-paste"),
+    ]).await;
 }
 
 /// Deploy the kosmos-agent binary to an SSH host.

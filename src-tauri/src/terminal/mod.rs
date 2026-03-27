@@ -1,8 +1,10 @@
 use kosmos_core::terminal::TerminalManager;
 use kosmos_protocol::requests::Request;
 use kosmos_protocol::types::ShellInfo;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_clipboard_manager::ClipboardExt;
 
+use crate::remote::connection::ConnectionType;
 use crate::remote::router::BackendRouter;
 
 #[tauri::command]
@@ -115,4 +117,58 @@ pub async fn terminal_close(
     } else {
         state.close(&id).map_err(|e| e.to_string())
     }
+}
+
+/// Forward the host clipboard image to a remote WSL terminal.
+/// Writes the image to `/tmp/kosmos-clipboard.png` on the WSL filesystem.
+/// The deployed xclip/wl-paste shims serve this file when TUI apps read
+/// image clipboard data — no system clipboard tools required.
+/// No-op for local terminals (the TUI app reads the host clipboard directly).
+#[tauri::command]
+pub async fn terminal_forward_clipboard_image(
+    app: AppHandle,
+    router: State<'_, BackendRouter>,
+    id: String,
+) -> Result<(), String> {
+    // Only needed for remote terminals
+    let agent = match router.get_remote_terminal(&id).await {
+        Some(a) => a,
+        None => return Ok(()),
+    };
+
+    let distro = match &agent.connection_type {
+        ConnectionType::Wsl { distro } => distro.clone(),
+        _ => return Ok(()), // SSH not supported yet
+    };
+
+    // Read image from the host clipboard
+    let image = app
+        .clipboard()
+        .read_image()
+        .map_err(|e| format!("clipboard read_image: {e}"))?;
+
+    // Encode RGBA → PNG and write directly to the WSL filesystem
+    let rgba = image.rgba();
+    let png_bytes = encode_rgba_to_png(&rgba, image.width(), image.height())?;
+    let wsl_host_path = format!(r"\\wsl.localhost\{distro}\tmp\kosmos-clipboard.png");
+    std::fs::write(&wsl_host_path, &png_bytes)
+        .map_err(|e| format!("write to WSL fs: {e}"))?;
+
+    Ok(())
+}
+
+fn encode_rgba_to_png(rgba: &[u8], width: u32, height: u32) -> Result<Vec<u8>, String> {
+    let mut buf = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut buf, width, height);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder
+            .write_header()
+            .map_err(|e| format!("png header: {e}"))?;
+        writer
+            .write_image_data(rgba)
+            .map_err(|e| format!("png data: {e}"))?;
+    }
+    Ok(buf)
 }
