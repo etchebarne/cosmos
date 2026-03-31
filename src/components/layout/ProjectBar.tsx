@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
-import { MagnifyingGlass, Plus, Desktop, Cloud } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, Desktop, Cloud, ArrowsClockwise } from "@phosphor-icons/react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { getTheme } from "../../lib/themes";
@@ -9,6 +9,7 @@ import { Tooltip } from "../shared/Tooltip";
 import { useLayoutStore } from "../../store/layout.store";
 import { DRAG_THRESHOLD } from "../../lib/drag-threshold";
 import { RemoteDialog } from "./RemoteDialog";
+import { useUpdateStore } from "../../store/update.store";
 
 const FLIP_DURATION = 150;
 
@@ -222,6 +223,7 @@ export function ProjectBar() {
         </div>
       )}
       <div className="flex-1" />
+      <UpdateButton />
       <button
         className="flex items-center gap-1.5 w-[220px] h-8 px-2.5 bg-[var(--color-bg-input)] cursor-pointer hover:bg-[var(--color-bg-surface)] transition-colors"
         onClick={() => useLayoutStore.getState().openSearch()}
@@ -324,5 +326,26 @@ export function ProjectBar() {
         <RemoteDialog open distro={remoteDialog} onClose={() => setRemoteDialog(null)} />
       )}
     </div>
+  );
+}
+
+function UpdateButton() {
+  const update = useUpdateStore((s) => s.update);
+  const installing = useUpdateStore((s) => s.installing);
+  const installUpdate = useUpdateStore((s) => s.installUpdate);
+
+  if (!update) return null;
+
+  return (
+    <Tooltip content={`Update to ${update.version}`}>
+      <button
+        className="flex items-center gap-1.5 h-8 px-2.5 text-xs text-[var(--color-accent-blue)] bg-[var(--color-bg-input)] cursor-pointer hover:bg-[var(--color-bg-surface)] transition-colors disabled:opacity-50 disabled:cursor-default"
+        onClick={installUpdate}
+        disabled={installing}
+      >
+        <ArrowsClockwise size={13} className={installing ? "animate-spin" : ""} />
+        <span>{installing ? "Updating..." : "Update Kosmos"}</span>
+      </button>
+    </Tooltip>
   );
 }

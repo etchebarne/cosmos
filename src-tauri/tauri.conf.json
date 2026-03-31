@@ -23,6 +23,12 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": ["https://github.com/etchebarne/kosmos/releases/latest/download/latest.json"],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQTA0M0QyRUQ4QzlDRjAKUldUd25JenQwa09nN3VDZ2M1SU4rZmZLSlY1SVJDSmpscnMrbkQ3a2UvNzhYLzVxTWpaOHJsOFIK"
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

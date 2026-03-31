@@ -12,6 +12,7 @@ import { useLayoutStore } from "./store/layout.store";
 import { useWorkspaceStore } from "./store/workspace.store";
 import { useSettingsStore } from "./store/settings.store";
 import { useLspStore } from "./store/lsp.store";
+import { useUpdateStore } from "./store/update.store";
 import { initPlugins } from "./plugins";
 import { applyTheme } from "./lib/themes";
 import "overlayscrollbars/overlayscrollbars.css";
@@ -43,6 +44,7 @@ function App() {
     init();
     initSettings();
     initPlugins().catch((err) => console.warn("Plugin init failed:", err));
+    useUpdateStore.getState().checkForUpdate();
   }, [init, initSettings]);
 
   // Sync active workspace path to layout store
