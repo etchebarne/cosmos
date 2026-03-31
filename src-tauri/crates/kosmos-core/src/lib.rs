@@ -4,6 +4,7 @@ pub mod file_tree;
 pub mod git;
 pub mod git_stash;
 pub mod lsp;
+pub mod search;
 pub mod terminal;
 pub mod watcher;
 

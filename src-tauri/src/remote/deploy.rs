@@ -104,8 +104,14 @@ pub async fn deploy_to_wsl(app: &AppHandle, distro: &str) -> Result<(), String> 
     }
 
     // Binary differs (or doesn't exist) — full deploy
-    // Kill only agents in THIS directory so dev/prod don't interfere
-    let _ = run_wsl(distro, &["pkill", "-f", &bin]).await;
+    // Kill only agents in THIS directory so dev/prod don't interfere.
+    // Use the directory name (without ~/) as the pkill pattern so it matches
+    // regardless of whether tilde was expanded in the process command line.
+    let kill_pattern = format!("{REMOTE_DIR}/kosmos-agent");
+    let _ = run_wsl(distro, &["pkill", "-f", &kill_pattern]).await;
+    // Remove the daemon socket so ensure_daemon() starts a fresh instance
+    let sock = format!("~/{REMOTE_DIR}/agent.sock");
+    let _ = run_wsl(distro, &["rm", "-f", &sock]).await;
     run_wsl(distro, &["cp", &wsl_path, &bin]).await?;
     run_wsl(distro, &["chmod", "+x", &bin]).await?;
 

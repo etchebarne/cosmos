@@ -146,6 +146,16 @@ pub enum Request {
         path: String,
     },
 
+    // ── Search ──
+    ListWorkspaceFiles {
+        path: String,
+    },
+    SearchInFiles {
+        path: String,
+        query: String,
+        max_results: Option<usize>,
+    },
+
     // ── Workspace watcher ──
     WatchWorkspace {
         path: String,

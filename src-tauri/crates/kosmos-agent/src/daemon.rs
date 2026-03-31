@@ -90,6 +90,10 @@ pub(crate) async fn daemon_main() {
     let data_dir = agent_data_dir();
     let sock_path = data_dir.join("agent.sock");
 
+    // Write PID + binary identity so clients can detect stale daemons
+    let _ = std::fs::write(data_dir.join("daemon.pid"), std::process::id().to_string());
+    let _ = std::fs::write(data_dir.join("daemon.identity"), binary_identity());
+
     // Remove stale socket from a previous daemon
     let _ = std::fs::remove_file(&sock_path);
 
@@ -123,14 +127,16 @@ pub(crate) async fn daemon_main() {
 
     tracing::info!("Listening on {}", sock_path.display());
 
-    // Clean up socket on exit
-    struct SocketCleanup(PathBuf);
-    impl Drop for SocketCleanup {
+    // Clean up socket + metadata on exit
+    struct DaemonCleanup(PathBuf);
+    impl Drop for DaemonCleanup {
         fn drop(&mut self) {
-            let _ = std::fs::remove_file(&self.0);
+            let _ = std::fs::remove_file(self.0.join("agent.sock"));
+            let _ = std::fs::remove_file(self.0.join("daemon.pid"));
+            let _ = std::fs::remove_file(self.0.join("daemon.identity"));
         }
     }
-    let _guard = SocketCleanup(sock_path.clone());
+    let _guard = DaemonCleanup(data_dir.clone());
 
     loop {
         match listener.accept().await {
@@ -153,10 +159,59 @@ pub(crate) fn is_daemon_running(sock_path: &Path) -> bool {
     std::os::unix::net::UnixStream::connect(sock_path).is_ok()
 }
 
+/// Returns a fingerprint of the current binary (size + mtime).
+/// Used to detect when the daemon is running from a stale binary.
+fn binary_identity() -> String {
+    let Ok(exe) = std::env::current_exe() else {
+        return String::new();
+    };
+    let Ok(meta) = std::fs::metadata(&exe) else {
+        return String::new();
+    };
+    let size = meta.len();
+    let mtime = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    format!("{size}:{mtime}")
+}
+
+/// Kill a running daemon using its PID file.
+fn kill_stale_daemon(data_dir: &Path) {
+    if let Ok(pid_str) = std::fs::read_to_string(data_dir.join("daemon.pid")) {
+        if let Ok(pid) = pid_str.trim().parse::<i32>() {
+            tracing::info!("Killing stale daemon (pid {pid})");
+            unsafe {
+                libc::kill(pid, libc::SIGTERM);
+            }
+            // Brief wait for the daemon to clean up its socket
+            std::thread::sleep(std::time::Duration::from_millis(300));
+        }
+    }
+    let _ = std::fs::remove_file(data_dir.join("agent.sock"));
+    let _ = std::fs::remove_file(data_dir.join("daemon.pid"));
+    let _ = std::fs::remove_file(data_dir.join("daemon.identity"));
+}
+
 pub(crate) fn ensure_daemon(data_dir: &Path) {
     let sock_path = data_dir.join("agent.sock");
+
     if is_daemon_running(&sock_path) {
-        return;
+        // Check if the running daemon matches the current binary.
+        // Old daemons won't have an identity file — treat as stale.
+        let current = binary_identity();
+        let matches = std::fs::read_to_string(data_dir.join("daemon.identity"))
+            .map(|s| !current.is_empty() && s.trim() == current)
+            .unwrap_or(false);
+
+        if matches {
+            return;
+        }
+
+        tracing::info!("Daemon binary outdated, restarting");
+        kill_stale_daemon(data_dir);
     }
 
     // Remove stale socket
