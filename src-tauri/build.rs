@@ -65,6 +65,11 @@ fn build_agent() {
         if !installed.lines().any(|l| l.trim() == target) {
             println!("cargo:warning=Linux musl target not installed. Run: rustup target add {target}");
             println!("cargo:warning=Skipping kosmos-agent cross-compilation.");
+            // Create a placeholder so tauri-build doesn't fail on missing resource
+            std::fs::create_dir_all(&resources_dir).ok();
+            if !agent_binary.exists() {
+                std::fs::write(&agent_binary, b"").ok();
+            }
             return;
         }
     }
