@@ -5,7 +5,7 @@ on:
     types: [published]
 
 jobs:
-  aur-publish:
+  aur-publish-bin:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +36,34 @@ jobs:
         with:
           pkgname: kosmos-bin
           pkgbuild: aur/kosmos-bin/PKGBUILD
+          commit_username: Martin Etchebarne
+          commit_email: martin@etchebarne.net
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+  aur-publish-src:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Get version from tag
+        id: version
+        run: echo "pkgver=${GITHUB_EVENT_RELEASE_TAG_NAME#v}" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+
+      - name: Update PKGBUILD
+        run: |
+          cd aur/kosmos
+          sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+        with:
+          pkgname: kosmos
+          pkgbuild: aur/kosmos/PKGBUILD
           commit_username: Martin Etchebarne
           commit_email: martin@etchebarne.net
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
