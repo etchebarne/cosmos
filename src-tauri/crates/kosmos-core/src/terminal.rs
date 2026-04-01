@@ -244,8 +244,10 @@ pub fn list_shells() -> Vec<ShellInfo> {
                     .file_name()
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| line.to_string());
-                // Skip minimal shells that don't work well as interactive terminals
-                if matches!(name.as_str(), "sh" | "dash" | "rbash") {
+                // Skip non-interactive or minimal shells
+                if matches!(name.as_str(), "sh" | "dash" | "rbash" | "git-shell" | "nologin" | "false")
+                    || name.contains("fallback")
+                {
                     continue;
                 }
                 if !seen_names.insert(name.clone()) {
@@ -254,7 +256,7 @@ pub fn list_shells() -> Vec<ShellInfo> {
                 shells.push(ShellInfo {
                     name,
                     program: line.to_string(),
-                    args: vec![],
+                    args: vec!["--login".into()],
                 });
             }
         }
