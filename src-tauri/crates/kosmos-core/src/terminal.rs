@@ -82,6 +82,10 @@ impl TerminalManager {
             cmd.arg(arg);
         }
         cmd.cwd(cwd);
+        #[cfg(target_os = "linux")]
+        if crate::is_appimage() {
+            cmd.env_remove("LD_LIBRARY_PATH");
+        }
 
         let child = pair
             .slave

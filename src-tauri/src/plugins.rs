@@ -172,6 +172,8 @@ pub async fn plugin_shell_execute(
 ) -> Result<ShellOutput, String> {
     let mut cmd = Command::new(&command);
     cmd.args(&args);
+    #[cfg(target_os = "linux")]
+    kosmos_core::sanitize_child_env(&mut cmd);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
     if let Some(ref dir) = cwd {
@@ -203,6 +205,8 @@ pub async fn plugin_shell_spawn(
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
+    #[cfg(target_os = "linux")]
+    kosmos_core::sanitize_child_env(&mut cmd);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
     if let Some(ref dir) = cwd {

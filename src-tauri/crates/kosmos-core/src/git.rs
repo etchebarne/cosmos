@@ -14,6 +14,8 @@ pub(crate) async fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>
     cmd.args(args)
         .current_dir(path)
         .env("GIT_OPTIONAL_LOCKS", "0");
+    #[cfg(target_os = "linux")]
+    crate::sanitize_child_env(&mut cmd);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
     let output = cmd.output().await?;
@@ -36,6 +38,8 @@ pub(crate) async fn run_git(path: &Path, args: &[&str]) -> Result<Option<String>
 pub(crate) async fn run_git_strict(path: &Path, args: &[&str]) -> Result<(), CoreError> {
     let mut cmd = tokio::process::Command::new("git");
     cmd.args(args).current_dir(path);
+    #[cfg(target_os = "linux")]
+    crate::sanitize_child_env(&mut cmd);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
     let output = cmd.output().await?;

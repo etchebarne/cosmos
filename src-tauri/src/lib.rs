@@ -52,15 +52,6 @@ impl EventSink for TauriEventSink {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // When running as an AppImage, the runtime injects LD_LIBRARY_PATH pointing to
-    // bundled libraries. This leaks into child processes (terminals, LSP servers, git,
-    // etc.) causing OpenSSL version mismatches and other library conflicts.
-    // The Tauri binary is already loaded, so removing it won't affect the running app.
-    #[cfg(target_os = "linux")]
-    if std::env::var_os("APPIMAGE").is_some() {
-        std::env::remove_var("LD_LIBRARY_PATH");
-    }
-
     // Work around WebKitGTK DMABuf renderer crashes on some Linux/Wayland compositors
     #[cfg(target_os = "linux")]
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {

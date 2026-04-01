@@ -105,7 +105,10 @@ fn shell_command(program: &str) -> tokio::process::Command {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        tokio::process::Command::new(program)
+        let mut cmd = tokio::process::Command::new(program);
+        #[cfg(target_os = "linux")]
+        crate::sanitize_child_env(&mut cmd);
+        cmd
     }
 }
 
@@ -307,9 +310,11 @@ async fn install_pypi(entry: &RegistryEntry, install_dir: &Path) -> Result<Strin
         format!("{package}[{}]=={version}", extras.join(","))
     };
 
-    let output = tokio::process::Command::new(&pip)
-        .args(["install", &pkg_spec])
-        .output()
+    let mut cmd = tokio::process::Command::new(&pip);
+    cmd.args(["install", &pkg_spec]);
+    #[cfg(target_os = "linux")]
+    crate::sanitize_child_env(&mut cmd);
+    let output = cmd.output()
         .await
         .map_err(|e| format!("Failed to run pip: {e}"))?;
 

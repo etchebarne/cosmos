@@ -74,6 +74,8 @@ fn spawn_server(
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
 
+    #[cfg(target_os = "linux")]
+    crate::sanitize_child_env(&mut cmd);
     #[cfg(target_os = "windows")]
     cmd.creation_flags(CREATE_NO_WINDOW);
 
