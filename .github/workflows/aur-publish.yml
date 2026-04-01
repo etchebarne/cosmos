@@ -1,0 +1,41 @@
+name: Publish to AUR
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  aur-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Get version from tag
+        id: version
+        run: echo "pkgver=${GITHUB_EVENT_RELEASE_TAG_NAME#v}" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+
+      - name: Get deb checksum
+        id: checksum
+        run: |
+          curl -sL "https://github.com/etchebarne/kosmos/releases/download/${{ github.event.release.tag_name }}/kosmos_${{ steps.version.outputs.pkgver }}_amd64.deb" -o kosmos.deb
+          echo "sha256=$(sha256sum kosmos.deb | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Update PKGBUILD
+        run: |
+          cd aur/kosmos-bin
+          sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.pkgver }}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${{ steps.checksum.outputs.sha256 }}' 'SKIP' 'SKIP')/" PKGBUILD
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v3.0.1
+        with:
+          pkgname: kosmos-bin
+          pkgbuild: aur/kosmos-bin/PKGBUILD
+          commit_username: Martin Etchebarne
+          commit_email: martin@etchebarne.net
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}

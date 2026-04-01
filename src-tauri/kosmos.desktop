@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Kosmos
+Comment=A highly customizable and versatile tab-based code editor.
+GenericName=Code Editor
+Exec=kosmos %F
+Icon=kosmos
+Terminal=false
+Type=Application
+Categories=Development;TextEditor;IDE;
+MimeType=text/plain;text/x-csrc;text/x-chdr;text/x-python;text/x-script.python;text/x-java;text/javascript;application/json;text/xml;text/html;text/css;text/x-rust;text/x-go;text/x-c++src;text/x-typescript;
+Keywords=editor;code;development;IDE;text;
+StartupWMClass=kosmos
+StartupNotify=true
