@@ -43,7 +43,10 @@ pub async fn read_dir(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        kosmos_core::file_tree::read_dir(&path).map_err(|e| e.to_string())
+        tokio::task::spawn_blocking(move || kosmos_core::file_tree::read_dir(&path))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())
     }
 }
 

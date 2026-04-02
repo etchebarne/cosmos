@@ -13,8 +13,8 @@ pub fn read_dir(path: &str) -> Result<Vec<DirEntry>, CoreError> {
     let mut files: Vec<DirEntry> = Vec::new();
 
     for entry in entries {
-        let entry = entry?;
-        let metadata = entry.metadata()?;
+        let Ok(entry) = entry else { continue };
+        let Ok(metadata) = entry.metadata() else { continue };
         let name = entry.file_name().to_string_lossy().to_string();
 
         if name == ".git" {

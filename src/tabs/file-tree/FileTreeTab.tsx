@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
 import { FileTreeNode } from "./FileTreeNode";
 import { useFileTreeSelection } from "./file-tree-stores";
@@ -64,11 +65,37 @@ export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
   // Start filesystem watcher for the workspace
   useEffect(() => {
     if (!activeWorkspace) return;
-    invoke("watch_workspace", { path: activeWorkspace.path });
+    invoke("watch_workspace", { path: activeWorkspace.path }).catch((e) =>
+      console.warn("Failed to start file watcher:", e),
+    );
     return () => {
       invoke("unwatch_workspace", { path: activeWorkspace.path });
     };
   }, [activeWorkspace]);
+
+  // Single Tauri listener for watcher events, debounced and dispatched to nodes
+  // via window CustomEvents. Replaces per-node Tauri listeners to avoid a
+  // thundering herd of concurrent read_dir calls that can starve the runtime.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let pending = new Set<string>();
+
+    const unlisten = listen<string[]>("file-tree-changed", (event) => {
+      for (const dir of event.payload) pending.add(dir);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        for (const dir of pending) {
+          window.dispatchEvent(new CustomEvent("file-tree-refresh", { detail: { dir } }));
+        }
+        pending = new Set();
+      }, 300);
+    });
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   if (!activeWorkspace) {
     return <StateView message="No workspace open" />;
