@@ -119,42 +119,93 @@ pub async fn terminal_close(
     }
 }
 
-/// Forward the host clipboard image to a remote WSL terminal.
-/// Writes the image to `/tmp/kosmos-clipboard.png` on the WSL filesystem.
-/// The deployed xclip/wl-paste shims serve this file when TUI apps read
-/// image clipboard data — no system clipboard tools required.
-/// No-op for local terminals (the TUI app reads the host clipboard directly).
+/// Forward the host clipboard image so TUI apps inside the terminal can
+/// read it.
+///
+/// - **WSL terminals**: writes the PNG to the WSL filesystem via
+///   `\\wsl.localhost\…\tmp\kosmos-clipboard.png`. The deployed
+///   xclip/wl-paste shims serve this file transparently.
+/// - **Local Linux terminals**: reads the image via system clipboard tools
+///   (from the Tauri process, which has display access) and writes it to
+///   `$XDG_RUNTIME_DIR/kosmos/clipboard.png`. Shims deployed at terminal
+///   spawn serve this file to TUI apps that call xclip/wl-paste.
+/// - **Local Windows terminals**: no-op — TUI apps read the Win32 clipboard
+///   directly.
 #[tauri::command]
 pub async fn terminal_forward_clipboard_image(
     app: AppHandle,
     router: State<'_, BackendRouter>,
     id: String,
 ) -> Result<(), String> {
-    // Only needed for remote terminals
-    let agent = match router.get_remote_terminal(&id).await {
-        Some(a) => a,
-        None => return Ok(()),
-    };
+    // Remote terminals (WSL)
+    if let Some(agent) = router.get_remote_terminal(&id).await {
+        let distro = match &agent.connection_type {
+            ConnectionType::Wsl { distro } => distro.clone(),
+            _ => return Ok(()), // SSH not supported yet
+        };
 
-    let distro = match &agent.connection_type {
-        ConnectionType::Wsl { distro } => distro.clone(),
-        _ => return Ok(()), // SSH not supported yet
-    };
+        let image = app
+            .clipboard()
+            .read_image()
+            .map_err(|e| format!("clipboard read_image: {e}"))?;
 
-    // Read image from the host clipboard
-    let image = app
-        .clipboard()
-        .read_image()
-        .map_err(|e| format!("clipboard read_image: {e}"))?;
+        let rgba = image.rgba();
+        let png_bytes = encode_rgba_to_png(&rgba, image.width(), image.height())?;
+        let wsl_host_path = format!(r"\\wsl.localhost\{distro}\tmp\kosmos-clipboard.png");
+        std::fs::write(&wsl_host_path, &png_bytes)
+            .map_err(|e| format!("write to WSL fs: {e}"))?;
 
-    // Encode RGBA → PNG and write directly to the WSL filesystem
-    let rgba = image.rgba();
-    let png_bytes = encode_rgba_to_png(&rgba, image.width(), image.height())?;
-    let wsl_host_path = format!(r"\\wsl.localhost\{distro}\tmp\kosmos-clipboard.png");
-    std::fs::write(&wsl_host_path, &png_bytes)
-        .map_err(|e| format!("write to WSL fs: {e}"))?;
+        return Ok(());
+    }
+
+    // Local terminals on Linux — read the clipboard image and write it so
+    // the shims deployed at spawn time can serve it.
+    #[cfg(target_os = "linux")]
+    {
+        let base = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".into());
+        let img_dir = format!("{base}/kosmos");
+        let _ = std::fs::create_dir_all(&img_dir);
+        let png_bytes = read_clipboard_image_linux(&app)?;
+        std::fs::write(format!("{img_dir}/clipboard.png"), &png_bytes)
+            .map_err(|e| format!("write clipboard image: {e}"))?;
+    }
 
     Ok(())
+}
+
+/// Read a clipboard image on Linux, trying Tauri's API first then falling
+/// back to system tools (wl-paste, xclip) which work from the Tauri
+/// process since it has display access.
+#[cfg(target_os = "linux")]
+fn read_clipboard_image_linux(app: &AppHandle) -> Result<Vec<u8>, String> {
+    // Try Tauri clipboard API (works on some Linux setups)
+    if let Ok(image) = app.clipboard().read_image() {
+        let rgba = image.rgba();
+        if !rgba.is_empty() {
+            return encode_rgba_to_png(&rgba, image.width(), image.height());
+        }
+    }
+
+    // Fall back to system tools — these run from the Tauri process which
+    // is the focused Wayland/X11 client and has clipboard access.
+    use std::process::Command;
+
+    if let Ok(output) = Command::new("wl-paste").args(["--type", "image/png"]).output() {
+        if output.status.success() && !output.stdout.is_empty() {
+            return Ok(output.stdout);
+        }
+    }
+
+    if let Ok(output) = Command::new("xclip")
+        .args(["-selection", "clipboard", "-o", "-t", "image/png"])
+        .output()
+    {
+        if output.status.success() && !output.stdout.is_empty() {
+            return Ok(output.stdout);
+        }
+    }
+
+    Err("No image found in clipboard".to_string())
 }
 
 fn encode_rgba_to_png(rgba: &[u8], width: u32, height: u32) -> Result<Vec<u8>, String> {

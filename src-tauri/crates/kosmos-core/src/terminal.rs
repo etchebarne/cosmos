@@ -84,8 +84,17 @@ impl TerminalManager {
         cmd.cwd(cwd);
         cmd.env("TERM", "xterm-256color");
         #[cfg(target_os = "linux")]
-        if crate::is_appimage() {
-            cmd.env_remove("LD_LIBRARY_PATH");
+        {
+            if crate::is_appimage() {
+                cmd.env_remove("LD_LIBRARY_PATH");
+            }
+            // Deploy clipboard shims so TUI apps can read images pasted via
+            // Ctrl+V. The shims serve the kosmos clipboard image for image
+            // reads and fall back to the real tools for everything else.
+            let shim_dir = ensure_clipboard_shims();
+            if let Ok(path) = std::env::var("PATH") {
+                cmd.env("PATH", format!("{shim_dir}:{path}"));
+            }
         }
 
         let child = pair
@@ -280,4 +289,57 @@ pub fn list_shells() -> Vec<ShellInfo> {
     }
 
     shells
+}
+
+/// Deploy lightweight clipboard shim scripts so TUI apps inside local Linux
+/// terminals can read image data written by `terminal_forward_clipboard_image`.
+///
+/// Returns the shim directory path (prepended to PATH for spawned terminals).
+/// The shims serve the kosmos clipboard image for image reads and find the
+/// real tool dynamically in PATH (skipping the shim directory) for everything
+/// else.
+#[cfg(target_os = "linux")]
+fn ensure_clipboard_shims() -> String {
+    let base = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".into());
+    let dir = format!("{base}/kosmos/clipboard-shims");
+    let _ = std::fs::create_dir_all(&dir);
+
+    // Helper fragment: resolve the real binary by removing our shim dir from PATH.
+    // Shared by both shims — keeps them from recursing into themselves.
+    const FIND_REAL: &str = r#"SHIM_DIR=$(dirname "$(readlink -f "$0")")
+REAL=$(PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -Fxv "$SHIM_DIR" | tr '\n' ':')"#;
+
+    let xclip_shim = format!(
+        r#"#!/bin/sh
+KOSMOS_IMG="${{XDG_RUNTIME_DIR:-/tmp}}/kosmos/clipboard.png"
+reading=false; image=false; targets=false
+for arg in "$@"; do case "$arg" in -o) reading=true ;; image/*) image=true ;; TARGETS) targets=true ;; esac; done
+if $reading && $targets && [ -f "$KOSMOS_IMG" ]; then printf 'image/png\n'; exit 0; fi
+if $reading && $image && [ -f "$KOSMOS_IMG" ]; then cat "$KOSMOS_IMG"; exit 0; fi
+{FIND_REAL} command -v xclip 2>/dev/null)
+[ -x "$REAL" ] && exec "$REAL" "$@"
+"#
+    );
+
+    let wl_paste_shim = format!(
+        r#"#!/bin/sh
+KOSMOS_IMG="${{XDG_RUNTIME_DIR:-/tmp}}/kosmos/clipboard.png"
+listing=false; image=false
+for arg in "$@"; do case "$arg" in -l|--list-types) listing=true ;; image/*|--type=image/*) image=true ;; esac; done
+if $listing && [ -f "$KOSMOS_IMG" ]; then printf 'image/png\n'; exit 0; fi
+if $image && [ -f "$KOSMOS_IMG" ]; then cat "$KOSMOS_IMG"; exit 0; fi
+{FIND_REAL} command -v wl-paste 2>/dev/null)
+[ -x "$REAL" ] && exec "$REAL" "$@"
+"#
+    );
+
+    let _ = std::fs::write(format!("{dir}/xclip"), xclip_shim);
+    let _ = std::fs::write(format!("{dir}/wl-paste"), wl_paste_shim);
+
+    use std::os::unix::fs::PermissionsExt;
+    let perms = std::fs::Permissions::from_mode(0o755);
+    let _ = std::fs::set_permissions(format!("{dir}/xclip"), perms.clone());
+    let _ = std::fs::set_permissions(format!("{dir}/wl-paste"), perms);
+
+    dir
 }

@@ -134,9 +134,9 @@ function TerminalView({ tabId, shell, cwd }: { tabId: string; shell: ShellInfo; 
               return;
             }
           } catch {}
-          // No text on clipboard (e.g. image data). For remote terminals,
-          // write the image to the WSL filesystem and set the clipboard so
-          // TUI apps can read it. Then send the raw Ctrl+V byte.
+          // No text on clipboard (e.g. image data). Forward the image so
+          // TUI apps can read it (WSL: write to WSL fs + shims; Linux:
+          // write to /tmp + wl-copy/xclip). Then send the raw Ctrl+V byte.
           await invoke("terminal_forward_clipboard_image", { id: terminalId }).catch((err) => {
             console.warn("clipboard image forward:", err);
           });
