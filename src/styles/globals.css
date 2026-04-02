@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Prevent accidental text selection on UI chrome (tabs, sidebars, toolbars, etc.).
+   Placed outside @layer so it wins over Tailwind resets.
+   Content areas (Monaco, xterm, shadow-DOM diffs) manage their own selection. */
+*,
+*::before,
+*::after {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.monaco-editor,
+.monaco-editor * {
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
 /* Monaco scrollbar override — ensures Tailwind preflight doesn't interfere */
 .monaco-scrollable-element > .scrollbar > .slider {
   background: var(--color-scrollbar-track) !important;
