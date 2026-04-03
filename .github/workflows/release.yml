@@ -212,4 +212,3 @@ jobs:
           gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' \
             | grep '\.sig$' \
             | xargs -I{} gh release delete-asset "$TAG" {} --repo "$REPO" --yes
-
