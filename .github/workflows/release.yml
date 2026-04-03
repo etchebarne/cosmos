@@ -44,12 +44,16 @@ jobs:
         include:
           - platform: ubuntu-latest
             args: ""
+            id: linux
           - platform: macos-latest
             args: --target aarch64-apple-darwin
+            id: macos-arm
           - platform: macos-latest
             args: --target x86_64-apple-darwin
+            id: macos-x64
           - platform: windows-latest
             args: ""
+            id: windows
 
     runs-on: ${{ matrix.platform }}
 
@@ -94,3 +98,118 @@ jobs:
           prerelease: false
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
+
+      # tauri-action has a bug where it fails to upload .sig files and latest.json.
+      # We manually upload the updater archives and collect signatures for the
+      # publish-updater job.
+      - name: Upload updater archive & collect signature (Linux)
+        if: matrix.platform == 'ubuntu-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          archive=$(find src-tauri/target/release/bundle/appimage -name '*.AppImage.tar.gz' | head -1)
+          gh release upload "${{ github.ref_name }}" "$archive" --clobber
+          mkdir -p updater-sig
+          cp "${archive}.sig" updater-sig/linux-x86_64.sig
+
+      - name: Upload updater archive & collect signature (macOS)
+        if: matrix.platform == 'macos-latest'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # .app.tar.gz is already uploaded by tauri-action; just collect the sig
+          target=$(echo "${{ matrix.args }}" | sed 's/--target //')
+          sig="src-tauri/target/${target}/release/bundle/macos/kosmos.app.tar.gz.sig"
+          mkdir -p updater-sig
+          if [ "$target" = "aarch64-apple-darwin" ]; then
+            cp "$sig" updater-sig/darwin-aarch64.sig
+          else
+            cp "$sig" updater-sig/darwin-x86_64.sig
+          fi
+
+      - name: Upload updater archive & collect signature (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          archive=$(find src-tauri/target/release/bundle/nsis -name '*.nsis.zip' | head -1)
+          gh release upload "${{ github.ref_name }}" "$archive" --clobber
+          mkdir -p updater-sig
+          cp "${archive}.sig" updater-sig/windows-x86_64.sig
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updater-sig-${{ matrix.id }}
+          path: updater-sig/
+
+  publish-updater:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all updater signatures
+        uses: actions/download-artifact@v4
+        with:
+          pattern: updater-sig-*
+          merge-multiple: true
+          path: sigs
+
+      - name: Generate latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          REPO="${GITHUB_REPOSITORY}"
+          BASE="https://github.com/${REPO}/releases/download/${TAG}"
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Read signatures
+          SIG_LINUX=$(cat sigs/linux-x86_64.sig)
+          SIG_DARWIN_AARCH64=$(cat sigs/darwin-aarch64.sig)
+          SIG_DARWIN_X64=$(cat sigs/darwin-x86_64.sig)
+          SIG_WINDOWS=$(cat sigs/windows-x86_64.sig)
+
+          # Get release notes
+          NOTES=$(gh release view "$TAG" --repo "$REPO" --json body -q .body)
+
+          # Build latest.json
+          jq -n \
+            --arg version "$VERSION" \
+            --arg notes "$NOTES" \
+            --arg pub_date "$PUB_DATE" \
+            --arg sig_linux "$SIG_LINUX" \
+            --arg url_linux "${BASE}/kosmos_${VERSION}_amd64.AppImage.tar.gz" \
+            --arg sig_darwin_aarch64 "$SIG_DARWIN_AARCH64" \
+            --arg url_darwin_aarch64 "${BASE}/kosmos_aarch64.app.tar.gz" \
+            --arg sig_darwin_x64 "$SIG_DARWIN_X64" \
+            --arg url_darwin_x64 "${BASE}/kosmos_x64.app.tar.gz" \
+            --arg sig_windows "$SIG_WINDOWS" \
+            --arg url_windows "${BASE}/kosmos_${VERSION}_x64-setup.nsis.zip" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "linux-x86_64": { signature: $sig_linux, url: $url_linux },
+                "darwin-aarch64": { signature: $sig_darwin_aarch64, url: $url_darwin_aarch64 },
+                "darwin-x86_64": { signature: $sig_darwin_x64, url: $url_darwin_x64 },
+                "windows-x86_64": { signature: $sig_windows, url: $url_windows }
+              }
+            }' > latest.json
+
+          cat latest.json
+
+      - name: Upload latest.json and remove .sig files from release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          REPO="${GITHUB_REPOSITORY}"
+          gh release upload "$TAG" latest.json --repo "$REPO" --clobber
+          gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' \
+            | grep '\.sig$' \
+            | xargs -I{} gh release delete-asset "$TAG" {} --repo "$REPO" --yes
+
