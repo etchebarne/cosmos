@@ -49,8 +49,8 @@ jobs:
           cp aur/kosmos-bin/PKGBUILD aur-repo/PKGBUILD
 
           cd aur-repo
-          docker run --rm -v "$PWD:/pkg" archlinux:base bash -c \
-            'pacman -Sy --noconfirm pacman-contrib && useradd -m builder && chown -R builder /pkg && runuser -u builder -- bash -c "cd /pkg && makepkg --printsrcinfo > .SRCINFO"'
+          docker run --rm -v "$PWD:/pkg" -e HOST_UID="$(id -u)" archlinux:base bash -c \
+            'pacman -Sy --noconfirm pacman-contrib && useradd -m builder && chown -R builder /pkg && runuser -u builder -- bash -c "cd /pkg && makepkg --printsrcinfo > .SRCINFO" && chown -R $HOST_UID /pkg'
 
           git config user.name "Martin Etchebarne"
           git config user.email "martin@etchebarne.net"
@@ -95,8 +95,8 @@ jobs:
           cp aur/kosmos/PKGBUILD aur-repo/PKGBUILD
 
           cd aur-repo
-          docker run --rm -v "$PWD:/pkg" archlinux:base bash -c \
-            'pacman -Sy --noconfirm pacman-contrib && useradd -m builder && chown -R builder /pkg && runuser -u builder -- bash -c "cd /pkg && makepkg --printsrcinfo > .SRCINFO"'
+          docker run --rm -v "$PWD:/pkg" -e HOST_UID="$(id -u)" archlinux:base bash -c \
+            'pacman -Sy --noconfirm pacman-contrib && useradd -m builder && chown -R builder /pkg && runuser -u builder -- bash -c "cd /pkg && makepkg --printsrcinfo > .SRCINFO" && chown -R $HOST_UID /pkg'
 
           git config user.name "Martin Etchebarne"
           git config user.email "martin@etchebarne.net"
