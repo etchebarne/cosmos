@@ -50,6 +50,13 @@ impl EventSink for TauriEventSink {
     }
 }
 
+/// On Linux the Tauri updater only works for AppImage installs. Package-manager
+/// installs (deb/AUR) should be updated through the package manager instead.
+#[tauri::command]
+fn is_appimage() -> bool {
+    cfg!(target_os = "linux") && std::env::var_os("APPIMAGE").is_some()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Work around WebKitGTK DMABuf renderer crashes on some Linux/Wayland compositors
@@ -118,6 +125,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            is_appimage,
             tabs::file_tree::read_dir,
             tabs::file_tree::move_file,
             tabs::file_tree::create_file,

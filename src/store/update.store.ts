@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { invoke } from "@tauri-apps/api/core";
 
 interface UpdateStore {
   /** The available update, or null if up to date */
@@ -19,6 +20,11 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
 
   checkForUpdate: async () => {
     try {
+      // On Linux, the Tauri updater only works for AppImage installs.
+      // Package-manager installs (deb/AUR) update through the package manager.
+      const isLinux = navigator.userAgent.includes("Linux");
+      if (isLinux && !(await invoke<boolean>("is_appimage"))) return;
+
       const update = await check();
       set({ update: update?.available ? update : null });
     } catch (e) {
