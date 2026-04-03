@@ -4,10 +4,10 @@
   <br>
   <p>A code editor where every view is a tab you can place anywhere.</p>
 
-  [![Release](https://img.shields.io/github/v/release/etchebarne/kosmos?style=flat-square&color=6366f1)](https://github.com/etchebarne/kosmos/releases/latest)
-  [![License: MIT](https://img.shields.io/badge/license-MIT-6366f1?style=flat-square)](LICENSE)
-  [![Stars](https://img.shields.io/github/stars/etchebarne/kosmos?style=flat-square&color=6366f1)](https://github.com/etchebarne/kosmos/stargazers)
-  [![Issues](https://img.shields.io/github/issues/etchebarne/kosmos?style=flat-square&color=6366f1)](https://github.com/etchebarne/kosmos/issues)
+[![Release](https://img.shields.io/github/v/release/etchebarne/kosmos?style=flat-square&color=6366f1)](https://github.com/etchebarne/kosmos/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-6366f1?style=flat-square)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/etchebarne/kosmos?style=flat-square&color=6366f1)](https://github.com/etchebarne/kosmos/stargazers)
+[![Issues](https://img.shields.io/github/issues/etchebarne/kosmos?style=flat-square&color=6366f1)](https://github.com/etchebarne/kosmos/issues)
 
 </div>
 
@@ -27,13 +27,14 @@ Most editors dictate where things go. Kosmos lets you treat every view as a tab 
 
 Download the latest binary for your platform:
 
-| Platform | Download |
-|----------|----------|
-| Windows | [kosmos_x64.msi](https://github.com/etchebarne/kosmos/releases/latest) |
-| macOS | [kosmos_aarch64.dmg](https://github.com/etchebarne/kosmos/releases/latest) |
-| Linux | [kosmos_amd64.deb](https://github.com/etchebarne/kosmos/releases/latest) |
+| Platform | Download                                                                   |
+| -------- | -------------------------------------------------------------------------- |
+| Windows  | [kosmos_x64.msi](https://github.com/etchebarne/kosmos/releases/latest)     |
+| macOS    | [kosmos_aarch64.dmg](https://github.com/etchebarne/kosmos/releases/latest) |
+| Linux    | [kosmos_amd64.deb](https://github.com/etchebarne/kosmos/releases/latest)   |
 
 **Arch Linux (AUR)**
+
 ```bash
 yay -S kosmos-bin       # pre-built binary
 yay -S kosmos           # build from source
@@ -42,6 +43,7 @@ yay -S kosmos           # build from source
 ## Building from source
 
 **Prerequisites:** [Bun](https://bun.sh/), [Rust](https://www.rust-lang.org/tools/install), [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/)
+
 ```bash
 bun install
 bun run tauri dev    # development
