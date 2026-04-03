@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useActiveWorkspace } from "../../contexts/WorkspaceContext";
+import { useActiveWorkspace, useIsWorkspaceActive } from "../../contexts/WorkspaceContext";
 import { FileTreeNode } from "./FileTreeNode";
 import { useFileTreeSelection } from "./file-tree-stores";
 import { ScrollArea } from "../../components/shared/ScrollArea";
@@ -19,11 +19,12 @@ export interface DirEntry {
 
 export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
   const activeWorkspace = useActiveWorkspace();
+  const isActive = useIsWorkspaceActive();
 
   const [entries, setEntries] = useState<DirEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { status: gitStatus } = useGitStatus(activeWorkspace?.path ?? null);
+  const { status: gitStatus } = useGitStatus(activeWorkspace?.path ?? null, isActive);
 
   const getGitColor = useMemo(() => {
     if (!activeWorkspace || !gitStatus?.isRepo) return () => null;
@@ -62,16 +63,17 @@ export function FileTreeTab({ tab: _tab, paneId }: TabContentProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Start filesystem watcher for the workspace
+  // Start filesystem watcher only for the active workspace — the watcher is a
+  // singleton, so inactive workspaces would replace the active one's watcher.
   useEffect(() => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace || !isActive) return;
     invoke("watch_workspace", { path: activeWorkspace.path }).catch((e) =>
       console.warn("Failed to start file watcher:", e),
     );
     return () => {
       invoke("unwatch_workspace", { path: activeWorkspace.path });
     };
-  }, [activeWorkspace]);
+  }, [activeWorkspace, isActive]);
 
   // Single Tauri listener for watcher events, debounced and dispatched to nodes
   // via window CustomEvents. Replaces per-node Tauri listeners to avoid a

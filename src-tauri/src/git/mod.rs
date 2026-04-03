@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use kosmos_core::watcher::WatcherManager;
 use kosmos_protocol::requests::Request;
 use kosmos_protocol::types::*;
@@ -275,7 +277,7 @@ pub async fn get_git_remote_owner(
 #[tauri::command]
 pub async fn watch_workspace(
     router: State<'_, BackendRouter>,
-    watcher: State<'_, WatcherManager>,
+    watcher: State<'_, Arc<WatcherManager>>,
     path: String,
 ) -> Result<(), String> {
     if let Some((agent, remote_path)) = router.resolve(&path).await {
@@ -286,14 +288,23 @@ pub async fn watch_workspace(
     } else if BackendRouter::is_remote_path(&path) {
         Err(no_agent_error(&path))
     } else {
-        watcher.watch(&path).str_err()
+        // Setting up recursive inotify watches can block for seconds on large
+        // repos. Fire-and-forget on the blocking pool so this command returns
+        // instantly and doesn't hold up the IPC channel.
+        let watcher = Arc::clone(&*watcher);
+        tokio::task::spawn_blocking(move || {
+            if let Err(e) = watcher.watch(&path) {
+                tracing::warn!("watch_workspace failed for {path}: {e}");
+            }
+        });
+        Ok(())
     }
 }
 
 #[tauri::command]
 pub async fn unwatch_workspace(
     router: State<'_, BackendRouter>,
-    watcher: State<'_, WatcherManager>,
+    watcher: State<'_, Arc<WatcherManager>>,
     path: Option<String>,
 ) -> Result<(), String> {
     if let Some(ref p) = path {

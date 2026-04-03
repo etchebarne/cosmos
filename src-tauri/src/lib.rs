@@ -85,7 +85,7 @@ pub fn run() {
             let events: Arc<dyn EventSink> = Arc::new(TauriEventSink(handle.clone()));
 
             // Watcher
-            app.manage(kosmos_core::watcher::WatcherManager::new(events.clone()));
+            app.manage(Arc::new(kosmos_core::watcher::WatcherManager::new(events.clone())));
 
             // Terminal
             app.manage(kosmos_core::terminal::TerminalManager::new(events.clone()));
