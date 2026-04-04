@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { CaretDown, GearSix } from "@phosphor-icons/react";
 import { ScrollArea } from "../../components/shared/ScrollArea";
 import { Setting } from "../../components/shared/Setting";
@@ -143,6 +144,7 @@ function AccordionSection({
 
 export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
   const [schema, setSchema] = useState<SettingsSchema | null>(null);
+  const [version, setVersion] = useState<string | null>(null);
   // Default to all sections expanded for a better "editor settings" feel
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const values = useSettingsStore((s) => s.values);
@@ -154,6 +156,7 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
       // Auto-expand all sections on load
       setExpandedSections(new Set(s.sections.map((sec) => sec.id)));
     });
+    getVersion().then(setVersion);
   }, []);
 
   const toggleSection = useCallback((id: string) => {
@@ -203,6 +206,11 @@ export function SettingsTab({ tab: _tab, paneId: _paneId }: TabContentProps) {
             />
           ))}
         </div>
+        {version && (
+          <p className="mt-6 text-center text-[11px] text-[var(--color-text-muted)]">
+            Kosmos v{version}
+          </p>
+        )}
       </div>
     </ScrollArea>
   );
