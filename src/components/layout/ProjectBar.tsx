@@ -1,7 +1,17 @@
 import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
-import { MagnifyingGlass, Plus, Desktop, Cloud, ArrowsClockwise } from "@phosphor-icons/react";
+import {
+  MagnifyingGlass,
+  Plus,
+  Desktop,
+  Cloud,
+  ArrowsClockwise,
+  Minus,
+  Square,
+  X,
+} from "@phosphor-icons/react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getTheme } from "../../lib/themes";
 import { useWorkspaceStore } from "../../store/workspace.store";
 import { ContextMenu } from "../shared/ContextMenu";
@@ -199,7 +209,10 @@ export function ProjectBar() {
   );
 
   return (
-    <div className="flex items-center gap-2 h-[52px] min-h-[52px] px-3 bg-[var(--color-project-bar-bg)] border-b border-[var(--color-border-primary)]">
+    <div
+      data-tauri-drag-region
+      className="flex items-center gap-2 h-[52px] min-h-[52px] pl-3 bg-[var(--color-project-bar-bg)] border-b border-[var(--color-border-primary)]"
+    >
       {active && (
         <div className="flex items-center gap-1.5">
           {active.connection && active.connection.type !== "local" && (
@@ -222,7 +235,7 @@ export function ProjectBar() {
           </span>
         </div>
       )}
-      <div className="flex-1" />
+      <div className="flex-1" data-tauri-drag-region />
       <UpdateButton />
       <button
         className="flex items-center gap-1.5 w-[220px] h-8 px-2.5 bg-[var(--color-bg-input)] cursor-pointer hover:bg-[var(--color-bg-surface)] transition-colors"
@@ -292,6 +305,8 @@ export function ProjectBar() {
         <Plus size={14} />
       </button>
 
+      <WindowControls />
+
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
@@ -325,6 +340,32 @@ export function ProjectBar() {
       {remoteDialog && (
         <RemoteDialog open distro={remoteDialog} onClose={() => setRemoteDialog(null)} />
       )}
+    </div>
+  );
+}
+
+function WindowControls() {
+  const appWindow = getCurrentWindow();
+  return (
+    <div className="flex items-center ml-2">
+      <button
+        className="w-[46px] h-[52px] flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-bg-surface)] transition-colors"
+        onClick={() => appWindow.minimize()}
+      >
+        <Minus size={14} />
+      </button>
+      <button
+        className="w-[46px] h-[52px] flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-bg-surface)] transition-colors"
+        onClick={() => appWindow.toggleMaximize()}
+      >
+        <Square size={10} weight="bold" />
+      </button>
+      <button
+        className="w-[46px] h-[52px] flex items-center justify-center text-[var(--color-text-muted)] hover:bg-red-500/80 hover:text-white transition-colors"
+        onClick={() => appWindow.close()}
+      >
+        <X size={14} />
+      </button>
     </div>
   );
 }
